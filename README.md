@@ -14,7 +14,8 @@ This is a simple Rust app that allows you to interact with the WWE Universe in w
 2. `echo "DATABASE_URL=database.db" > .env` OR `echo "DATABASE_URL=sqlite:database.db" > .env` if you want to be more explicit. This is required to tell Diesel where the database is located.
 3. `diesel setup` to setup the database
 4. `diesel migration run` to run the migrations
-5. Run `cargo tauri dev` to start the app
+5. Run `npx @tailwindcss/cli -i ./<path-to-your-base-css>/<css-file-name>.css -o ./<path-to-your-output-css>/output.css`. We do this so we don't re-compile every time our CSS classes change.
+6. Run `cargo tauri dev` to start the app
 
 # Running Tests
 
