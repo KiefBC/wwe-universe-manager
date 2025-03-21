@@ -1,0 +1,8 @@
+-- Your SQL goes here
+CREATE TABLE wrestlers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    name TEXT NOT NULL,
+    gender TEXT NOT NULL,
+    wins INTEGER NOT NULL DEFAULT 0,
+    losses INTEGER NOT NULL DEFAULT 0
+);

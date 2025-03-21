@@ -1,0 +1,6 @@
+edition = "2021"
+# (optional) other config...
+
+[rustfmt]
+overrideCommand = ["leptosfmt", "--stdin", "--rustfmt"]
+# (optional) other config...
