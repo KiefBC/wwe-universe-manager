@@ -4,3 +4,4 @@
 *.db
 .vscode/*
 /node_modules/
+output.css
