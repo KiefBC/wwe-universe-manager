@@ -109,8 +109,8 @@ fn ShowSelector() -> impl IntoView {
     ];
 
     view! {
-        <div class="flex flex-col items-center justify-center">
-            <p class="font-bold m-4">"Available Shows"</p>
+        <div class="flex flex-col justify-center items-center">
+            <p class="">"Available Shows"</p>
             <select
               on:change:target=move |ev| {
                   set_show.set(ev.target().value().to_string());
