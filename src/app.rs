@@ -1,5 +1,4 @@
-use leptos::html;
-use leptos::{ev::SubmitEvent, prelude::*};
+use leptos::prelude::*;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -10,88 +9,11 @@ extern "C" {
 
 #[component]
 pub fn App() -> impl IntoView {
-    let (count, set_count) = signal(0);
-    let (name, set_name) = signal("Controlled".to_string());
-    let email = RwSignal::new("".to_string());
-    let spam_me = RwSignal::new(true);
-    let input_element: NodeRef<html::Input> = NodeRef::new();
-
-    let on_submit = move |ev: SubmitEvent| {
-        // stop the page from reloading!
-        ev.prevent_default();
-
-        // here, we'll extract the value from the input
-        let value = input_element
-            .get()
-            // event handlers can only fire after the view
-            // is mounted to the DOM, so the `NodeRef` will be `Some`
-            .expect("<input> should be mounted")
-            // `leptos::HtmlElement<html::Input>` implements `Deref`
-            // to a `web_sys::HtmlInputElement`.
-            // this means we can call`HtmlInputElement::value()`
-            // to get the current value of the input
-            .value();
-        set_name.set(value);
-    };
-
     view! {
+        <div class="flex justify-center items-center w-full">
+            <img loading="lazy" src="public/logo.png" class="object-center aspect-auto w-64 h-auto max-w-full"/>
+        </div>
         <ShowSelector />
-      // <button on:click=move |_| {
-      //     set_count.update(|n| *n += 1);
-      //   }
-      // >
-      //   "Click me: "
-      //   {count}
-      // </button>
-
-      // <br/>
-
-      // <input type="text"
-      //     bind:value=(name, set_name)
-      // />
-      // <input type="email"
-      //     bind:value=email
-      // />
-      // <label>
-      //     "Please send me lots of spam email."
-      //     <input type="checkbox"
-      //         bind:checked=spam_me
-      //     />
-      // </label>
-      // <p>"Name is: " {name}</p>
-      // <p>"Email is: " {email}</p>
-      // <Show when=move || spam_me.get()>
-      //     <p>"You’ll receive cool bonus content!"</p>
-      // </Show>
-
-      // <br/>
-
-      // <form on:submit=on_submit> // on_submit defined below
-      //     <input type="text"
-      //         value=name
-      //         node_ref=input_element
-      //     />
-      //     <input type="submit" value="Submit"/>
-      // </form>
-      // <p>"Name is: " {name}</p>
-
-      // <br/>
-      // <SelectInput/>
-      // <br/>
-      // <NumericInput/>
-      // <br/>
-      // <TakesChildren render_prop=|| view! { <p>"Hi, there!"</p> }>
-      //     // these get passed to `children`
-      //     "Some text"
-      //     <br/>
-      //     <span>"A span"</span>
-      // </TakesChildren>
-      // <br/>
-      // <WrapsChildren>
-      //     "A"
-      //     "B"
-      //     "C"
-      // </WrapsChildren>
     }
 }
 
@@ -215,45 +137,45 @@ fn NumericInput() -> impl IntoView {
     }
 }
 
-/// Displays a `render_prop` and some children within markup.
-#[component]
-pub fn TakesChildren<F, IV>(
-    /// Takes a function (type F) that returns anything that can be
-    /// converted into a View (type IV)
-    render_prop: F,
-    /// `children` can take one of several different types, each of which
-    /// is a function that returns some view type
-    children: Children,
-) -> impl IntoView
-where
-    F: Fn() -> IV,
-    IV: IntoView,
-{
-    view! {
-        <h1><code>"<TakesChildren/>"</code></h1>
-        <h2>"Render Prop"</h2>
-        {render_prop()}
-        <hr/>
-        <h2>"Children"</h2>
-        {children()}
-    }
-}
-/// Wraps each child in an `<li>` and embeds them in a `<ul>`.
-#[component]
-pub fn WrapsChildren(children: ChildrenFragment) -> impl IntoView {
-    // children() returns a `Fragment`, which has a
-    // `nodes` field that contains a Vec<View>
-    // this means we can iterate over the children
-    // to create something new!
-    let children = children()
-        .nodes
-        .into_iter()
-        .map(|child| view! { <li>{child}</li> })
-        .collect::<Vec<_>>();
+// Displays a `render_prop` and some children within markup.
+// #[component]
+// pub fn TakesChildren<F, IV>(
+//     /// Takes a function (type F) that returns anything that can be
+//     /// converted into a View (type IV)
+//     render_prop: F,
+//     /// `children` can take one of several different types, each of which
+//     /// is a function that returns some view type
+//     children: Children,
+// ) -> impl IntoView
+// where
+//     F: Fn() -> IV,
+//     IV: IntoView,
+// {
+//     view! {
+//         <h1><code>"<TakesChildren/>"</code></h1>
+//         <h2>"Render Prop"</h2>
+//         {render_prop()}
+//         <hr/>
+//         <h2>"Children"</h2>
+//         {children()}
+//     }
+// }
+// Wraps each child in an `<li>` and embeds them in a `<ul>`.
+// #[component]
+// pub fn WrapsChildren(children: ChildrenFragment) -> impl IntoView {
+//     // children() returns a `Fragment`, which has a
+//     // `nodes` field that contains a Vec<View>
+//     // this means we can iterate over the children
+//     // to create something new!
+//     let children = children()
+//         .nodes
+//         .into_iter()
+//         .map(|child| view! { <li>{child}</li> })
+//         .collect::<Vec<_>>();
 
-    view! {
-        <h1><code>"<WrapsChildren/>"</code></h1>
-        // wrap our wrapped children in a UL
-        <ul>{children}</ul>
-    }
-}
+//     view! {
+//         <h1><code>"<WrapsChildren/>"</code></h1>
+//         // wrap our wrapped children in a UL
+//         <ul>{children}</ul>
+//     }
+// }

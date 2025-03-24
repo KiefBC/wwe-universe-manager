@@ -21,7 +21,3 @@ serial_test = "2.0"
 log = "0.4"
 diesel = { version = "2.1.0", features = ["sqlite"] }
 wwe-universe-manager = { path = "src-tauri" }
-
-[package.metadata.leptos]
-# style-file = "style/style.css"
-tailwind-input-file = "style/tailwind.css"
