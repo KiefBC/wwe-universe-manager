@@ -37,6 +37,9 @@ pub fn App() -> impl IntoView {
             <img loading="lazy" src="public/logo.png" class="object-center aspect-auto w-64 h-auto max-w-full"/>
         </div>
         <ShowSelector />
+        <div class="flex justify-center items-center w-full">
+            <button class="btn btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl mb-4">Responsive</button>
+        </div>
     }
 }
 
