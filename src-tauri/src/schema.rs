@@ -1,6 +1,14 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    shows (id) {
+        id -> Integer,
+        name -> Text,
+        description -> Text,
+    }
+}
+
+diesel::table! {
     titles (id) {
         id -> Integer,
         name -> Text,
@@ -29,6 +37,7 @@ diesel::table! {
 diesel::joinable!(titles -> wrestlers (current_holder_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    shows,
     titles,
     users,
     wrestlers,

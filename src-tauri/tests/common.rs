@@ -4,7 +4,7 @@ use log::info;
 
 // Import from the crate we're testing - only what we actually use
 use wwe_universe_manager_lib::db::{establish_connection};
-use wwe_universe_manager_lib::models::{NewTitle, NewUser, NewWrestler, Title, User, Wrestler};
+use wwe_universe_manager_lib::models::{NewTitle, NewUser, NewWrestler, Title, User, Wrestler, NewShow, Show};
 
 // Helper function to reset and establish the connection
 #[allow(dead_code)]
@@ -17,6 +17,15 @@ pub fn setup_test_user<'a>() -> (SqliteConnection, NewUser<'a>) {
 
     reset_test_user(&mut conn, &test_user);
     (conn, test_user)
+}
+
+#[allow(dead_code)]
+pub fn setup_test_show<'a>() -> (SqliteConnection, NewShow<'a>) {
+    let mut conn = establish_connection();
+    let test_show = NewShow { name: "Testing", description: "Testing Description" };
+
+    reset_test_show(&mut conn, &test_show);
+    (conn, test_show)
 }
 
 #[allow(dead_code)]
@@ -99,3 +108,24 @@ fn reset_test_belt(conn: &mut SqliteConnection, test_belt: &NewTitle) {
 
     info!("Deleted {} belt", result);
 }
+
+#[allow(dead_code)]
+fn reset_test_show(conn: &mut SqliteConnection, test_show: &NewShow) {
+    // Import DSL items locally
+    use wwe_universe_manager_lib::schema::shows::dsl::{name as show_name, shows};
+
+    if let Ok(show) = shows
+        .filter(show_name.eq(test_show.name))
+        .first::<Show>(conn)
+    {
+        println!("Deleting show: {:?}", show);
+    }
+
+    let result = diesel::delete(shows.filter(show_name.eq(test_show.name)))
+        .execute(conn)
+        .expect("Error deleting test show");
+
+    info!("Deleted {} show", result);
+}
+
+

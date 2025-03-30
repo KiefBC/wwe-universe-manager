@@ -1,4 +1,4 @@
-use crate::models::{NewTitle, NewUser, NewWrestler, Title, User, Wrestler};
+use crate::models::{NewTitle, NewUser, NewWrestler, Title, User, Wrestler, NewShow, Show};
 use diesel::prelude::*;
 use dotenvy::dotenv;
 use log::{error, info};
@@ -74,6 +74,26 @@ pub fn create_belt(conn: &mut SqliteConnection, new_title: NewTitle) -> Option<T
         }
         Err(e) => {
             error!("Error saving new title: {}", e);
+            None
+        }
+    }
+}
+
+#[tauri::command]
+pub fn create_show(conn: &mut SqliteConnection, new_show: NewShow) -> Option<Show> {
+    use crate::schema::shows::dsl::*;
+
+    match diesel::insert_into(shows)
+        .values(&new_show)
+        .returning(Show::as_returning())
+        .get_result(conn)
+    {
+        Ok(show) => {
+            info!("Show '{}' created successfully", show.name);
+            Some(show)
+        }
+        Err(e) => {
+            error!("Error saving new show: {}", e);
             None
         }
     }
