@@ -1,7 +1,8 @@
 use crate::schema::wrestlers;
 use diesel::prelude::*;
+use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Queryable, Selectable, Identifiable)]
+#[derive(Debug, Queryable, Selectable, Identifiable, Serialize, Deserialize)]
 #[diesel(table_name = wrestlers)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Wrestler {
@@ -14,7 +15,13 @@ pub struct Wrestler {
 
 #[derive(Insertable)]
 #[diesel(table_name = wrestlers)]
-pub struct NewWrestler<'a> {
-    pub name: &'a str,
-    pub gender: &'a str,
+pub struct NewWrestler {
+    pub name: String,
+    pub gender: String,
+}
+
+#[derive(Deserialize)]
+pub struct WrestlerData {
+    pub name: String,
+    pub gender: String,
 }

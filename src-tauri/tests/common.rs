@@ -3,16 +3,16 @@ use diesel::prelude::*;
 use log::info;
 
 // Import from the crate we're testing - only what we actually use
-use wwe_universe_manager_lib::db::{establish_connection};
+use wwe_universe_manager_lib::db::establish_connection;
 use wwe_universe_manager_lib::models::{NewTitle, NewUser, NewWrestler, Title, User, Wrestler, NewShow, Show};
 
 // Helper function to reset and establish the connection
 #[allow(dead_code)]
-pub fn setup_test_user<'a>() -> (SqliteConnection, NewUser<'a>) {
+pub fn setup_test_user() -> (SqliteConnection, NewUser) {
     let mut conn = establish_connection();
     let test_user = NewUser {
-        username: "Testing",
-        password: "Testing",
+        username: "Testing".to_string(),
+        password: "Testing".to_string(),
     };
 
     reset_test_user(&mut conn, &test_user);
@@ -20,20 +20,20 @@ pub fn setup_test_user<'a>() -> (SqliteConnection, NewUser<'a>) {
 }
 
 #[allow(dead_code)]
-pub fn setup_test_show<'a>() -> (SqliteConnection, NewShow<'a>) {
+pub fn setup_test_show() -> (SqliteConnection, NewShow) {
     let mut conn = establish_connection();
-    let test_show = NewShow { name: "Testing", description: "Testing Description" };
+    let test_show = NewShow { name: "Testing".to_string(), description: "Testing Description".to_string() };
 
     reset_test_show(&mut conn, &test_show);
     (conn, test_show)
 }
 
 #[allow(dead_code)]
-pub fn setup_test_wrestler<'a>() -> (SqliteConnection, NewWrestler<'a>) {
+pub fn setup_test_wrestler() -> (SqliteConnection, NewWrestler) {
     let mut conn = establish_connection();
     let test_wrestler = NewWrestler {
-        name: "Testing",
-        gender: "Male Test",
+        name: "Testing".to_string(),
+        gender: "Male Test".to_string(),
     };
 
     reset_test_wrestler(&mut conn, &test_wrestler);
@@ -41,9 +41,9 @@ pub fn setup_test_wrestler<'a>() -> (SqliteConnection, NewWrestler<'a>) {
 }
 
 #[allow(dead_code)]
-pub fn setup_test_belt<'a>() -> (SqliteConnection, NewTitle<'a>) {
+pub fn setup_test_belt() -> (SqliteConnection, NewTitle) {
     let mut conn = establish_connection();
-    let test_belt = NewTitle { name: "Testing" };
+    let test_belt = NewTitle { name: "Testing".to_string() };
 
     reset_test_belt(&mut conn, &test_belt);
     (conn, test_belt)
@@ -56,15 +56,15 @@ fn reset_test_user(conn: &mut SqliteConnection, test_user: &NewUser) {
     use wwe_universe_manager_lib::schema::users::dsl::{password, username, users};
 
     if let Ok(user) = users
-        .filter(username.eq(test_user.username))
-        .filter(password.eq(test_user.password))
+        .filter(username.eq(&test_user.username))
+        .filter(password.eq(&test_user.password))
         .first::<User>(conn)
     {
         println!("Deleting user: {:?}", user);
     }
 
-    let result = diesel::delete(users.filter(username.eq(test_user.username)))
-        .filter(password.eq(test_user.password))
+    let result = diesel::delete(users.filter(username.eq(&test_user.username)))
+        .filter(password.eq(&test_user.password))
         .execute(conn)
         .expect("Error deleting test user");
 
@@ -77,13 +77,13 @@ fn reset_test_wrestler(conn: &mut SqliteConnection, test_wrestler: &NewWrestler)
     use wwe_universe_manager_lib::schema::wrestlers::dsl::{name as wrestler_name, wrestlers};
 
     if let Ok(wrestler) = wrestlers
-        .filter(wrestler_name.eq(test_wrestler.name))
+        .filter(wrestler_name.eq(&test_wrestler.name))
         .first::<Wrestler>(conn)
     {
         println!("Deleting wrestler: {:?}", wrestler);
     }
 
-    let result = diesel::delete(wrestlers.filter(wrestler_name.eq(test_wrestler.name)))
+    let result = diesel::delete(wrestlers.filter(wrestler_name.eq(&test_wrestler.name)))
         .execute(conn)
         .expect("Error deleting test wrestler");
 
@@ -96,13 +96,13 @@ fn reset_test_belt(conn: &mut SqliteConnection, test_belt: &NewTitle) {
     use wwe_universe_manager_lib::schema::titles::dsl::{name as belt_name, titles};
 
     if let Ok(belt) = titles
-        .filter(belt_name.eq(test_belt.name))
+        .filter(belt_name.eq(&test_belt.name))
         .first::<Title>(conn)
     {
         println!("Deleting belt: {:?}", belt);
     }
 
-    let result = diesel::delete(titles.filter(belt_name.eq(test_belt.name)))
+    let result = diesel::delete(titles.filter(belt_name.eq(&test_belt.name)))
         .execute(conn)
         .expect("Error deleting test belt");
 
@@ -115,13 +115,13 @@ fn reset_test_show(conn: &mut SqliteConnection, test_show: &NewShow) {
     use wwe_universe_manager_lib::schema::shows::dsl::{name as show_name, shows};
 
     if let Ok(show) = shows
-        .filter(show_name.eq(test_show.name))
+        .filter(show_name.eq(&test_show.name))
         .first::<Show>(conn)
     {
         println!("Deleting show: {:?}", show);
     }
 
-    let result = diesel::delete(shows.filter(show_name.eq(test_show.name)))
+    let result = diesel::delete(shows.filter(show_name.eq(&test_show.name)))
         .execute(conn)
         .expect("Error deleting test show");
 

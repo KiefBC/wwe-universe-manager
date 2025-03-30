@@ -1,8 +1,9 @@
-use crate::db::establish_connection;
+use crate::db::DbState;
 use crate::models::{NewUser, User};
 use crate::schema::users::dsl::*;
 use diesel::prelude::*;
 use log::{error, info, warn};
+use tauri::State;
 
 pub fn check_user_exists(conn: &mut SqliteConnection, username_check: &str) -> bool {
     match users
@@ -23,54 +24,78 @@ pub fn check_user_exists(conn: &mut SqliteConnection, username_check: &str) -> b
     }
 }
 
-#[tauri::command]
-pub fn verify_credentials(susername: String, spassword: String) -> bool {
-    info!("Verifying credentials...");
-    let conn = &mut establish_connection();
-
+// Internal function for verifying credentials, testable directly
+pub fn internal_verify_credentials(conn: &mut SqliteConnection, susername: &str, spassword: &str) -> bool {
     match users
-        .filter(username.eq(&susername))
+        .filter(username.eq(susername))
         .first::<User>(conn)
         .optional()
     {
         Ok(Some(user)) => {
             if user.password == spassword {
-                info!("Credentials verified");
+                info!("Credentials verified for user: {}", susername);
                 true
             } else {
-                warn!("Invalid password");
+                warn!("Invalid password for user: {}", susername);
                 false
             }
         }
         Ok(None) => {
-            warn!("User not found");
+            warn!("User not found: {}", susername);
             false
         }
         Err(err) => {
-            error!("Error loading user: {:?}", err);
+            error!("Error loading user {}: {:?}", susername, err);
             false
         }
     }
 }
 
 #[tauri::command]
-pub fn register_user(susername: String, spassword: String) -> bool {
-    let conn = &mut establish_connection();
+pub fn verify_credentials(state: State<'_, DbState>, susername: String, spassword: String) -> bool {
+    info!("Verifying credentials for user: {}...", susername);
+    let mut conn = match state.db.lock() {
+        Ok(guard) => guard,
+        Err(e) => {
+            error!("Failed to lock database state: {}", e);
+            return false;
+        }
+    };
 
-    if check_user_exists(conn, &susername) {
+    // Call the internal function
+    internal_verify_credentials(&mut *conn, &susername, &spassword)
+}
+
+#[tauri::command]
+pub fn register_user(state: State<'_, DbState>, susername: String, spassword: String) -> bool {
+    let mut conn = match state.db.lock() {
+        Ok(guard) => guard,
+        Err(e) => {
+            error!("Failed to lock database state: {}", e);
+            return false;
+        }
+    };
+
+    if check_user_exists(&mut *conn, &susername) {
         warn!("User already exists");
         return false;
     }
 
     let new_user = NewUser {
-        username: &susername,
-        password: &spassword,
+        username: susername.clone(),
+        password: spassword.clone(),
     };
 
-    match crate::db::create_user(conn, new_user) {
-        Some(_) => true,
-        None => {
-            error!("Failed to create user");
+    match diesel::insert_into(users)
+        .values(&new_user)
+        .execute(&mut *conn)
+    {
+        Ok(_) => {
+            info!("User '{}' created successfully", susername);
+            true
+        }
+        Err(e) => {
+            error!("Failed to create user: {}", e);
             false
         }
     }

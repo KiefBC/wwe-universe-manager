@@ -1,7 +1,8 @@
 use crate::schema::users;
 use diesel::prelude::*;
+use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Queryable, Selectable, Identifiable)]
+#[derive(Debug, Queryable, Selectable, Identifiable, Serialize, Deserialize)]
 #[diesel(table_name = users)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct User {
@@ -12,7 +13,13 @@ pub struct User {
 
 #[derive(Insertable)]
 #[diesel(table_name = users)]
-pub struct NewUser<'a> {
-    pub username: &'a str,
-    pub password: &'a str,
+pub struct NewUser {
+    pub username: String,
+    pub password: String,
+}
+
+#[derive(Deserialize)]
+pub struct UserData {
+    pub username: String,
+    pub password: String,
 }

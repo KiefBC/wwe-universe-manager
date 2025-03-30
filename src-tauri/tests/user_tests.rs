@@ -2,8 +2,8 @@ use serial_test::serial;
 
 // Import directly from the library
 extern crate wwe_universe_manager_lib;
-use wwe_universe_manager_lib::auth::{check_user_exists, verify_credentials};
-use wwe_universe_manager_lib::db::create_user;
+use wwe_universe_manager_lib::auth::{check_user_exists, internal_verify_credentials};
+use wwe_universe_manager_lib::db::internal_create_user;
 
 // Import the common module functions
 mod common;
@@ -14,7 +14,7 @@ use common::setup_test_user;
 // Test to create a new user
 fn test_create_user() {
     let (mut conn, new_user) = setup_test_user();
-    let user = create_user(&mut conn, new_user).expect("User not created");
+    let user = internal_create_user(&mut conn, &new_user.username, &new_user.password).expect("User not created");
 
     assert_eq!(user.username, "Testing");
     assert_eq!(user.password, "Testing");
@@ -25,7 +25,7 @@ fn test_create_user() {
 // Test to check if user exists
 fn test_check_user_exists() {
     let (mut conn, new_user) = setup_test_user();
-    create_user(&mut conn, new_user);
+    internal_create_user(&mut conn, &new_user.username, &new_user.password).expect("User creation failed");
 
     let username_check: &str = "Testing";
     let username_check1: &str = "Testing1";
@@ -42,18 +42,20 @@ fn test_check_user_exists() {
 // Test to verify credentials of a user
 fn test_verify_credentials() {
     let (mut conn, new_user) = setup_test_user();
-    create_user(&mut conn, new_user);
+    internal_create_user(&mut conn, &new_user.username, &new_user.password).expect("User creation failed");
 
     let username_check: &str = "Testing";
     let password_check: &str = "Testing";
     let password_check1: &str = "Testing1";
 
-    assert!(verify_credentials(
-        username_check.to_string(),
-        password_check.to_string()
+    assert!(internal_verify_credentials(
+        &mut conn,
+        username_check,
+        password_check
     ));
-    assert!(!verify_credentials(
-        username_check.to_string(),
-        password_check1.to_string()
+    assert!(!internal_verify_credentials(
+        &mut conn,
+        username_check,
+        password_check1
     ));
 }

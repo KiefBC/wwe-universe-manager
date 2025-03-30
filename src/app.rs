@@ -1,10 +1,33 @@
 use leptos::prelude::*;
 use wasm_bindgen::prelude::*;
+use serde::{Deserialize, Serialize};
+use leptos::logging;
 
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"])]
     async fn invoke(cmd: &str, args: JsValue) -> JsValue;
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub struct Show {
+    pub id: i32,
+    pub name: String,
+    pub description: String,
+}
+
+async fn fetch_shows() -> Result<Vec<Show>, String> {
+    let args = JsValue::NULL;
+    let result_js = invoke("get_shows", args).await;
+
+    match serde_wasm_bindgen::from_value(result_js) {
+        Ok(shows) => Ok(shows),
+        Err(e) => {
+            let error_msg = format!("Failed to deserialize shows: {}", e);
+            logging::error!("{}", error_msg);
+            Err(error_msg)
+        }
+    }
 }
 
 #[component]
@@ -19,31 +42,55 @@ pub fn App() -> impl IntoView {
 
 #[component]
 fn ShowSelector() -> impl IntoView {
-    let (show, set_show) = signal("Show One".to_string());
+    let shows_resource = LocalResource::new(|| async move { fetch_shows().await });
 
-    // List of available shows
-    let available_shows = vec![
-        "Show One",
-        "Show Two",
-        "Show Three",
-        "Comedy Hour",
-        "Drama Special",
-    ];
+    let (selected_show_name, set_selected_show_name) = signal(String::new());
+
+    let options_view = move || {
+        shows_resource.get().map(|result| {
+            match &*result {
+                Ok(shows) => {
+                    if shows.is_empty() {
+                         vec![view! { <option value=String::from("") disabled=true>"-- No shows found --"</option> }
+                            .into_any()
+                         ]
+                            .into_view()
+                    } else {
+                        if selected_show_name.get().is_empty() {
+                            set_selected_show_name.set(shows[0].name.clone());
+                        }
+                        shows.into_iter().map(|show| {
+                            let current_name = show.name.clone();
+                            let is_selected = selected_show_name.get() == current_name;
+                             view! { <option value=current_name selected=is_selected>{show.name.clone()}</option> }
+                                .into_any()
+                        }).collect_view()
+                            .into_view()
+                    }
+                },
+                Err(e) => {
+                    vec![view! { <option value="" disabled=true>{format!("-- Error: {} --", e)}</option> }
+                        .into_any()
+                    ]
+                        .into_view()
+                }
+            }
+        })
+    };
 
     view! {
         <div class="flex flex-col justify-center items-center">
             <p class="">"Available Shows"</p>
-            <select
-              on:change:target=move |ev| {
-                  set_show.set(ev.target().value().to_string());
-              }
-              prop:value=move || show.get()
-            >
-              {available_shows.into_iter().map(|show_name| {
-                  view! { <option value={show_name}>{show_name}</option> }
-              }).collect::<Vec<_>>()}
-            </select>
-            <p class="m-6 text-blue-600">"Selected: " {move || show.get()}</p>
+            <Suspense fallback=move || view! { <p>"Loading shows..."</p> }>
+                 <select
+                    on:change:target=move |ev| {
+                        set_selected_show_name.set(ev.target().value());
+                    }
+                 >
+                    {options_view}
+                 </select>
+            </Suspense>
+            <p class="m-6 text-blue-600">"Selected: " {selected_show_name}</p>
         </div>
     }
 }
@@ -71,7 +118,6 @@ fn SelectInput() -> impl IntoView {
           <option value="9">"9"</option>
           <option value="10">"10"</option>
         </select>
-        // a button that will cycle through the options
         <button on:click=move |_| set_value.update(|n| {
             if *n == Ok(10) {
               *n = Ok(0);
@@ -100,19 +146,12 @@ fn NumericInput() -> impl IntoView {
         <label>
             "Type a number (or something that's not a number!)"
             <input type="number" on:input:target=move |ev| {
-                // when input changes, try to parse a number from the input
                 set_value.set(ev.target().value().parse::<i32>())
             }/>
-            // If an `Err(_) had been rendered inside the <ErrorBoundary/>,
-            // the fallback will be displayed. Otherwise, the children of the
-            // <ErrorBoundary/> will be displayed.
             <ErrorBoundary
-                // the fallback receives a signal containing current errors
                 fallback=|errors| view! {
                     <div class="error">
                         <p>"Not a number! Errors: "</p>
-                        // we can render a list of errors
-                        // as strings, if we'd like
                         <ul>
                             {move || errors.get()
                                 .into_iter()
@@ -125,57 +164,9 @@ fn NumericInput() -> impl IntoView {
             >
                 <p>
                     "You entered "
-                    // because `value` is `Result<i32, _>`,
-                    // it will render the `i32` if it is `Ok`,
-                    // and render nothing and trigger the error boundary
-                    // if it is `Err`. It's a signal, so this will dynamically
-                    // update when `value` changes
                     <strong>{value}</strong>
                 </p>
             </ErrorBoundary>
         </label>
     }
 }
-
-// Displays a `render_prop` and some children within markup.
-// #[component]
-// pub fn TakesChildren<F, IV>(
-//     /// Takes a function (type F) that returns anything that can be
-//     /// converted into a View (type IV)
-//     render_prop: F,
-//     /// `children` can take one of several different types, each of which
-//     /// is a function that returns some view type
-//     children: Children,
-// ) -> impl IntoView
-// where
-//     F: Fn() -> IV,
-//     IV: IntoView,
-// {
-//     view! {
-//         <h1><code>"<TakesChildren/>"</code></h1>
-//         <h2>"Render Prop"</h2>
-//         {render_prop()}
-//         <hr/>
-//         <h2>"Children"</h2>
-//         {children()}
-//     }
-// }
-// Wraps each child in an `<li>` and embeds them in a `<ul>`.
-// #[component]
-// pub fn WrapsChildren(children: ChildrenFragment) -> impl IntoView {
-//     // children() returns a `Fragment`, which has a
-//     // `nodes` field that contains a Vec<View>
-//     // this means we can iterate over the children
-//     // to create something new!
-//     let children = children()
-//         .nodes
-//         .into_iter()
-//         .map(|child| view! { <li>{child}</li> })
-//         .collect::<Vec<_>>();
-
-//     view! {
-//         <h1><code>"<WrapsChildren/>"</code></h1>
-//         // wrap our wrapped children in a UL
-//         <ul>{children}</ul>
-//     }
-// }
