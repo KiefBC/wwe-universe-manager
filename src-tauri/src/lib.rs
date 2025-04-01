@@ -4,7 +4,6 @@ pub mod models;
 pub mod schema;
 
 use db::{establish_connection, DbState};
-use std::sync::Mutex;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -14,10 +13,8 @@ fn greet(name: &str) -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let conn = establish_connection();
-    let db_state = DbState {
-        db: Mutex::new(conn),
-    };
+    let pool = establish_connection();
+    let db_state = DbState { pool };
 
     tauri::Builder::default()
         .manage(db_state)

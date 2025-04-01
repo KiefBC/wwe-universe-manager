@@ -1,29 +1,34 @@
 use crate::models::{NewTitle, NewUser, NewWrestler, Title, User, Wrestler, NewShow, Show, ShowData, UserData, WrestlerData, TitleData};
 use diesel::prelude::*;
+use diesel::r2d2::{self, ConnectionManager};
 use dotenvy::dotenv;
 use log::{error, info};
 use std::env;
 use tauri::State;
-use std::sync::Mutex;
 use diesel::result::Error as DieselError;
 
+pub type Pool = r2d2::Pool<ConnectionManager<SqliteConnection>>;
+
 pub struct DbState {
-    pub db: Mutex<SqliteConnection>,
+    pub pool: Pool,
 }
 
-pub fn establish_connection() -> SqliteConnection {
+pub fn establish_connection() -> Pool {
     dotenv().ok().expect("Error loading .env file");
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
-    let mut conn = SqliteConnection::establish(&database_url)
-        .unwrap_or_else(|_| panic!("Error connecting to {}", database_url));
+    let manager = ConnectionManager::<SqliteConnection>::new(database_url);
+    let pool = r2d2::Pool::builder()
+        .build(manager)
+        .expect("Failed to create pool");
 
     // Enable foreign key constraints using a raw SQL query
+    let mut conn = pool.get().expect("Failed to get connection from pool");
     diesel::sql_query("PRAGMA foreign_keys = ON")
         .execute(&mut conn)
         .expect("Failed to enable foreign key constraints");
 
-    conn
+    pool
 }
 
 // Internal function for database logic, testable directly
@@ -43,7 +48,7 @@ pub fn internal_create_show(conn: &mut SqliteConnection, name: &str, description
 
 #[tauri::command]
 pub fn create_show(state: State<'_, DbState>, show_data: ShowData) -> Result<Show, String> {
-    let mut conn = state.db.lock().map_err(|e| e.to_string())?;
+    let mut conn = state.pool.get().map_err(|e| e.to_string())?;
 
     // Call the internal function
     match internal_create_show(&mut *conn, &show_data.name, &show_data.description) {
@@ -53,7 +58,7 @@ pub fn create_show(state: State<'_, DbState>, show_data: ShowData) -> Result<Sho
         }
         Err(e) => {
             error!("Error saving new show: {}", e);
-            Err(e.to_string()) // Convert DieselError to String for Tauri command return
+            Err(e.to_string())
         }
     }
 }
@@ -70,7 +75,7 @@ pub fn internal_create_user(conn: &mut SqliteConnection, username: &str, passwor
 
 #[tauri::command]
 pub fn create_user(state: State<'_, DbState>, user_data: UserData) -> Result<User, String> {
-    let mut conn = state.db.lock().map_err(|e| e.to_string())?;
+    let mut conn = state.pool.get().map_err(|e| e.to_string())?;
     match internal_create_user(&mut *conn, &user_data.username, &user_data.password) {
         Ok(user) => {
             info!("User '{}' created successfully", user.username);
@@ -95,7 +100,7 @@ pub fn internal_create_wrestler(conn: &mut SqliteConnection, name: &str, gender:
 
 #[tauri::command]
 pub fn create_wrestler(state: State<'_, DbState>, wrestler_data: WrestlerData) -> Result<Wrestler, String> {
-    let mut conn = state.db.lock().map_err(|e| e.to_string())?;
+    let mut conn = state.pool.get().map_err(|e| e.to_string())?;
     match internal_create_wrestler(&mut *conn, &wrestler_data.name, &wrestler_data.gender) {
         Ok(wrestler) => {
             info!("Wrestler '{}' created successfully", wrestler.name);
@@ -120,7 +125,7 @@ pub fn internal_create_belt(conn: &mut SqliteConnection, name: &str) -> Result<T
 
 #[tauri::command]
 pub fn create_belt(state: State<'_, DbState>, title_data: TitleData) -> Result<Title, String> {
-    let mut conn = state.db.lock().map_err(|e| e.to_string())?;
+    let mut conn = state.pool.get().map_err(|e| e.to_string())?;
     match internal_create_belt(&mut *conn, &title_data.name) {
         Ok(title) => {
             info!("Title '{}' created successfully", title.name);
@@ -140,7 +145,7 @@ pub fn internal_get_shows(conn: &mut SqliteConnection) -> Result<Vec<Show>, Dies
 
 #[tauri::command]
 pub fn get_shows(state: State<'_, DbState>) -> Result<Vec<Show>, String> {
-    let mut conn = state.db.lock().map_err(|e| e.to_string())?;
+    let mut conn = state.pool.get().map_err(|e| e.to_string())?;
     match internal_get_shows(&mut *conn) {
         Ok(all_shows) => Ok(all_shows),
         Err(e) => Err(format!("Error loading shows: {}", e)),

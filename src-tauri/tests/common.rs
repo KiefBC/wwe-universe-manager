@@ -1,5 +1,8 @@
 // Common test utilities and setup functions
 use diesel::prelude::*;
+use diesel::r2d2::Pool;
+use diesel::sqlite::SqliteConnection;
+use diesel::r2d2::ConnectionManager;
 use log::info;
 
 // Import from the crate we're testing - only what we actually use
@@ -8,45 +11,49 @@ use wwe_universe_manager_lib::models::{NewTitle, NewUser, NewWrestler, Title, Us
 
 // Helper function to reset and establish the connection
 #[allow(dead_code)]
-pub fn setup_test_user() -> (SqliteConnection, NewUser) {
-    let mut conn = establish_connection();
+pub fn setup_test_user() -> (Pool<ConnectionManager<SqliteConnection>>, NewUser) {
+    let pool = establish_connection();
     let test_user = NewUser {
         username: "Testing".to_string(),
         password: "Testing".to_string(),
     };
 
+    let mut conn = pool.get().expect("Failed to get connection from pool");
     reset_test_user(&mut conn, &test_user);
-    (conn, test_user)
+    (pool, test_user)
 }
 
 #[allow(dead_code)]
-pub fn setup_test_show() -> (SqliteConnection, NewShow) {
-    let mut conn = establish_connection();
+pub fn setup_test_show() -> (Pool<ConnectionManager<SqliteConnection>>, NewShow) {
+    let pool = establish_connection();
     let test_show = NewShow { name: "Testing".to_string(), description: "Testing Description".to_string() };
 
+    let mut conn = pool.get().expect("Failed to get connection from pool");
     reset_test_show(&mut conn, &test_show);
-    (conn, test_show)
+    (pool, test_show)
 }
 
 #[allow(dead_code)]
-pub fn setup_test_wrestler() -> (SqliteConnection, NewWrestler) {
-    let mut conn = establish_connection();
+pub fn setup_test_wrestler() -> (Pool<ConnectionManager<SqliteConnection>>, NewWrestler) {
+    let pool = establish_connection();
     let test_wrestler = NewWrestler {
         name: "Testing".to_string(),
         gender: "Male Test".to_string(),
     };
 
+    let mut conn = pool.get().expect("Failed to get connection from pool");
     reset_test_wrestler(&mut conn, &test_wrestler);
-    (conn, test_wrestler)
+    (pool, test_wrestler)
 }
 
 #[allow(dead_code)]
-pub fn setup_test_belt() -> (SqliteConnection, NewTitle) {
-    let mut conn = establish_connection();
+pub fn setup_test_belt() -> (Pool<ConnectionManager<SqliteConnection>>, NewTitle) {
+    let pool = establish_connection();
     let test_belt = NewTitle { name: "Testing".to_string() };
 
+    let mut conn = pool.get().expect("Failed to get connection from pool");
     reset_test_belt(&mut conn, &test_belt);
-    (conn, test_belt)
+    (pool, test_belt)
 }
 
 // Resets the test user by deleting it if it exists

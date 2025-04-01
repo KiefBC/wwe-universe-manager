@@ -16,9 +16,11 @@ use common::setup_test_show;
 #[test]
 #[serial]
 fn test_create_show() {
-    // setup_test_show returns conn and the NewShow struct
-    let (mut conn, new_show) = setup_test_show();
+    // setup_test_show returns pool and the NewShow struct
+    let (pool, new_show) = setup_test_show();
     info!("Creating new Show");
+    // Get a connection from the pool
+    let mut conn = pool.get().expect("Failed to get connection from pool");
     // Call the internal function with the connection and fields from new_show
     let show = internal_create_show(&mut conn, &new_show.name, &new_show.description)
         .expect("Show not created");

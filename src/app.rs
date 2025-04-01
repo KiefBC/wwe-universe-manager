@@ -89,7 +89,7 @@ fn ShowSelector() -> impl IntoView {
                     on:change:target=move |ev| {
                         set_selected_show_name.set(ev.target().value());
                     }
-                 >
+                  class="select">
                     {options_view}
                  </select>
             </Suspense>

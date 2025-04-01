@@ -13,7 +13,9 @@ use common::setup_test_user;
 #[serial]
 // Test to create a new user
 fn test_create_user() {
-    let (mut conn, new_user) = setup_test_user();
+    let (pool, new_user) = setup_test_user();
+    // Get a connection from the pool
+    let mut conn = pool.get().expect("Failed to get connection from pool");
     let user = internal_create_user(&mut conn, &new_user.username, &new_user.password).expect("User not created");
 
     assert_eq!(user.username, "Testing");
@@ -24,7 +26,9 @@ fn test_create_user() {
 #[serial]
 // Test to check if user exists
 fn test_check_user_exists() {
-    let (mut conn, new_user) = setup_test_user();
+    let (pool, new_user) = setup_test_user();
+    // Get a connection from the pool
+    let mut conn = pool.get().expect("Failed to get connection from pool");
     internal_create_user(&mut conn, &new_user.username, &new_user.password).expect("User creation failed");
 
     let username_check: &str = "Testing";
@@ -41,7 +45,9 @@ fn test_check_user_exists() {
 #[serial]
 // Test to verify credentials of a user
 fn test_verify_credentials() {
-    let (mut conn, new_user) = setup_test_user();
+    let (pool, new_user) = setup_test_user();
+    // Get a connection from the pool
+    let mut conn = pool.get().expect("Failed to get connection from pool");
     internal_create_user(&mut conn, &new_user.username, &new_user.password).expect("User creation failed");
 
     let username_check: &str = "Testing";

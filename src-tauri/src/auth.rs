@@ -54,10 +54,10 @@ pub fn internal_verify_credentials(conn: &mut SqliteConnection, susername: &str,
 #[tauri::command]
 pub fn verify_credentials(state: State<'_, DbState>, susername: String, spassword: String) -> bool {
     info!("Verifying credentials for user: {}...", susername);
-    let mut conn = match state.db.lock() {
-        Ok(guard) => guard,
+    let mut conn = match state.pool.get() {
+        Ok(conn) => conn,
         Err(e) => {
-            error!("Failed to lock database state: {}", e);
+            error!("Failed to get connection from pool: {}", e);
             return false;
         }
     };
@@ -68,10 +68,10 @@ pub fn verify_credentials(state: State<'_, DbState>, susername: String, spasswor
 
 #[tauri::command]
 pub fn register_user(state: State<'_, DbState>, susername: String, spassword: String) -> bool {
-    let mut conn = match state.db.lock() {
-        Ok(guard) => guard,
+    let mut conn = match state.pool.get() {
+        Ok(conn) => conn,
         Err(e) => {
-            error!("Failed to lock database state: {}", e);
+            error!("Failed to get connection from pool: {}", e);
             return false;
         }
     };
