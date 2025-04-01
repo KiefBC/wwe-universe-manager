@@ -21,13 +21,6 @@ pub fn establish_connection() -> Pool {
     let pool = r2d2::Pool::builder()
         .build(manager)
         .expect("Failed to create pool");
-
-    // Enable foreign key constraints using a raw SQL query
-    let mut conn = pool.get().expect("Failed to get connection from pool");
-    diesel::sql_query("PRAGMA foreign_keys = ON")
-        .execute(&mut conn)
-        .expect("Failed to enable foreign key constraints");
-
     pool
 }
 
@@ -139,8 +132,11 @@ pub fn create_belt(state: State<'_, DbState>, title_data: TitleData) -> Result<T
 }
 
 pub fn internal_get_shows(conn: &mut SqliteConnection) -> Result<Vec<Show>, DieselError> {
-    // Explicitly qualify table name
-    crate::schema::shows::dsl::shows.load::<Show>(conn)
+    use crate::schema::shows::dsl::*;
+    
+    shows
+        .order(id.asc())
+        .load::<Show>(conn)
 }
 
 #[tauri::command]

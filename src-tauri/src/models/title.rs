@@ -25,4 +25,5 @@ pub struct NewTitle {
 #[derive(Deserialize)]
 pub struct TitleData {
     pub name: String,
+    pub current_holder_id: Option<i32>,
 }

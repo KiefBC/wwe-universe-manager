@@ -1,13 +1,7 @@
 use log::info;
 use serial_test::serial;
-
-// Import from the correct library crate
-// The library is defined in src-tauri with the name wwe_universe_manager_lib
-extern crate wwe_universe_manager_lib;
-// Import the internal function
 use wwe_universe_manager_lib::db::internal_create_wrestler;
 
-// Import the common module as a separate module
 mod common;
 use common::setup_test_wrestler;
 
