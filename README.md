@@ -67,7 +67,3 @@ To add new tests:
 1. For backend features, add test files in `src-tauri/tests/`
 2. For frontend features, add test files in `src/tests/` (if applicable)
 3. Use the common test utilities in `common.rs` for setup and teardown
-
-### Continuous Integration
-
-The test suite is designed to be run in CI environments. The `run_tests.sh` script will exit with a non-zero status code if any tests fail, making it suitable for CI pipelines.
