@@ -1,69 +1,146 @@
-# WIP - 2025
+# WWE Universe Manager
 
-I am currently re-writing this. I had a rush of creativity recently and have been focsed on porting the App to use Tauri 2.0, as well as fixing any and all errors that occur from this upgrade. I have also switched from using Svelte to Leptos. It's leading to a much more refined experience, seeing as how I get to use Rust throughout the entire project now.
+<div align="center">
+  <img src="Example.png" alt="WWE Universe Manager Interface" width="800" />
+  
+  <p><em>The Ultimate Wrestling Management Experience</em></p>
+</div>
 
-# WWE Universe Manager App
+A comprehensive WWE Universe management application built entirely in Rust, featuring a custom WWE-themed interface that brings the excitement of professional wrestling to your desktop.
 
-This is a simple Rust app that allows you to interact with the WWE Universe in ways you never thought possible.
+## ✨ Features
 
-# To Run
+- **WWE-Themed Interface**: Custom red/yellow/black color scheme with championship-style design
+- **Complete Roster Management**: Create and manage wrestlers with detailed stats
+- **Show Creation**: Design and organize your wrestling shows
+- **Championship System**: Create and manage championship titles
+- **Desktop App**: Built with Tauri 2.0 for native performance
+- **Responsive Design**: Adapts to any window size
+- **Rust Throughout**: Frontend (Leptos) and backend both written in Rust
 
-*This assumes you have Rustup, Diesel and sqlite installed. You may be able to use other databases such as MySQL or Postgres but I won't support them*
+## 🚀 Quick Start
 
-1. Clone the repo
-2. `echo "DATABASE_URL=database.db" > .env` OR `echo "DATABASE_URL=sqlite:database.db" > .env` if you want to be more explicit. This is required to tell Diesel where the database is located.
-3. `diesel setup` to setup the database
-4. `diesel migration run` to run the migrations
-5. Run `npx @tailwindcss/cli -i ./<path-to-your-base-css>/<css-file-name>.css -o ./<path-to-your-output-css>/output.css`. We do this so we don't re-compile every time our CSS classes change.
-6. Run `cargo tauri dev` to start the app
+### Prerequisites
+- [Rust](https://rustup.rs/) (latest stable)
+- [Node.js](https://nodejs.org/) (for Tailwind CSS)
+- [Diesel CLI](https://diesel.rs/guides/getting-started) (`cargo install diesel_cli --no-default-features --features sqlite`)
+- SQLite3
 
-# Running Tests
+### Installation & Setup
 
-You can run tests using the provided Makefile:
+1. **Clone the repository**
+   ```bash
+   git clone <your-repo-url>
+   cd wwe-universe-manager
+   ```
 
-- `make test` - Run all tests for all packages
-- `make test-frontend` - Run tests for the frontend package only
-- `make test-backend` - Run tests for the backend package only
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-Alternatively, you can use the shell script:
+3. **Setup database**
+   ```bash
+   echo "DATABASE_URL=database.db" > .env
+   diesel setup
+   diesel migration run
+   ```
 
-- `./run_tests.sh` - Run all tests for all packages
+4. **Build CSS and run the app**
+   ```bash
+   # Terminal 1: Start CSS watcher (rebuilds styles automatically)
+   npm run build-css
+   
+   # Terminal 2: Start the application
+   npm run dev
+   ```
 
-Or use Cargo directly:
+### Alternative Quick Start
+```bash
+# One-time setup
+npm install
+echo "DATABASE_URL=database.db" > .env
+diesel setup && diesel migration run
 
-- `cargo test --workspace` - Run all tests for all packages
-- `cargo test -p wwe-universe-manager` - Run tests for the backend package only
-- `cargo test -p wwe-universe-manager-frontend` - Run tests for the frontend package only
-
-## Project Structure and Testing
-
-This project is set up as a Rust workspace with multiple packages:
-
-- `wwe-universe-manager-frontend` - The frontend package (in the root directory)
-- `wwe-universe-manager` - The backend package (in the `src-tauri` directory)
-
-### Test Organization
-
-- Backend tests are located in `src-tauri/tests/` and include:
-  - `user_tests.rs` - Tests for user authentication and management
-  - `wrestler_tests.rs` - Tests for wrestler creation and management
-  - `title_tests.rs` - Tests for championship belt management
-  - `common.rs` - Common test utilities and setup functions
-
-### Understanding Test Output
-
-When running tests, you'll see output for each package and test file. A successful test run will show:
-
+# Build and run
+npm run build-css-prod && npm run dev
 ```
-test result: ok. X passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+
+## 🧪 Testing
+
+Run the comprehensive test suite:
+
+```bash
+# Run all tests
+cargo test --workspace
+
+# Run specific package tests
+cargo test -p wwe-universe-manager      # Backend tests
+cargo test -p wwe-universe-manager-ui   # Frontend tests
+
+# Run specific test suites
+cargo test -p wwe-universe-manager --test users        # User management tests
+cargo test -p wwe-universe-manager --test wrestlers    # Wrestler management tests  
+cargo test -p wwe-universe-manager --test titles       # Championship tests
+cargo test -p wwe-universe-manager --test shows        # Show management tests
+cargo test -p wwe-universe-manager --test integration  # Cross-system tests
 ```
 
-Where X is the number of tests that passed in that file.
+## 🏗️ Project Architecture
 
-### Adding New Tests
+### Technology Stack
+- **Frontend**: Leptos (Rust → WebAssembly)
+- **Backend**: Tauri 2.0 with Rust
+- **Database**: SQLite with Diesel ORM
+- **Styling**: Tailwind CSS v4 + DaisyUI
+- **Build**: Cargo workspace + npm scripts
 
-To add new tests:
+### Project Structure
+```
+wwe-universe-manager/
+├── src/                    # Frontend (Leptos)
+│   ├── app.rs             # Main UI components
+│   └── main.rs            # WASM entry point
+├── src-tauri/             # Backend (Tauri)
+│   ├── src/
+│   │   ├── db.rs          # Database operations
+│   │   ├── models/        # Data models
+│   │   └── auth.rs        # Authentication
+│   └── tests/             # Comprehensive test suite
+├── style/                 # CSS and styling
+├── migrations/            # Database migrations
+└── public/               # Static assets
+```
 
-1. For backend features, add test files in `src-tauri/tests/`
-2. For frontend features, add test files in `src/tests/` (if applicable)
-3. Use the common test utilities in `common.rs` for setup and teardown
+## 🎨 WWE Theming
+
+The application features a custom WWE-inspired design system:
+- **Primary Colors**: WWE Red (#dc2626) and Gold (#eab308)
+- **Typography**: Bold, championship-style fonts
+- **Layout**: Wrestling arena-inspired card designs
+- **Responsive**: Adapts from mobile to desktop seamlessly
+
+## 📈 Development Status
+
+✅ **Completed**
+- Tauri 2.0 migration
+- Leptos frontend implementation  
+- WWE-themed responsive UI
+- Database architecture with migrations
+- Comprehensive testing framework
+- Build system optimization
+
+🔄 **In Progress**
+- Advanced wrestler statistics
+- Show scheduling system
+- Championship tracking features
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Run tests (`cargo test --workspace`)
+5. Commit your changes (`git commit -m 'Add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request

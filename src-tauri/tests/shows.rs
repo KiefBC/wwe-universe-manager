@@ -1,0 +1,189 @@
+use serial_test::serial;
+
+use wwe_universe_manager_lib::db::{internal_create_show, internal_get_shows};
+
+mod test_helpers;
+use test_helpers::*;
+
+#[test]
+#[serial]
+fn test_create_show_success() {
+    let test_data = TestData::new();
+    let new_show = create_test_show();
+
+    // Cleanup any existing test data
+    test_data.cleanup_shows(&new_show.name);
+
+    let mut conn = test_data.get_connection();
+    let show = internal_create_show(&mut conn, &new_show.name, &new_show.description)
+        .expect("Failed to create show");
+
+    assert_eq!(show.name, new_show.name);
+    assert_eq!(show.description, new_show.description);
+    assert!(show.id > 0);
+
+    // Cleanup
+    test_data.cleanup_shows(&new_show.name);
+}
+
+#[test]
+#[serial]
+fn test_create_multiple_shows() {
+    let test_data = TestData::new();
+    let show1_name = "Monday Night Raw";
+    let show1_desc = "Monday night wrestling show";
+    let show2_name = "SmackDown";
+    let show2_desc = "Friday night wrestling show";
+
+    // Cleanup any existing test data
+    test_data.cleanup_shows(show1_name);
+    test_data.cleanup_shows(show2_name);
+
+    let mut conn = test_data.get_connection();
+
+    let show1 =
+        internal_create_show(&mut conn, show1_name, show1_desc).expect("Failed to create show 1");
+
+    let show2 =
+        internal_create_show(&mut conn, show2_name, show2_desc).expect("Failed to create show 2");
+
+    assert_ne!(show1.id, show2.id);
+    assert_eq!(show1.name, show1_name);
+    assert_eq!(show2.name, show2_name);
+    assert_eq!(show1.description, show1_desc);
+    assert_eq!(show2.description, show2_desc);
+
+    // Cleanup
+    test_data.cleanup_shows(show1_name);
+    test_data.cleanup_shows(show2_name);
+}
+
+#[test]
+#[serial]
+fn test_get_shows() {
+    let test_data = TestData::new();
+    let show1_name = "Test Show 1";
+    let show1_desc = "First test show";
+    let show2_name = "Test Show 2";
+    let show2_desc = "Second test show";
+
+    // Cleanup any existing test data
+    test_data.cleanup_shows(show1_name);
+    test_data.cleanup_shows(show2_name);
+
+    let mut conn = test_data.get_connection();
+
+    // Get initial count
+    let initial_shows = internal_get_shows(&mut conn).expect("Failed to get initial shows");
+    let initial_count = initial_shows.len();
+
+    // Create test shows
+    internal_create_show(&mut conn, show1_name, show1_desc).expect("Failed to create show 1");
+    internal_create_show(&mut conn, show2_name, show2_desc).expect("Failed to create show 2");
+
+    // Get all shows
+    let shows = internal_get_shows(&mut conn).expect("Failed to get shows");
+
+    assert_eq!(shows.len(), initial_count + 2);
+
+    // Verify our test shows are in the results
+    let show1_found = shows
+        .iter()
+        .any(|s| s.name == show1_name && s.description == show1_desc);
+    let show2_found = shows
+        .iter()
+        .any(|s| s.name == show2_name && s.description == show2_desc);
+
+    assert!(show1_found, "Show 1 not found in results");
+    assert!(show2_found, "Show 2 not found in results");
+
+    // Cleanup
+    test_data.cleanup_shows(show1_name);
+    test_data.cleanup_shows(show2_name);
+}
+
+#[test]
+#[serial]
+fn test_create_show_with_empty_description() {
+    let test_data = TestData::new();
+    let show_name = "Show With Empty Description";
+
+    // Cleanup any existing test data
+    test_data.cleanup_shows(show_name);
+
+    let mut conn = test_data.get_connection();
+    let show = internal_create_show(&mut conn, show_name, "")
+        .expect("Failed to create show with empty description");
+
+    assert_eq!(show.name, show_name);
+    assert_eq!(show.description, "");
+
+    // Cleanup
+    test_data.cleanup_shows(show_name);
+}
+
+#[test]
+#[serial]
+fn test_create_show_with_long_description() {
+    let test_data = TestData::new();
+    let show_name = "Show With Long Description";
+    let long_description = "This is a very long description that goes on and on and on to test how the database handles longer text fields. It should work fine since we're using TEXT type in SQLite which can handle large amounts of text data without any issues.".repeat(5);
+
+    // Cleanup any existing test data
+    test_data.cleanup_shows(show_name);
+
+    let mut conn = test_data.get_connection();
+    let show = internal_create_show(&mut conn, show_name, &long_description)
+        .expect("Failed to create show with long description");
+
+    assert_eq!(show.name, show_name);
+    assert_eq!(show.description, long_description);
+
+    // Cleanup
+    test_data.cleanup_shows(show_name);
+}
+
+#[test]
+#[serial]
+fn test_shows_are_ordered_by_id() {
+    let test_data = TestData::new();
+    let show1_name = "Ordered Show 1";
+    let show2_name = "Ordered Show 2";
+    let show3_name = "Ordered Show 3";
+
+    // Cleanup any existing test data
+    test_data.cleanup_shows(show1_name);
+    test_data.cleanup_shows(show2_name);
+    test_data.cleanup_shows(show3_name);
+
+    let mut conn = test_data.get_connection();
+
+    // Create shows in sequence
+    let show1 =
+        internal_create_show(&mut conn, show1_name, "First show").expect("Failed to create show 1");
+    let show2 = internal_create_show(&mut conn, show2_name, "Second show")
+        .expect("Failed to create show 2");
+    let show3 =
+        internal_create_show(&mut conn, show3_name, "Third show").expect("Failed to create show 3");
+
+    // Get all shows
+    let shows = internal_get_shows(&mut conn).expect("Failed to get shows");
+
+    // Find positions of our test shows
+    let pos1 = shows.iter().position(|s| s.id == show1.id);
+    let pos2 = shows.iter().position(|s| s.id == show2.id);
+    let pos3 = shows.iter().position(|s| s.id == show3.id);
+
+    assert!(pos1.is_some());
+    assert!(pos2.is_some());
+    assert!(pos3.is_some());
+
+    // Verify they are ordered by ID (ascending)
+    assert!(pos1.unwrap() < pos2.unwrap());
+    assert!(pos2.unwrap() < pos3.unwrap());
+
+    // Cleanup
+    test_data.cleanup_shows(show1_name);
+    test_data.cleanup_shows(show2_name);
+    test_data.cleanup_shows(show3_name);
+}

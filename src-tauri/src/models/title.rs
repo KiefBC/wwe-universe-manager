@@ -1,8 +1,9 @@
 // models/title.rs
 use crate::models::Wrestler;
 use crate::schema::titles;
+use chrono::NaiveDateTime;
 use diesel::prelude::*;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Queryable, Selectable, Identifiable, Associations, Serialize, Deserialize)]
 #[diesel(table_name = titles)]
@@ -12,6 +13,8 @@ pub struct Title {
     pub id: i32,
     pub name: String,
     pub current_holder_id: Option<i32>,
+    pub created_at: Option<NaiveDateTime>,
+    pub updated_at: Option<NaiveDateTime>,
 }
 
 // Struct for Diesel insertion (uses owned String, no lifetime)
@@ -19,6 +22,7 @@ pub struct Title {
 #[diesel(table_name = titles)]
 pub struct NewTitle {
     pub name: String,
+    pub current_holder_id: Option<i32>,
 }
 
 // Struct for Tauri command argument

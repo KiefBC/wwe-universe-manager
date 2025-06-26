@@ -5,6 +5,8 @@ diesel::table! {
         id -> Integer,
         name -> Text,
         description -> Text,
+        created_at -> Nullable<Timestamp>,
+        updated_at -> Nullable<Timestamp>,
     }
 }
 
@@ -13,6 +15,8 @@ diesel::table! {
         id -> Integer,
         name -> Text,
         current_holder_id -> Nullable<Integer>,
+        created_at -> Nullable<Timestamp>,
+        updated_at -> Nullable<Timestamp>,
     }
 }
 
@@ -21,6 +25,8 @@ diesel::table! {
         id -> Integer,
         username -> Text,
         password -> Text,
+        created_at -> Nullable<Timestamp>,
+        updated_at -> Nullable<Timestamp>,
     }
 }
 
@@ -31,14 +37,11 @@ diesel::table! {
         gender -> Text,
         wins -> Integer,
         losses -> Integer,
+        created_at -> Nullable<Timestamp>,
+        updated_at -> Nullable<Timestamp>,
     }
 }
 
 diesel::joinable!(titles -> wrestlers (current_holder_id));
 
-diesel::allow_tables_to_appear_in_same_query!(
-    shows,
-    titles,
-    users,
-    wrestlers,
-);
+diesel::allow_tables_to_appear_in_same_query!(shows, titles, users, wrestlers,);
