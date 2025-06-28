@@ -2,7 +2,7 @@
 
 <div align="center">
   <img src="Example.png" alt="WWE Universe Manager Interface" width="800" />
-  
+
   <p><em>The Ultimate Wrestling Management Experience</em></p>
 </div>
 
@@ -50,7 +50,7 @@ A comprehensive WWE Universe management application built entirely in Rust, feat
    ```bash
    # Terminal 1: Start CSS watcher (rebuilds styles automatically)
    npm run build-css
-   
+
    # Terminal 2: Start the application
    npm run dev
    ```
@@ -80,7 +80,7 @@ cargo test -p wwe-universe-manager-ui   # Frontend tests
 
 # Run specific test suites
 cargo test -p wwe-universe-manager --test users        # User management tests
-cargo test -p wwe-universe-manager --test wrestlers    # Wrestler management tests  
+cargo test -p wwe-universe-manager --test wrestlers    # Wrestler management tests
 cargo test -p wwe-universe-manager --test titles       # Championship tests
 cargo test -p wwe-universe-manager --test shows        # Show management tests
 cargo test -p wwe-universe-manager --test integration  # Cross-system tests
@@ -112,19 +112,11 @@ wwe-universe-manager/
 └── public/               # Static assets
 ```
 
-## 🎨 WWE Theming
-
-The application features a custom WWE-inspired design system:
-- **Primary Colors**: WWE Red (#dc2626) and Gold (#eab308)
-- **Typography**: Bold, championship-style fonts
-- **Layout**: Wrestling arena-inspired card designs
-- **Responsive**: Adapts from mobile to desktop seamlessly
-
 ## 📈 Development Status
 
 ✅ **Completed**
 - Tauri 2.0 migration
-- Leptos frontend implementation  
+- Leptos frontend implementation
 - WWE-themed responsive UI
 - Database architecture with migrations
 - Comprehensive testing framework
