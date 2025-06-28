@@ -1,0 +1,264 @@
+---
+title: 'Development Guide'
+description: 'Learn how to contribute to and extend WWE Universe Manager'
+---
+
+## Development Setup
+
+### Project Structure
+
+WWE Universe Manager is organized as a Rust workspace with two main packages:
+
+```
+wwe-universe-manager/
+├── src/                    # Frontend (Leptos + WASM)
+│   ├── components/         # UI Components
+│   ├── types.rs           # Shared types and API functions
+│   ├── app.rs             # Main application component
+│   └── main.rs            # Entry point
+├── src-tauri/             # Backend (Tauri + Rust)
+│   ├── src/
+│   │   ├── models/        # Database models
+│   │   ├── db.rs          # Database operations
+│   │   ├── auth.rs        # Authentication utilities
+│   │   └── lib.rs         # Main entry point
+│   └── migrations/        # Database migrations
+├── style/                 # Tailwind CSS
+└── docs/                  # Documentation (Mintlify)
+```
+
+### Development Workflow
+
+<Steps>
+  <Step title="Make Changes">
+    Edit Rust files in either `src/` (frontend) or `src-tauri/src/` (backend)
+  </Step>
+  <Step title="Auto-reload">
+    The development server automatically reloads when you save files
+  </Step>
+  <Step title="CSS Changes">
+    Modify Tailwind classes in your components and the CSS watcher will rebuild styles
+  </Step>
+  <Step title="Test Changes">
+    Run tests to ensure your changes don't break existing functionality:
+    ```bash
+    cargo test --workspace
+    ```
+  </Step>
+</Steps>
+
+## Database Development
+
+### Creating Migrations
+
+When you need to modify the database schema:
+
+```bash
+# Create a new migration
+diesel migration generate add_new_table
+
+# Edit the generated migration files in migrations/
+# Then apply the migration
+diesel migration run
+```
+
+### Database Operations
+
+All database operations follow this pattern:
+
+1. **Internal Function**: Pure Rust function that takes a connection
+2. **Tauri Command**: Wrapper that handles connection pooling and error handling
+3. **Frontend Function**: JavaScript binding that calls the Tauri command
+
+<CodeGroup>
+
+```rust Internal Function (db.rs)
+pub fn internal_create_show(
+    conn: &mut SqliteConnection,
+    name: &str,
+    description: &str,
+) -> Result<Show, DieselError> {
+    // Implementation
+}
+```
+
+```rust Tauri Command (db.rs)
+#[tauri::command]
+pub fn create_show(
+    state: State<'_, DbState>, 
+    show_data: ShowData
+) -> Result<Show, String> {
+    let mut conn = get_connection(&state)?;
+    internal_create_show(&mut conn, &show_data.name, &show_data.description)
+        .map_err(|e| format!("Failed to create show: {}", e))
+}
+```
+
+```rust Frontend Function (types.rs)
+pub async fn create_show(show_data: ShowData) -> Result<Show, String> {
+    let args = serde_json::json!({
+        "showData": show_data
+    });
+    let args_value = serde_wasm_bindgen::to_value(&args)?;
+    let result_js = invoke("create_show", args_value).await;
+    serde_wasm_bindgen::from_value(result_js)
+}
+```
+
+</CodeGroup>
+
+## Frontend Development
+
+### Component Architecture
+
+Components are organized in the `src/components/` directory:
+
+- Each component is in its own file
+- Components export public functions
+- Shared types are in `src/types.rs`
+
+### Creating New Components
+
+<Steps>
+  <Step title="Create Component File">
+    ```rust src/components/my_component.rs
+    use leptos::prelude::*;
+    use crate::types::*;
+
+    #[component]
+    pub fn MyComponent() -> impl IntoView {
+        view! {
+            <div>"Hello World"</div>
+        }
+    }
+    ```
+  </Step>
+  <Step title="Export in mod.rs">
+    ```rust src/components/mod.rs
+    pub mod my_component;
+    pub use my_component::MyComponent;
+    ```
+  </Step>
+  <Step title="Use in App">
+    ```rust src/app.rs
+    use crate::components::MyComponent;
+
+    // Use in view!
+    <MyComponent />
+    ```
+  </Step>
+</Steps>
+
+### Styling Guidelines
+
+We use Tailwind CSS with DaisyUI and a custom WWE theme:
+
+<Tabs>
+  <Tab title="Color Palette">
+    - Primary: Red (#DC2626)
+    - Secondary: Yellow (#EAB308)
+    - Accent: Purple (#7C3AED)
+    - Background: Black gradients
+  </Tab>
+  <Tab title="Common Classes">
+    ```css
+    .btn-primary     /* WWE red button */
+    .btn-secondary   /* WWE yellow button */
+    .btn-accent      /* WWE purple button */
+    .card            /* DaisyUI card component */
+    .loading         /* Loading spinner */
+    ```
+  </Tab>
+  <Tab title="Responsive Design">
+    - Use `sm:`, `md:`, `lg:` prefixes
+    - Design mobile-first
+    - Test on different screen sizes
+  </Tab>
+</Tabs>
+
+## Testing
+
+### Backend Tests
+
+Backend tests are organized by feature:
+
+```bash
+# Run specific test files
+cargo test -p wwe-universe-manager --test users
+cargo test -p wwe-universe-manager --test wrestlers
+cargo test -p wwe-universe-manager --test titles
+cargo test -p wwe-universe-manager --test shows
+```
+
+### Writing Tests
+
+<CodeGroup>
+
+```rust Unit Test
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serial_test::serial;
+
+    #[test]
+    #[serial]
+    fn test_create_show() {
+        // Test implementation
+    }
+}
+```
+
+```rust Integration Test
+use serial_test::serial;
+use wwe_universe_manager::*;
+
+#[test]
+#[serial]
+fn test_complete_workflow() {
+    // Test multiple components working together
+}
+```
+
+</CodeGroup>
+
+## Code Style
+
+### Rust Guidelines
+
+- Use `rustfmt` for consistent formatting
+- Follow Rust naming conventions
+- Add documentation comments for public functions
+- Use `Result` types for error handling
+
+### Frontend Guidelines
+
+- Keep components focused and small
+- Use descriptive prop names
+- Handle loading and error states
+- Follow Leptos best practices
+
+## Contributing
+
+<Steps>
+  <Step title="Fork the Repository">
+    Create a fork on GitHub
+  </Step>
+  <Step title="Create Feature Branch">
+    ```bash
+    git checkout -b feature/my-new-feature
+    ```
+  </Step>
+  <Step title="Make Changes">
+    Follow the development guidelines above
+  </Step>
+  <Step title="Test Thoroughly">
+    ```bash
+    cargo test --workspace
+    npm run build-css-prod
+    cargo check
+    ```
+  </Step>
+  <Step title="Submit Pull Request">
+    Create a pull request with a clear description
+  </Step>
+</Steps>

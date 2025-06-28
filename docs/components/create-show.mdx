@@ -1,0 +1,234 @@
+---
+title: 'CreateShow Component'
+description: 'WWE-themed form component for creating new wrestling shows'
+---
+
+## Overview
+
+The `CreateShow` component is a comprehensive form component that handles the creation of new wrestling shows. It features WWE-themed styling, form validation, loading states, and seamless integration with the backend API.
+
+## Component Structure
+
+```rust
+#[component]
+pub fn CreateShow(
+    set_current_page: WriteSignal<String>, 
+    set_refresh_trigger: WriteSignal<u32>
+) -> impl IntoView
+```
+
+### Props
+
+<ParamField path="set_current_page" type="WriteSignal<String>">
+  Signal to control navigation between pages
+</ParamField>
+
+<ParamField path="set_refresh_trigger" type="WriteSignal<u32>">
+  Signal to trigger refresh of show lists after creation
+</ParamField>
+
+## Features
+
+<CardGroup cols={2}>
+  <Card
+    title="Form Validation"
+    icon="shield-check"
+  >
+    Validates that both name and description fields are filled
+  </Card>
+  <Card
+    title="Loading States"
+    icon="spinner"
+  >
+    Shows loading spinner and disabled state during submission
+  </Card>
+  <Card
+    title="Error Handling"
+    icon="exclamation-triangle"
+  >
+    Displays user-friendly error messages for failed submissions
+  </Card>
+  <Card
+    title="Success Feedback"
+    icon="check-circle"
+  >
+    Shows success message and auto-navigates after creation
+  </Card>
+</CardGroup>
+
+## Implementation Details
+
+### State Management
+
+The component manages several pieces of local state:
+
+```rust
+let (name, set_name) = signal(String::new());
+let (description, set_description) = signal(String::new());
+let (is_submitting, set_is_submitting) = signal(false);
+let (submit_message, set_submit_message) = signal(String::new());
+```
+
+### Form Submission
+
+<Steps>
+  <Step title="Validation">
+    Checks that both name and description fields contain non-empty values
+  </Step>
+  <Step title="Data Preparation">
+    Creates a `ShowData` struct with trimmed input values
+  </Step>
+  <Step title="API Call">
+    Calls the `create_show` async function via spawn_local
+  </Step>
+  <Step title="Response Handling">
+    Updates UI based on success or error response
+  </Step>
+  <Step title="Navigation">
+    Automatically navigates back to home after successful creation
+  </Step>
+</Steps>
+
+### Submit Function
+
+```rust
+let submit_form = move || {
+    // Validation
+    if name.get().trim().is_empty() || description.get().trim().is_empty() {
+        set_submit_message.set("Please fill in all fields.".to_string());
+        return;
+    }
+
+    set_is_submitting.set(true);
+    set_submit_message.set(String::new());
+
+    let show_data = ShowData {
+        name: name.get().trim().to_string(),
+        description: description.get().trim().to_string(),
+    };
+
+    spawn_local(async move {
+        match create_show(show_data).await {
+            Ok(show) => {
+                set_submit_message.set("Show created successfully!".to_string());
+                set_refresh_trigger.update(|n| *n += 1);
+                gloo_timers::future::TimeoutFuture::new(1500).await;
+                set_current_page.set("home".to_string());
+            }
+            Err(e) => {
+                set_submit_message.set(format!("Error creating show: {}", e));
+                set_is_submitting.set(false);
+            }
+        }
+    });
+};
+```
+
+## UI Structure
+
+The component renders a WWE-themed card layout:
+
+<Tabs>
+  <Tab title="Header">
+    WWE-themed header with yellow and red accent circles and "CREATE NEW SHOW" title
+  </Tab>
+  <Tab title="Form Section">
+    - **Show Name Input**: Text input with WWE-themed styling
+    - **Description Textarea**: Multi-line input for show description
+    - **Message Display**: Dynamic success/error message area
+  </Tab>
+  <Tab title="Action Buttons">
+    - **Back Button**: Returns to home page
+    - **Create Show Button**: Submits the form with loading state
+  </Tab>
+</Tabs>
+
+## Styling
+
+The component uses Tailwind CSS with custom WWE theming:
+
+```css
+/* Main card styling */
+.card bg-gradient-to-b from-gray-900 to-black border-2 border-yellow-500
+
+/* Input styling */
+.input bg-gray-800 border-yellow-500 text-white focus:border-red-500
+
+/* Button styling */
+.btn-primary bg-gradient-to-r from-red-600 to-red-700 border-red-800
+```
+
+## Usage Example
+
+```rust
+use crate::components::CreateShow;
+
+#[component]
+fn App() -> impl IntoView {
+    let (current_page, set_current_page) = signal("home".to_string());
+    let (refresh_trigger, set_refresh_trigger) = signal(0u32);
+
+    view! {
+        <Show when=move || current_page.get() == "create-show">
+            <CreateShow set_current_page set_refresh_trigger />
+        </Show>
+    }
+}
+```
+
+## Dependencies
+
+<CodeGroup>
+
+```toml Cargo.toml
+[dependencies]
+leptos = { version = "0.7", features = ["csr"] }
+web-sys = "0.3"
+serde = { version = "1", features = ["derive"] }
+gloo-timers = { version = "0.3", features = ["futures"] }
+```
+
+```rust Imports
+use leptos::prelude::*;
+use leptos::task::spawn_local;
+use web_sys::console;
+use crate::types::{ShowData, create_show};
+```
+
+</CodeGroup>
+
+## Testing
+
+To test the CreateShow component:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_validation() {
+        // Test that empty fields trigger validation
+    }
+    
+    #[test]
+    fn test_form_submission() {
+        // Test successful form submission
+    }
+    
+    #[test]
+    fn test_error_handling() {
+        // Test error display and handling
+    }
+}
+```
+
+## Accessibility
+
+The component includes accessibility features:
+
+- Proper form labels and semantic HTML
+- Keyboard navigation support
+- Screen reader friendly error messages
+- High contrast color scheme
+- Responsive design for all devices

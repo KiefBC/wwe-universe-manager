@@ -1,0 +1,158 @@
+---
+title: 'Quickstart'
+description: 'Start building your wrestling universe in under 5 minutes'
+---
+
+## Prerequisites
+
+Before you begin, make sure you have the following installed:
+
+<CardGroup cols={2}>
+  <Card
+    title="Rust"
+    icon="rust"
+  >
+    Install from [rustup.rs](https://rustup.rs/)
+  </Card>
+  <Card
+    title="Node.js"
+    icon="node-js"
+  >
+    Version 18+ from [nodejs.org](https://nodejs.org/)
+  </Card>
+</CardGroup>
+
+## Setup
+
+<Steps>
+  <Step title="Clone the Repository">
+    ```bash
+    git clone https://github.com/your-username/wwe-universe-manager.git
+    cd wwe-universe-manager
+    ```
+  </Step>
+  <Step title="Install Dependencies">
+    ```bash
+    npm install
+    ```
+  </Step>
+  <Step title="Setup Environment">
+    ```bash
+    echo "DATABASE_URL=database.db" > .env
+    ```
+  </Step>
+  <Step title="Setup Database">
+    ```bash
+    diesel setup
+    diesel migration run
+    ```
+  </Step>
+  <Step title="Build CSS">
+    ```bash
+    npm run build-css-prod
+    ```
+  </Step>
+</Steps>
+
+## Running the Application
+
+### Development Mode (Recommended)
+
+For the best development experience, run these commands in separate terminals:
+
+<CodeGroup>
+
+```bash Terminal 1: CSS Watcher
+npm run build-css
+```
+
+```bash Terminal 2: Tauri Dev Server
+npm run dev
+```
+
+</CodeGroup>
+
+The CSS watcher will automatically rebuild styles when you modify Tailwind classes in your Rust components.
+
+### Alternative Development Options
+
+<Tabs>
+  <Tab title="Single Command">
+    Build CSS once, then run the application:
+    ```bash
+    npm run build-css-prod && npm run dev
+    ```
+  </Tab>
+  <Tab title="Tauri Direct">
+    Use Tauri directly (rebuild CSS manually when needed):
+    ```bash
+    cargo tauri dev
+    ```
+  </Tab>
+  <Tab title="Frontend Only">
+    Frontend-only development without Tauri backend:
+    ```bash
+    trunk serve
+    ```
+  </Tab>
+</Tabs>
+
+## Production Build
+
+When you're ready to create a production build:
+
+```bash
+# Build optimized CSS
+npm run build-css-prod
+
+# Build Tauri application
+npm run build
+```
+
+## Testing
+
+Run the test suite to ensure everything is working:
+
+```bash
+# Run all tests
+cargo test --workspace
+
+# Run specific package tests
+cargo test -p wwe-universe-manager-ui      # Frontend tests
+cargo test -p wwe-universe-manager         # Backend tests
+```
+
+## Next Steps
+
+Now that you have WWE Universe Manager running, explore these features:
+
+<CardGroup cols={2}>
+  <Card
+    title="Create Your First Show"
+    icon="plus"
+    href="/features/show-management"
+  >
+    Learn how to create and manage wrestling shows
+  </Card>
+  <Card
+    title="Build Your Roster"
+    icon="users"
+    href="/features/wrestler-management"
+  >
+    Add wrestlers to your universe
+  </Card>
+  <Card
+    title="Setup Championships"
+    icon="trophy"
+    href="/features/title-management"
+  >
+    Create championship titles and assign holders
+  </Card>
+  <Card
+    title="Architecture Overview"
+    icon="sitemap"
+    href="/architecture/overview"
+  >
+    Understand how the application is structured
+  </Card>
+</CardGroup>
