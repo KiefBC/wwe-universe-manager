@@ -35,12 +35,12 @@ pub async fn fetch_shows() -> Result<Vec<Show>, String> {
 /// Creates a new show via Tauri
 pub async fn create_show(show_data: ShowData) -> Result<Show, String> {
     console::log_1(&format!("create_show called with: {:?}", show_data).into());
-    
+
     // Tauri expects arguments to be wrapped in an object with parameter names as keys
     let args = serde_json::json!({
         "showData": show_data
     });
-    
+
     let args_value = serde_wasm_bindgen::to_value(&args).map_err(|e| {
         let error_msg = format!("Failed to serialize show data: {}", e);
         console::log_1(&error_msg.clone().into());

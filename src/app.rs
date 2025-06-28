@@ -1,5 +1,5 @@
-use leptos::prelude::*;
 use crate::components::{CreateShow, ShowSelector};
+use leptos::prelude::*;
 
 #[component]
 pub fn App() -> impl IntoView {

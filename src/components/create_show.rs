@@ -1,11 +1,14 @@
+use crate::types::{create_show, ShowData};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use web_sys::console;
-use crate::types::{ShowData, create_show};
 
 /// WWE-themed create show form component
 #[component]
-pub fn CreateShow(set_current_page: WriteSignal<String>, set_refresh_trigger: WriteSignal<u32>) -> impl IntoView {
+pub fn CreateShow(
+    set_current_page: WriteSignal<String>,
+    set_refresh_trigger: WriteSignal<u32>,
+) -> impl IntoView {
     let (name, set_name) = signal(String::new());
     let (description, set_description) = signal(String::new());
     let (is_submitting, set_is_submitting) = signal(false);
@@ -13,7 +16,7 @@ pub fn CreateShow(set_current_page: WriteSignal<String>, set_refresh_trigger: Wr
 
     let submit_form = move || {
         console::log_1(&"Form submitted".into());
-        
+
         if name.get().trim().is_empty() || description.get().trim().is_empty() {
             console::log_1(&"Validation failed - empty fields".into());
             set_submit_message.set("Please fill in all fields.".to_string());
@@ -28,8 +31,14 @@ pub fn CreateShow(set_current_page: WriteSignal<String>, set_refresh_trigger: Wr
             name: name.get().trim().to_string(),
             description: description.get().trim().to_string(),
         };
-        
-        console::log_1(&format!("Show data: name={}, description={}", show_data.name, show_data.description).into());
+
+        console::log_1(
+            &format!(
+                "Show data: name={}, description={}",
+                show_data.name, show_data.description
+            )
+            .into(),
+        );
 
         spawn_local(async move {
             console::log_1(&"Calling create_show...".into());
@@ -116,7 +125,7 @@ pub fn CreateShow(set_current_page: WriteSignal<String>, set_refresh_trigger: Wr
                     </div>
 
                     <div class="flex gap-4 mt-auto">
-                        <button 
+                        <button
                             type="button"
                             class="btn btn-secondary btn-sm sm:btn-md lg:btn-lg bg-gradient-to-r from-gray-600 to-gray-700 border-gray-800 hover:from-gray-700 hover:to-gray-800 text-white font-bold flex-1"
                             on:click=move |_| {

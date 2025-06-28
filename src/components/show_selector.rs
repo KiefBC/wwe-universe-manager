@@ -1,9 +1,12 @@
+use crate::types::fetch_shows;
 use leptos::prelude::*;
-use crate::types::{fetch_shows};
 
 /// WWE-themed show selector component
 #[component]
-pub fn ShowSelector(set_current_page: WriteSignal<String>, refresh_trigger: ReadSignal<u32>) -> impl IntoView {
+pub fn ShowSelector(
+    set_current_page: WriteSignal<String>,
+    refresh_trigger: ReadSignal<u32>,
+) -> impl IntoView {
     let shows_resource = LocalResource::new(move || {
         let _trigger = refresh_trigger.get(); // This makes the resource reactive to refresh_trigger
         fetch_shows()
@@ -105,7 +108,7 @@ pub fn ShowSelector(set_current_page: WriteSignal<String>, refresh_trigger: Read
 
                     // Action buttons
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-auto">
-                        <button 
+                        <button
                             class="btn btn-primary btn-sm sm:btn-md lg:btn-lg bg-gradient-to-r from-red-600 to-red-700 border-red-800 hover:from-red-700 hover:to-red-800 text-white font-bold"
                             on:click=move |_| set_current_page.set("create-show".to_string())
                         >

@@ -1,0 +1,259 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, development ]
+  pull_request:
+    branches: [ main, development ]
+
+env:
+  CARGO_TERM_COLOR: always
+  DATABASE_URL: database.db
+
+jobs:
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+
+    - name: Cache Rust dependencies
+      uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: |
+          . -> target
+          src-tauri -> src-tauri/target
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libwebkit2gtk-4.0-dev \
+          libwebkit2gtk-4.1-dev \
+          libappindicator3-dev \
+          librsvg2-dev \
+          patchelf \
+          libssl-dev \
+          pkg-config \
+          sqlite3
+
+    - name: Install Diesel CLI
+      run: cargo install diesel_cli --no-default-features --features sqlite --locked
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install npm dependencies
+      run: npm ci
+
+    - name: Setup database
+      run: |
+        echo "DATABASE_URL=database.db" > .env
+        diesel setup
+        diesel migration run
+
+    - name: Build CSS
+      run: npm run build-css-prod
+
+    - name: Check Rust formatting
+      run: cargo fmt --all -- --check
+
+    - name: Run Clippy
+      run: cargo clippy --all-targets --all-features -- -D warnings
+
+    - name: Run backend tests
+      run: cargo test -p wwe-universe-manager --verbose
+
+    - name: Run frontend tests
+      run: cargo test -p wwe-universe-manager-ui --verbose
+
+    - name: Run integration tests
+      run: cargo test --workspace --verbose
+
+    - name: Test Tauri build (without bundle)
+      run: cargo tauri build --no-bundle
+      
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache Rust dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Install cargo-audit
+      run: cargo install cargo-audit --locked
+
+    - name: Run security audit
+      run: cargo audit
+
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: llvm-tools-preview
+
+    - name: Cache Rust dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y sqlite3
+
+    - name: Install Diesel CLI
+      run: cargo install diesel_cli --no-default-features --features sqlite --locked
+
+    - name: Install cargo-llvm-cov
+      run: cargo install cargo-llvm-cov --locked
+
+    - name: Setup database
+      run: |
+        echo "DATABASE_URL=database.db" > .env
+        diesel setup
+        diesel migration run
+
+    - name: Generate code coverage
+      run: cargo llvm-cov --workspace --lcov --output-path lcov.info
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: lcov.info
+        fail_ci_if_error: false
+
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache Rust dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Check documentation
+      run: cargo doc --no-deps --workspace
+
+    - name: Setup Node.js for Mintlify
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install Mintlify CLI
+      run: npm install -g mintlify
+
+    - name: Check Mintlify documentation
+      run: |
+        cd docs
+        mintlify broken-links
+
+  build-matrix:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache Rust dependencies
+      uses: Swatinem/rust-cache@v2
+      with:
+        key: ${{ matrix.os }}
+
+    - name: Install system dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libwebkit2gtk-4.0-dev \
+          libwebkit2gtk-4.1-dev \
+          libappindicator3-dev \
+          librsvg2-dev \
+          patchelf \
+          sqlite3
+
+    - name: Install system dependencies (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew install sqlite3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install npm dependencies
+      run: npm ci
+
+    - name: Install Diesel CLI
+      run: cargo install diesel_cli --no-default-features --features sqlite --locked
+
+    - name: Setup database
+      run: |
+        echo "DATABASE_URL=database.db" > .env
+        diesel setup
+        diesel migration run
+
+    - name: Build CSS
+      run: npm run build-css-prod
+
+    - name: Build project
+      run: cargo build --workspace --verbose
+
+    - name: Run quick tests
+      run: cargo test -p wwe-universe-manager --test shows
+
+  dependency-check:
+    name: Dependency Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache Rust dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Install cargo-deny
+      run: cargo install cargo-deny --locked
+
+    - name: Check dependencies
+      run: cargo deny check

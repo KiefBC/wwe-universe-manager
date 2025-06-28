@@ -1,0 +1,199 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to create release for'
+        required: true
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+  DATABASE_URL: database.db
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      tag_name: ${{ steps.get_tag.outputs.tag_name }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Get tag name
+      id: get_tag
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "tag_name=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+        else
+          echo "tag_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.get_tag.outputs.tag_name }}
+        release_name: WWE Universe Manager ${{ steps.get_tag.outputs.tag_name }}
+        body: |
+          ## WWE Universe Manager ${{ steps.get_tag.outputs.tag_name }}
+          
+          A comprehensive WWE Universe management application built entirely in Rust.
+          
+          ### 🎯 Features
+          - WWE-themed desktop application
+          - Complete roster and show management
+          - Championship tracking system
+          - Cross-platform compatibility
+          
+          ### 📦 Installation
+          Download the appropriate file for your platform:
+          - **Windows**: `wwe-universe-manager_windows.msi`
+          - **macOS**: `wwe-universe-manager_macos.dmg` (Intel) or `wwe-universe-manager_macos_silicon.dmg` (Apple Silicon)
+          - **Linux**: `wwe-universe-manager_linux.AppImage`
+          
+          ### 🔗 Links
+          - [Documentation](https://github.com/${{ github.repository }}/blob/main/README.md)
+          - [API Reference](https://github.com/${{ github.repository }}/blob/main/docs/api-reference/introduction.mdx)
+          - [Report Issues](https://github.com/${{ github.repository }}/issues)
+        draft: false
+        prerelease: false
+
+  build-release:
+    name: Build Release (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    needs: create-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest'
+            os: 'macos-latest'
+            target: 'x86_64-apple-darwin'
+            arch: 'x64'
+            rust_target: 'x86_64-apple-darwin'
+          - platform: 'macos-latest'
+            os: 'macos-latest' 
+            target: 'aarch64-apple-darwin'
+            arch: 'arm64'
+            rust_target: 'aarch64-apple-darwin'
+          - platform: 'ubuntu-latest'
+            os: 'ubuntu-latest'
+            target: 'x86_64-unknown-linux-gnu'
+            arch: 'x64'
+            rust_target: 'x86_64-unknown-linux-gnu'
+          - platform: 'windows-latest'
+            os: 'windows-latest'
+            target: 'x86_64-pc-windows-msvc'
+            arch: 'x64'
+            rust_target: 'x86_64-pc-windows-msvc'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ matrix.rust_target }}
+
+    - name: Cache Rust dependencies
+      uses: Swatinem/rust-cache@v2
+      with:
+        key: ${{ matrix.platform }}
+
+    - name: Install system dependencies (Ubuntu)
+      if: matrix.platform == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libwebkit2gtk-4.0-dev \
+          libwebkit2gtk-4.1-dev \
+          libappindicator3-dev \
+          librsvg2-dev \
+          patchelf \
+          libssl-dev \
+          pkg-config \
+          sqlite3
+
+    - name: Install system dependencies (macOS)
+      if: matrix.platform == 'macos-latest'
+      run: |
+        brew install sqlite3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install npm dependencies
+      run: npm ci
+
+    - name: Install Diesel CLI
+      run: cargo install diesel_cli --no-default-features --features sqlite --locked
+
+    - name: Setup database
+      run: |
+        echo "DATABASE_URL=database.db" > .env
+        diesel setup
+        diesel migration run
+
+    - name: Build CSS
+      run: npm run build-css-prod
+
+    - name: Build Tauri app
+      run: cargo tauri build --target ${{ matrix.rust_target }}
+
+    - name: Upload Release Asset (Ubuntu)
+      if: matrix.platform == 'ubuntu-latest'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./src-tauri/target/${{ matrix.rust_target }}/release/bundle/appimage/wwe-universe-manager_*_amd64.AppImage
+        asset_name: wwe-universe-manager_linux.AppImage
+        asset_content_type: application/octet-stream
+
+    - name: Upload Release Asset (Windows)
+      if: matrix.platform == 'windows-latest'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./src-tauri/target/${{ matrix.rust_target }}/release/bundle/msi/WWE Universe Manager_*_x64_en-US.msi
+        asset_name: wwe-universe-manager_windows.msi
+        asset_content_type: application/octet-stream
+
+    - name: Upload Release Asset (macOS Intel)
+      if: matrix.platform == 'macos-latest' && matrix.arch == 'x64'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./src-tauri/target/${{ matrix.rust_target }}/release/bundle/dmg/WWE Universe Manager_*_x64.dmg
+        asset_name: wwe-universe-manager_macos.dmg
+        asset_content_type: application/octet-stream
+
+    - name: Upload Release Asset (macOS Apple Silicon)
+      if: matrix.platform == 'macos-latest' && matrix.arch == 'arm64'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./src-tauri/target/${{ matrix.rust_target }}/release/bundle/dmg/WWE Universe Manager_*_aarch64.dmg
+        asset_name: wwe-universe-manager_macos_silicon.dmg
+        asset_content_type: application/octet-stream
