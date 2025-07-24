@@ -62,107 +62,101 @@ pub fn CreateShow(
     };
 
     view! {
-        <div class="w-full max-w-2xl mx-auto flex-1 flex flex-col">
-            <div class="card bg-gradient-to-b from-gray-900 to-black shadow-2xl border-2 border-yellow-500 flex-1 flex flex-col">
-                <div class="card-body text-center flex-1 flex flex-col p-4 sm:p-6 lg:p-8">
-                    <div class="flex items-center justify-center mb-4 sm:mb-6">
-                        <div class="w-6 h-6 sm:w-8 sm:h-8 bg-yellow-500 rounded-full mr-2 sm:mr-3"></div>
-                        <h2 class="card-title text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-wider">
-                            "CREATE NEW SHOW"
-                        </h2>
-                        <div class="w-6 h-6 sm:w-8 sm:h-8 bg-red-500 rounded-full ml-2 sm:ml-3"></div>
+        <div class="max-w-2xl mx-auto">
+            <div class="card-modern rounded-xl p-8">
+                <div class="text-center mb-8">
+                    <h2 class="text-3xl font-bold text-slate-100 mb-2">
+                        "Create New Show"
+                    </h2>
+                    <p class="text-slate-400">
+                        "Add a new wrestling show to your universe"
+                    </p>
+                </div>
+
+                <form class="space-y-6" on:submit=move |ev| {
+                    ev.prevent_default();
+                    submit_form();
+                }>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">
+                            "Show Name"
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="Enter show name (e.g., Monday Night Raw)"
+                            class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-slate-100 placeholder-slate-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                            on:input:target=move |ev| {
+                                set_name.set(ev.target().value());
+                            }
+                            prop:value=name
+                        />
                     </div>
 
-                    <div class="bg-gradient-to-r from-red-600 to-yellow-500 p-1 rounded-lg mb-4 sm:mb-6 flex-1 flex flex-col">
-                        <div class="bg-black rounded-md p-4 sm:p-6 flex-1 flex flex-col">
-                            <form class="space-y-4 flex-1 flex flex-col">
-                                <div class="form-control">
-                                    <label class="label">
-                                        <span class="label-text text-yellow-300 font-bold">"Show Name"</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="Enter show name (e.g., Monday Night Raw)"
-                                        class="input input-bordered w-full bg-gray-800 border-yellow-500 text-white placeholder-gray-400 focus:border-red-500"
-                                        on:input:target=move |ev| {
-                                            set_name.set(ev.target().value());
-                                        }
-                                        prop:value=name
-                                    />
-                                </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">
+                            "Description"
+                        </label>
+                        <textarea
+                            placeholder="Enter show description..."
+                            rows="4"
+                            class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-slate-100 placeholder-slate-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-none"
+                            on:input:target=move |ev| {
+                                set_description.set(ev.target().value());
+                            }
+                            prop:value=description
+                        ></textarea>
+                    </div>
 
-                                <div class="form-control flex-1">
-                                    <label class="label">
-                                        <span class="label-text text-yellow-300 font-bold">"Description"</span>
-                                    </label>
-                                    <textarea
-                                        placeholder="Enter show description..."
-                                        class="textarea textarea-bordered h-32 w-full bg-gray-800 border-yellow-500 text-white placeholder-gray-400 focus:border-red-500 resize-none"
-                                        on:input:target=move |ev| {
-                                            set_description.set(ev.target().value());
-                                        }
-                                        prop:value=description
-                                    ></textarea>
-                                </div>
-
-                                <Show
-                                    when=move || !submit_message.get().is_empty()
-                                    fallback=|| view! {}
-                                >
-                                    <div class={move || {
-                                        let is_error = submit_message.get().contains("Error");
-                                        if is_error {
-                                            "text-center font-semibold text-red-400"
-                                        } else {
-                                            "text-center font-semibold text-green-400"
-                                        }
-                                    }}>
-                                        {move || submit_message.get()}
-                                    </div>
-                                </Show>
-                            </form>
+                    <Show
+                        when=move || !submit_message.get().is_empty()
+                        fallback=|| view! {}
+                    >
+                        <div class={move || {
+                            let is_error = submit_message.get().contains("Error");
+                            if is_error {
+                                "p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-center"
+                            } else {
+                                "p-4 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-center"
+                            }
+                        }}>
+                            {move || submit_message.get()}
                         </div>
-                    </div>
+                    </Show>
 
-                    <div class="flex gap-4 mt-auto">
+                    <div class="flex gap-4 pt-4">
                         <button
                             type="button"
-                            class="btn btn-secondary btn-sm sm:btn-md lg:btn-lg bg-gradient-to-r from-gray-600 to-gray-700 border-gray-800 hover:from-gray-700 hover:to-gray-800 text-white font-bold flex-1"
+                            class="flex-1 bg-slate-600 hover:bg-slate-700 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center space-x-2"
                             on:click=move |_| {
                                 console::log_1(&"Back button clicked!!!".into());
                                 set_current_page.set("home".to_string());
                             }
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                             </svg>
-                            "BACK"
+                            <span>"Back"</span>
                         </button>
                         <button
-                            type="button"
-                            class="btn btn-primary btn-sm sm:btn-md lg:btn-lg bg-gradient-to-r from-red-600 to-red-700 border-red-800 hover:from-red-700 hover:to-red-800 text-white font-bold flex-1"
-                            class:loading=is_submitting
+                            type="submit"
+                            class="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-800 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center space-x-2"
                             disabled=is_submitting
-                            on:click=move |_| {
-                                console::log_1(&"Create Show button clicked".into());
-                                submit_form();
-                            }
                         >
                             <Show
                                 when=move || is_submitting.get()
                                 fallback=|| view! {
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                                     </svg>
-                                    "CREATE SHOW"
+                                    <span>"Create Show"</span>
                                 }
                             >
-                                <span class="loading loading-spinner loading-sm"></span>
-                                "CREATING..."
+                                <div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                <span>"Creating..."</span>
                             </Show>
                         </button>
                     </div>
-                </div>
+                </form>
             </div>
         </div>
     }
