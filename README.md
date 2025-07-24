@@ -1,7 +1,7 @@
 # WWE Universe Manager
 
 <div align="center">
-  <img src="Example.png" alt="WWE Universe Manager Interface" width="800" />
+  <img src="Example.gif" alt="WWE Universe Manager Interface" width="800" />
 
   <p><em>The Ultimate Wrestling Management Experience</em></p>
 </div>
@@ -21,6 +21,7 @@ A comprehensive WWE Universe management application built entirely in Rust, feat
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - [Rust](https://rustup.rs/) (latest stable)
 - [Node.js](https://nodejs.org/) (for Tailwind CSS)
 - [Diesel CLI](https://diesel.rs/guides/getting-started) (`cargo install diesel_cli --no-default-features --features sqlite`)
@@ -29,17 +30,20 @@ A comprehensive WWE Universe management application built entirely in Rust, feat
 ### Installation & Setup
 
 1. **Clone the repository**
+
    ```bash
    git clone <your-repo-url>
    cd wwe-universe-manager
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    ```
 
 3. **Setup database**
+
    ```bash
    echo "DATABASE_URL=database.db" > .env
    diesel setup
@@ -47,6 +51,7 @@ A comprehensive WWE Universe management application built entirely in Rust, feat
    ```
 
 4. **Build CSS and run the app**
+
    ```bash
    # Terminal 1: Start CSS watcher (rebuilds styles automatically)
    npm run build-css
@@ -56,6 +61,7 @@ A comprehensive WWE Universe management application built entirely in Rust, feat
    ```
 
 ### Alternative Quick Start
+
 ```bash
 # One-time setup
 npm install
@@ -89,11 +95,13 @@ cargo test -p wwe-universe-manager --test integration  # Cross-system tests
 ## 📚 Documentation
 
 ### 📖 Complete Documentation
+
 For comprehensive documentation, including API references, component guides, and architecture details:
 
 **[🔗 View Full Documentation](docs/introduction.mdx)** (Mintlify-powered)
 
 To run the documentation locally:
+
 ```bash
 cd docs
 mintlify dev
@@ -101,6 +109,7 @@ mintlify dev
 ```
 
 ### 📋 Quick Reference
+
 - **[Getting Started Guide](docs/quickstart.mdx)** - 5-minute setup
 - **[Development Guide](docs/development.mdx)** - Contributing and development workflow
 - **[API Reference](docs/api-reference/introduction.mdx)** - Complete Tauri command documentation
@@ -109,6 +118,7 @@ mintlify dev
 ## 🏗️ Project Architecture
 
 ### Technology Stack
+
 - **Frontend**: Leptos (Rust → WebAssembly)
 - **Backend**: Tauri 2.0 with Rust
 - **Database**: SQLite with Diesel ORM
@@ -117,6 +127,7 @@ mintlify dev
 - **Documentation**: Mintlify
 
 ### Project Structure
+
 ```
 wwe-universe-manager/
 ├── src/                    # Frontend (Leptos)
@@ -155,16 +166,17 @@ The frontend is organized into modular components:
 
 Current entities managed by the application:
 
-| Entity | Description | Key Features |
-|--------|-------------|--------------|
-| **Shows** | Wrestling programs/brands | Name, description, timestamps |
-| **Wrestlers** | Performer profiles | Name, gender, win/loss records |
-| **Titles** | Championship belts | Name, current holder tracking |
-| **Users** | Application users | Authentication with Argon2 hashing |
+| Entity        | Description               | Key Features                       |
+| ------------- | ------------------------- | ---------------------------------- |
+| **Shows**     | Wrestling programs/brands | Name, description, timestamps      |
+| **Wrestlers** | Performer profiles        | Name, gender, win/loss records     |
+| **Titles**    | Championship belts        | Name, current holder tracking      |
+| **Users**     | Application users         | Authentication with Argon2 hashing |
 
 ## 🛠️ Development Workflow
 
 ### Prerequisites for Development
+
 - **Rust** (latest stable) - [Install via rustup](https://rustup.rs/)
 - **Node.js** 18+ - [Install from nodejs.org](https://nodejs.org/)
 - **Diesel CLI** - `cargo install diesel_cli --no-default-features --features sqlite`
@@ -173,6 +185,7 @@ Current entities managed by the application:
 ### Setting Up Your Development Environment
 
 1. **Clone and setup**
+
    ```bash
    git clone <your-repo-url>
    cd wwe-universe-manager
@@ -182,13 +195,14 @@ Current entities managed by the application:
    ```
 
 2. **Development servers** (run in separate terminals)
+
    ```bash
    # Terminal 1: CSS watcher (auto-rebuilds on changes)
    npm run build-css
-   
+
    # Terminal 2: Tauri development server (hot reload)
    npm run dev
-   
+
    # Terminal 3 (optional): Documentation server
    cd docs && mintlify dev
    ```
@@ -196,12 +210,14 @@ Current entities managed by the application:
 ### Making Changes
 
 #### Frontend Development (Leptos/WASM)
+
 - **Components**: Add new components in `src/components/`
 - **Types**: Update shared types in `src/types.rs`
 - **Styling**: Use Tailwind classes with WWE theme colors
 - **State**: Use Leptos signals for reactive state management
 
 #### Backend Development (Tauri/Rust)
+
 - **Database**: Create migrations with `diesel migration generate name`
 - **Models**: Add new models in `src-tauri/src/models/`
 - **API**: Add Tauri commands in `src-tauri/src/db.rs`
@@ -210,6 +226,7 @@ Current entities managed by the application:
 #### Adding a New Feature (Example: Wrestler Management)
 
 1. **Database Migration**
+
    ```bash
    diesel migration generate create_wrestlers
    # Edit the generated SQL files
@@ -217,6 +234,7 @@ Current entities managed by the application:
    ```
 
 2. **Create Models**
+
    ```rust
    // src-tauri/src/models/wrestler.rs
    #[derive(Serialize, Deserialize)]
@@ -228,6 +246,7 @@ Current entities managed by the application:
    ```
 
 3. **Add Tauri Commands**
+
    ```rust
    // src-tauri/src/db.rs
    #[tauri::command]
@@ -237,6 +256,7 @@ Current entities managed by the application:
    ```
 
 4. **Create Frontend Component**
+
    ```rust
    // src/components/wrestler_form.rs
    #[component]
@@ -257,6 +277,7 @@ Current entities managed by the application:
 ### Code Style Guidelines
 
 #### Rust Code
+
 - Use `rustfmt` for formatting: `cargo fmt`
 - Follow Rust naming conventions (snake_case, PascalCase)
 - Add documentation comments for public APIs
@@ -264,12 +285,14 @@ Current entities managed by the application:
 - Prefer `&str` over `String` for function parameters
 
 #### Frontend (Leptos)
+
 - Keep components small and focused
 - Use descriptive prop names
 - Handle loading and error states
 - Follow the existing WWE theming patterns
 
 #### Database
+
 - Use meaningful migration names
 - Include both `up.sql` and `down.sql`
 - Add indexes for frequently queried columns
@@ -294,15 +317,16 @@ cargo clippy -- -D warnings
 
 The application exposes these Tauri commands:
 
-| Command | Purpose | Parameters | Returns |
-|---------|---------|------------|---------|
-| `get_shows` | Fetch all shows | `state: DbState` | `Vec<Show>` |
-| `create_show` | Create new show | `state: DbState, show_data: ShowData` | `Show` |
-| `create_wrestler` | Create wrestler | `state: DbState, wrestler_data: WrestlerData` | `Wrestler` |
-| `create_belt` | Create championship | `state: DbState, title_data: TitleData` | `Title` |
-| `create_user` | Create user | `state: DbState, user_data: UserData` | `User` |
+| Command           | Purpose             | Parameters                                    | Returns     |
+| ----------------- | ------------------- | --------------------------------------------- | ----------- |
+| `get_shows`       | Fetch all shows     | `state: DbState`                              | `Vec<Show>` |
+| `create_show`     | Create new show     | `state: DbState, show_data: ShowData`         | `Show`      |
+| `create_wrestler` | Create wrestler     | `state: DbState, wrestler_data: WrestlerData` | `Wrestler`  |
+| `create_belt`     | Create championship | `state: DbState, title_data: TitleData`       | `Title`     |
+| `create_user`     | Create user         | `state: DbState, user_data: UserData`         | `User`      |
 
 **Example API Usage (Frontend)**:
+
 ```rust
 // src/types.rs - API wrapper functions
 pub async fn create_show(show_data: ShowData) -> Result<Show, String> {
@@ -361,6 +385,7 @@ diesel database reset
 ## 📈 Development Status
 
 ✅ **Completed**
+
 - Tauri 2.0 migration with Rust backend
 - Leptos frontend with WebAssembly compilation
 - Modular component architecture
@@ -374,12 +399,14 @@ diesel database reset
 - Component-based architecture with separation of concerns
 
 🔄 **In Progress**
+
 - Advanced wrestler statistics and management
 - Championship title tracking and history
 - Show scheduling and calendar system
 - User authentication and session management
 
 📋 **Planned**
+
 - Storyline management system
 - Match booking and results tracking
 - Import/export functionality
@@ -391,6 +418,7 @@ diesel database reset
 We welcome contributions! Please follow these steps:
 
 ### Quick Contribution Steps
+
 1. **Fork** the repository on GitHub
 2. **Clone** your fork: `git clone <your-fork-url>`
 3. **Create** a feature branch: `git checkout -b feature/amazing-feature`
@@ -404,6 +432,7 @@ We welcome contributions! Please follow these steps:
 11. **Create** a Pull Request with detailed description
 
 ### What We Look For
+
 - ✅ Clear, descriptive commit messages
 - ✅ Comprehensive tests for new features
 - ✅ Updated documentation (if applicable)
@@ -411,6 +440,7 @@ We welcome contributions! Please follow these steps:
 - ✅ No breaking changes (or clearly documented)
 
 ### Need Help?
+
 - 📖 Check the [Development Guide](docs/development.mdx)
 - 🔍 Browse existing [issues and discussions](https://github.com/your-username/wwe-universe-manager/issues)
 - 💬 Open an issue for questions or suggestions
