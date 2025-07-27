@@ -1,6 +1,14 @@
 use crate::types::fetch_shows;
-use crate::components::WrestlerCardModal;
 use leptos::prelude::*;
+use wasm_bindgen::prelude::*;
+use wasm_bindgen_futures::spawn_local;
+use serde_json;
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"])]
+    async fn invoke(cmd: &str, args: JsValue) -> JsValue;
+}
 
 /// WWE-themed show selector component
 #[component]
@@ -13,7 +21,14 @@ pub fn ShowSelector(
         fetch_shows()
     });
     let (selected_show_name, set_selected_show_name) = signal(String::new());
-    let (show_wrestler_modal, set_show_wrestler_modal) = signal(false);
+    let open_wrestler_window = move |_| {
+        spawn_local(async move {
+            let args = serde_json::json!({
+                "wrestlerId": "the-rock"
+            });
+            let _ = invoke("open_wrestler_window", serde_wasm_bindgen::to_value(&args).unwrap()).await;
+        });
+    };
 
     let options_view = move || {
         shows_resource.get().map(|result| {
@@ -124,7 +139,7 @@ pub fn ShowSelector(
                     </button>
                     <button 
                         class="btn bg-purple-600 hover:bg-purple-700 border-purple-600 text-white px-6 py-3 rounded-lg flex items-center justify-center space-x-2"
-                        on:click=move |_| set_show_wrestler_modal.set(true)
+                        on:click=open_wrestler_window
                     >
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -187,10 +202,6 @@ pub fn ShowSelector(
                 </div>
             </div>
 
-            <WrestlerCardModal 
-                show_modal=show_wrestler_modal
-                set_show_modal=set_show_wrestler_modal
-            />
         </div>
     }
 }

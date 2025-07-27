@@ -1,27 +1,43 @@
-use crate::components::{CreateShow, ShowSelector};
+use crate::components::{CreateShow, ShowSelector, WrestlerWindow};
 use leptos::prelude::*;
+use web_sys::window;
 
 #[component]
 pub fn App() -> impl IntoView {
     let (current_page, set_current_page) = signal("home".to_string());
     let (refresh_trigger, set_refresh_trigger) = signal(0u32);
+    
+    // Check if this is a wrestler window based on URL hash
+    let is_wrestler_window = move || {
+        window()
+            .and_then(|w| w.location().hash().ok())
+            .map(|hash| hash == "#wrestler")
+            .unwrap_or(false)
+    };
 
     view! {
         <div data-theme="modern-dark" class="min-h-screen bg-slate-950 text-slate-100">
-            <div class="flex flex-col h-screen">
-                <Header />
-                <main class="flex-1 container mx-auto px-6 py-8 overflow-auto">
-                    <div class="max-w-6xl mx-auto">
-                        <Show
-                            when=move || current_page.get() == "create-show"
-                            fallback=move || view! { <ShowSelector set_current_page refresh_trigger /> }
-                        >
-                            <CreateShow set_current_page set_refresh_trigger />
-                        </Show>
+            <Show
+                when=is_wrestler_window
+                fallback=move || view! {
+                    <div class="flex flex-col h-screen">
+                        <Header />
+                        <main class="flex-1 container mx-auto px-6 py-8 overflow-auto">
+                            <div class="max-w-6xl mx-auto">
+                                <Show
+                                    when=move || current_page.get() == "create-show"
+                                    fallback=move || view! { <ShowSelector set_current_page refresh_trigger /> }
+                                >
+                                    <CreateShow set_current_page set_refresh_trigger />
+                                </Show>
+                            </div>
+                        </main>
+                        <Footer />
                     </div>
-                </main>
-                <Footer />
-            </div>
+                }
+            >
+                <WrestlerWindow />
+            </Show>
         </div>
     }
 }
