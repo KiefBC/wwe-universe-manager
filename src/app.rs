@@ -1,4 +1,4 @@
-use crate::components::{CreateShow, Dashboard, WrestlerDetailsWindow};
+use crate::components::{CreateShow, Dashboard, WrestlerDetailsWindow, WrestlersList};
 use leptos::prelude::*;
 use web_sys::window;
 
@@ -11,7 +11,7 @@ pub fn App() -> impl IntoView {
     let is_wrestler_window = move || {
         window()
             .and_then(|w| w.location().hash().ok())
-            .map(|hash| hash == "#wrestler")
+            .map(|hash| hash.starts_with("#wrestler"))
             .unwrap_or(false)
     };
 
@@ -26,7 +26,16 @@ pub fn App() -> impl IntoView {
                             <div class="max-w-6xl mx-auto">
                                 <Show
                                     when=move || current_page.get() == "create-show"
-                                    fallback=move || view! { <Dashboard set_current_page refresh_trigger /> }
+                                    fallback=move || {
+                                        view! {
+                                            <Show
+                                                when=move || current_page.get() == "wrestlers"
+                                                fallback=move || view! { <Dashboard set_current_page refresh_trigger /> }
+                                            >
+                                                <WrestlersList set_current_page />
+                                            </Show>
+                                        }
+                                    }
                                 >
                                     <CreateShow set_current_page set_refresh_trigger />
                                 </Show>

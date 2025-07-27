@@ -120,6 +120,18 @@ pub fn create_user(state: State<'_, DbState>, user_data: UserData) -> Result<Use
 
 // ===== Wrestler Operations =====
 
+/// Gets all wrestlers ordered by ID (used by tests and Tauri commands)
+pub fn internal_get_wrestlers(conn: &mut SqliteConnection) -> Result<Vec<Wrestler>, DieselError> {
+    use crate::schema::wrestlers::dsl::*;
+    wrestlers.order(id.asc()).load::<Wrestler>(conn)
+}
+
+/// Gets a specific wrestler by ID (used by tests and Tauri commands)
+pub fn internal_get_wrestler_by_id(conn: &mut SqliteConnection, wrestler_id: i32) -> Result<Option<Wrestler>, DieselError> {
+    use crate::schema::wrestlers::dsl::*;
+    wrestlers.filter(id.eq(wrestler_id)).first::<Wrestler>(conn).optional()
+}
+
 /// Creates a new wrestler (used by tests and Tauri commands)
 pub fn internal_create_wrestler(
     conn: &mut SqliteConnection,
@@ -225,6 +237,26 @@ pub fn create_wrestler(
             error!("Error creating wrestler: {}", e);
             format!("Failed to create wrestler: {}", e)
         })
+}
+
+#[tauri::command]
+pub fn get_wrestlers(state: State<'_, DbState>) -> Result<Vec<Wrestler>, String> {
+    let mut conn = get_connection(&state)?;
+
+    internal_get_wrestlers(&mut conn).map_err(|e| {
+        error!("Error loading wrestlers: {}", e);
+        format!("Failed to load wrestlers: {}", e)
+    })
+}
+
+#[tauri::command]
+pub fn get_wrestler_by_id(state: State<'_, DbState>, wrestler_id: i32) -> Result<Option<Wrestler>, String> {
+    let mut conn = get_connection(&state)?;
+
+    internal_get_wrestler_by_id(&mut conn, wrestler_id).map_err(|e| {
+        error!("Error loading wrestler: {}", e);
+        format!("Failed to load wrestler: {}", e)
+    })
 }
 
 // ===== Title Operations =====

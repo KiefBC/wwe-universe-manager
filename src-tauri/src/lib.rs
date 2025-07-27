@@ -27,6 +27,8 @@ pub fn run() {
             // Database operations
             db::get_shows,
             db::create_show,
+            db::get_wrestlers,
+            db::get_wrestler_by_id,
             db::create_user,
             db::create_wrestler,
             db::create_belt,
@@ -44,7 +46,8 @@ pub fn run() {
 /// Opens a new window displaying wrestler details
 #[tauri::command]
 async fn open_wrestler_window(app: AppHandle, wrestler_id: Option<String>) -> Result<(), String> {
-    let window_label = format!("wrestler-{}", wrestler_id.unwrap_or_else(|| "default".to_string()));
+    let wrestler_id = wrestler_id.unwrap_or_else(|| "default".to_string());
+    let window_label = format!("wrestler-{}", wrestler_id);
     
     // Check if window already exists
     if let Some(_existing_window) = app.get_webview_window(&window_label) {
@@ -55,11 +58,12 @@ async fn open_wrestler_window(app: AppHandle, wrestler_id: Option<String>) -> Re
         }
     }
 
-    // Create new window
+    // Create new window with wrestler ID in the URL hash
+    let url = format!("index.html#wrestler?id={}", wrestler_id);
     let _window = tauri::WebviewWindowBuilder::new(
         &app,
         window_label,
-        tauri::WebviewUrl::App("index.html#wrestler".into()),
+        tauri::WebviewUrl::App(url.into()),
     )
     .title("Wrestler Details")
     .inner_size(885.0, 860.0)
