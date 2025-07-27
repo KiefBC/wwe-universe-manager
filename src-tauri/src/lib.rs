@@ -62,7 +62,7 @@ async fn open_wrestler_window(app: AppHandle, wrestler_id: Option<String>) -> Re
         tauri::WebviewUrl::App("index.html#wrestler".into()),
     )
     .title("Wrestler Details")
-    .inner_size(900.0, 700.0)
+    .inner_size(885.0, 860.0)
     .min_inner_size(600.0, 500.0)
     .center()
     .build()
