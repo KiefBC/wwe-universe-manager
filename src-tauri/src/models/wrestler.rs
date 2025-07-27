@@ -15,6 +15,23 @@ pub struct Wrestler {
     pub losses: i32,
     pub created_at: Option<NaiveDateTime>,
     pub updated_at: Option<NaiveDateTime>,
+    // Enhanced details
+    pub real_name: Option<String>,
+    pub nickname: Option<String>,
+    pub height: Option<String>,
+    pub weight: Option<String>,
+    pub debut_year: Option<i32>,
+    pub promotion: Option<String>,
+    // Power ratings (1-10)
+    pub strength: Option<i32>,
+    pub speed: Option<i32>,
+    pub agility: Option<i32>,
+    pub stamina: Option<i32>,
+    pub charisma: Option<i32>,
+    pub technique: Option<i32>,
+    // Content
+    pub biography: Option<String>,
+    pub trivia: Option<String>,
 }
 
 #[derive(Insertable)]
@@ -24,6 +41,29 @@ pub struct NewWrestler {
     pub gender: String,
     pub wins: i32,
     pub losses: i32,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = wrestlers)]
+pub struct NewEnhancedWrestler {
+    pub name: String,
+    pub gender: String,
+    pub wins: i32,
+    pub losses: i32,
+    pub real_name: Option<String>,
+    pub nickname: Option<String>,
+    pub height: Option<String>,
+    pub weight: Option<String>,
+    pub debut_year: Option<i32>,
+    pub promotion: Option<String>,
+    pub strength: Option<i32>,
+    pub speed: Option<i32>,
+    pub agility: Option<i32>,
+    pub stamina: Option<i32>,
+    pub charisma: Option<i32>,
+    pub technique: Option<i32>,
+    pub biography: Option<String>,
+    pub trivia: Option<String>,
 }
 
 #[derive(Deserialize)]
