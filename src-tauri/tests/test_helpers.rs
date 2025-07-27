@@ -73,6 +73,15 @@ impl TestData {
             .execute(&mut conn)
             .ok();
     }
+
+    #[allow(dead_code)]
+    pub fn cleanup_signature_moves(&self, target_wrestler_id: i32) {
+        use wwe_universe_manager_lib::schema::signature_moves::dsl::*;
+        let mut conn = self.get_connection();
+        diesel::delete(signature_moves.filter(wrestler_id.eq(target_wrestler_id)))
+            .execute(&mut conn)
+            .ok();
+    }
 }
 
 #[allow(dead_code)]
@@ -90,6 +99,39 @@ pub fn create_test_wrestler() -> NewWrestler {
         gender: "Male".to_string(),
         wins: 0,
         losses: 0,
+    }
+}
+
+#[allow(dead_code)]
+pub fn create_test_enhanced_wrestler() -> NewEnhancedWrestler {
+    NewEnhancedWrestler {
+        name: "Enhanced Test Wrestler".to_string(),
+        gender: "Male".to_string(),
+        wins: 5,
+        losses: 2,
+        real_name: Some("John Test Doe".to_string()),
+        nickname: Some("The Tester".to_string()),
+        height: Some("6'2\"".to_string()),
+        weight: Some("220 lbs".to_string()),
+        debut_year: Some(2020),
+        promotion: Some("WWE".to_string()),
+        strength: Some(7),
+        speed: Some(6),
+        agility: Some(8),
+        stamina: Some(7),
+        charisma: Some(9),
+        technique: Some(8),
+        biography: Some("A test wrestler for testing enhanced features.".to_string()),
+        trivia: Some("This wrestler exists only for testing purposes.".to_string()),
+    }
+}
+
+#[allow(dead_code)]
+pub fn create_test_signature_move() -> NewSignatureMove {
+    NewSignatureMove {
+        wrestler_id: 1, // This will need to be set to actual wrestler ID in tests
+        move_name: "Test Finisher".to_string(),
+        move_type: "primary".to_string(),
     }
 }
 
