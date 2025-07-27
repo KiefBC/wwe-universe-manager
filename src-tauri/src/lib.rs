@@ -30,6 +30,7 @@ pub fn run() {
             db::create_user,
             db::create_wrestler,
             db::create_belt,
+            db::create_test_data,
             // Authentication operations
             auth::verify_credentials,
             auth::register_user,

@@ -191,3 +191,50 @@ pub fn create_belt(state: State<'_, DbState>, title_data: TitleData) -> Result<T
             format!("Failed to create title: {}", e)
         })
 }
+
+/// Creates test data if it doesn't already exist
+#[tauri::command]
+pub fn create_test_data(state: State<'_, DbState>) -> Result<String, String> {
+    let mut conn = get_connection(&state)?;
+    
+    // Check if specific test data already exists
+    let existing_shows = internal_get_shows(&mut conn).map_err(|e| format!("Error checking shows: {}", e))?;
+    
+    // Check for specific test shows instead of any shows
+    let test_show_names = ["Monday Night RAW", "Friday Night SmackDown"];
+    let existing_test_shows: Vec<_> = existing_shows.iter()
+        .filter(|show| test_show_names.contains(&show.name.as_str()))
+        .collect();
+    
+    if !existing_test_shows.is_empty() {
+        return Ok(format!("Test data already exists: found {} test shows", existing_test_shows.len()));
+    }
+    
+    // Create test shows
+    let test_shows = vec![
+        ("Monday Night RAW", "WWE's flagship weekly show featuring the biggest superstars"),
+        ("Friday Night SmackDown", "The longest-running weekly episodic TV show in history"),
+    ];
+    
+    for (name, description) in test_shows {
+        internal_create_show(&mut conn, name, description)
+            .map_err(|e| format!("Failed to create show '{}': {}", name, e))?;
+    }
+    
+    // Create test wrestlers
+    let test_wrestlers = vec![
+        ("The Rock", "Male", 245, 67),
+        ("Stone Cold Steve Austin", "Male", 312, 89), 
+        ("Becky Lynch", "Female", 156, 43),
+        ("Charlotte Flair", "Female", 198, 52),
+        ("John Cena", "Male", 289, 78),
+    ];
+    
+    for (name, gender, wins, losses) in test_wrestlers {
+        internal_create_wrestler(&mut conn, name, gender, wins, losses)
+            .map_err(|e| format!("Failed to create wrestler '{}': {}", name, e))?;
+    }
+    
+    info!("Test data created successfully");
+    Ok("Test data created: 2 shows and 5 wrestlers".to_string())
+}
