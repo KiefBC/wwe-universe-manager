@@ -1,4 +1,4 @@
-use crate::components::{CreateShow, ShowSelector, WrestlerWindow};
+use crate::components::{CreateShow, Dashboard, WrestlerDetailsWindow};
 use leptos::prelude::*;
 use web_sys::window;
 
@@ -26,7 +26,7 @@ pub fn App() -> impl IntoView {
                             <div class="max-w-6xl mx-auto">
                                 <Show
                                     when=move || current_page.get() == "create-show"
-                                    fallback=move || view! { <ShowSelector set_current_page refresh_trigger /> }
+                                    fallback=move || view! { <Dashboard set_current_page refresh_trigger /> }
                                 >
                                     <CreateShow set_current_page set_refresh_trigger />
                                 </Show>
@@ -36,7 +36,7 @@ pub fn App() -> impl IntoView {
                     </div>
                 }
             >
-                <WrestlerWindow />
+                <WrestlerDetailsWindow />
             </Show>
         </div>
     }

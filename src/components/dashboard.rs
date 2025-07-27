@@ -10,9 +10,14 @@ extern "C" {
     async fn invoke(cmd: &str, args: JsValue) -> JsValue;
 }
 
-/// WWE-themed show selector component
+/// Main dashboard component with show selector and action buttons
+/// 
+/// Currently displays:
+/// - Show selector dropdown (for future wrestler filtering by show)
+/// - Action buttons for creating shows, viewing wrestlers, and managing championships
+/// - Statistics cards showing counts
 #[component]
-pub fn ShowSelector(
+pub fn Dashboard(
     set_current_page: WriteSignal<String>,
     refresh_trigger: ReadSignal<u32>,
 ) -> impl IntoView {
@@ -21,6 +26,13 @@ pub fn ShowSelector(
         fetch_shows()
     });
     let (selected_show_name, set_selected_show_name) = signal(String::new());
+    
+    // PLANNED ARCHITECTURE:
+    // - Show selector will become a FK in the Wrestler table for categorization
+    // - Wrestler roster will be filtered based on selected show
+    // - Currently shows example data, will connect to real wrestler database
+    // Opens wrestler details window showing example wrestler data
+    // TODO: In the future, this will open a wrestler roster filtered by selected show
     let open_wrestler_window = move |_| {
         spawn_local(async move {
             let args = serde_json::json!({

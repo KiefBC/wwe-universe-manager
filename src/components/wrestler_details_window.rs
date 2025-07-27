@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 
 #[component]
-pub fn WrestlerWindow() -> impl IntoView {
+pub fn WrestlerDetailsWindow() -> impl IntoView {
     view! {
         <div class="h-full p-4 overflow-auto">
             <div class="max-w-4xl mx-auto">
