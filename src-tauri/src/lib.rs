@@ -29,6 +29,8 @@ pub fn run() {
             db::create_show,
             db::get_wrestlers,
             db::get_wrestler_by_id,
+            db::update_wrestler_promotion,
+            db::update_wrestler_power_ratings,
             db::create_user,
             db::create_wrestler,
             db::create_belt,

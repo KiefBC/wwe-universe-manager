@@ -202,6 +202,46 @@ pub fn internal_create_enhanced_wrestler(
         .get_result(conn)
 }
 
+/// Updates a wrestler's promotion
+pub fn internal_update_wrestler_promotion(
+    conn: &mut SqliteConnection,
+    wrestler_id: i32,
+    new_promotion: &str,
+) -> Result<Wrestler, DieselError> {
+    use crate::schema::wrestlers::dsl::*;
+    
+    diesel::update(wrestlers.filter(id.eq(wrestler_id)))
+        .set(promotion.eq(new_promotion))
+        .returning(Wrestler::as_returning())
+        .get_result(conn)
+}
+
+/// Updates a wrestler's power ratings
+pub fn internal_update_wrestler_power_ratings(
+    conn: &mut SqliteConnection,
+    wrestler_id: i32,
+    new_strength: Option<i32>,
+    new_speed: Option<i32>,
+    new_agility: Option<i32>,
+    new_stamina: Option<i32>,
+    new_charisma: Option<i32>,
+    new_technique: Option<i32>,
+) -> Result<Wrestler, DieselError> {
+    use crate::schema::wrestlers::dsl::*;
+    
+    diesel::update(wrestlers.filter(id.eq(wrestler_id)))
+        .set((
+            strength.eq(new_strength),
+            speed.eq(new_speed),
+            agility.eq(new_agility),
+            stamina.eq(new_stamina),
+            charisma.eq(new_charisma),
+            technique.eq(new_technique),
+        ))
+        .returning(Wrestler::as_returning())
+        .get_result(conn)
+}
+
 /// Creates a new signature move for a wrestler
 pub fn internal_create_signature_move(
     conn: &mut SqliteConnection,
@@ -256,6 +296,56 @@ pub fn get_wrestler_by_id(state: State<'_, DbState>, wrestler_id: i32) -> Result
     internal_get_wrestler_by_id(&mut conn, wrestler_id).map_err(|e| {
         error!("Error loading wrestler: {}", e);
         format!("Failed to load wrestler: {}", e)
+    })
+}
+
+#[tauri::command]
+pub fn update_wrestler_promotion(
+    state: State<'_, DbState>,
+    wrestler_id: i32,
+    promotion: String,
+) -> Result<Wrestler, String> {
+    let mut conn = get_connection(&state)?;
+
+    internal_update_wrestler_promotion(&mut conn, wrestler_id, &promotion)
+        .inspect(|wrestler| {
+            info!("Wrestler '{}' promotion updated to '{}'", wrestler.name, promotion);
+        })
+        .map_err(|e| {
+            error!("Error updating wrestler promotion: {}", e);
+            format!("Failed to update wrestler promotion: {}", e)
+        })
+}
+
+#[tauri::command]
+pub fn update_wrestler_power_ratings(
+    state: State<'_, DbState>,
+    wrestler_id: i32,
+    strength: Option<i32>,
+    speed: Option<i32>,
+    agility: Option<i32>,
+    stamina: Option<i32>,
+    charisma: Option<i32>,
+    technique: Option<i32>,
+) -> Result<Wrestler, String> {
+    let mut conn = get_connection(&state)?;
+
+    internal_update_wrestler_power_ratings(
+        &mut conn, 
+        wrestler_id, 
+        strength, 
+        speed, 
+        agility, 
+        stamina, 
+        charisma, 
+        technique
+    )
+    .inspect(|wrestler| {
+        info!("Wrestler '{}' power ratings updated", wrestler.name);
+    })
+    .map_err(|e| {
+        error!("Error updating wrestler power ratings: {}", e);
+        format!("Failed to update wrestler power ratings: {}", e)
     })
 }
 
