@@ -100,6 +100,64 @@ async fn update_wrestler_basic_stats(
     serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
 }
 
+async fn update_wrestler_name(
+    wrestler_id: i32,
+    name: String,
+    nickname: Option<String>,
+) -> Result<Wrestler, String> {
+    let args = serde_wasm_bindgen::to_value(&serde_json::json!({
+        "wrestlerId": wrestler_id,
+        "name": name,
+        "nickname": nickname
+    }))
+    .map_err(|e| e.to_string())?;
+
+    let result = invoke("update_wrestler_name", args).await;
+    serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
+}
+
+async fn update_wrestler_real_name(
+    wrestler_id: i32,
+    real_name: Option<String>,
+) -> Result<Wrestler, String> {
+    let args = serde_wasm_bindgen::to_value(&serde_json::json!({
+        "wrestlerId": wrestler_id,
+        "realName": real_name
+    }))
+    .map_err(|e| e.to_string())?;
+
+    let result = invoke("update_wrestler_real_name", args).await;
+    serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
+}
+
+async fn update_wrestler_biography(
+    wrestler_id: i32,
+    biography: Option<String>,
+) -> Result<Wrestler, String> {
+    let args = serde_wasm_bindgen::to_value(&serde_json::json!({
+        "wrestlerId": wrestler_id,
+        "biography": biography
+    }))
+    .map_err(|e| e.to_string())?;
+
+    let result = invoke("update_wrestler_biography", args).await;
+    serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
+}
+
+async fn update_wrestler_trivia(
+    wrestler_id: i32,
+    trivia: Option<String>,
+) -> Result<Wrestler, String> {
+    let args = serde_wasm_bindgen::to_value(&serde_json::json!({
+        "wrestlerId": wrestler_id,
+        "trivia": trivia
+    }))
+    .map_err(|e| e.to_string())?;
+
+    let result = invoke("update_wrestler_trivia", args).await;
+    serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
+}
+
 fn extract_wrestler_id_from_url() -> Option<i32> {
     web_sys::window()?
         .location()
@@ -117,6 +175,9 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
     let (loading, set_loading) = signal(true);
     let (error, set_error) = signal(None::<String>);
     let (editing_power_ratings, set_editing_power_ratings) = signal(false);
+    
+    // Signal to track current wrestler ID from URL
+    let (current_wrestler_id, set_current_wrestler_id) = signal(extract_wrestler_id_from_url());
     
     // Temporary state for editing power ratings
     let (temp_strength, set_temp_strength) = signal(0i32);
@@ -158,25 +219,118 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
         }
     };
 
-    // Load wrestler data and shows on component mount
+    // Handler for name change
+    let handle_name_change = move |name: String, nickname: Option<String>| {
+        if let Some(w) = wrestler.get() {
+            spawn_local(async move {
+                match update_wrestler_name(w.id, name, nickname).await {
+                    Ok(updated_wrestler) => {
+                        set_wrestler.set(Some(updated_wrestler));
+                    }
+                    Err(e) => {
+                        set_error.set(Some(format!("Failed to update name: {}", e)));
+                    }
+                }
+            });
+        }
+    };
+
+    // Handler for real name change
+    let handle_real_name_change = move |real_name: Option<String>| {
+        if let Some(w) = wrestler.get() {
+            spawn_local(async move {
+                match update_wrestler_real_name(w.id, real_name).await {
+                    Ok(updated_wrestler) => {
+                        set_wrestler.set(Some(updated_wrestler));
+                    }
+                    Err(e) => {
+                        set_error.set(Some(format!("Failed to update real name: {}", e)));
+                    }
+                }
+            });
+        }
+    };
+
+    // Handler for biography change
+    let handle_biography_change = move |biography: Option<String>| {
+        if let Some(w) = wrestler.get() {
+            spawn_local(async move {
+                match update_wrestler_biography(w.id, biography).await {
+                    Ok(updated_wrestler) => {
+                        set_wrestler.set(Some(updated_wrestler));
+                    }
+                    Err(e) => {
+                        set_error.set(Some(format!("Failed to update biography: {}", e)));
+                    }
+                }
+            });
+        }
+    };
+
+    // Handler for trivia change
+    let handle_trivia_change = move |trivia: Option<String>| {
+        if let Some(w) = wrestler.get() {
+            spawn_local(async move {
+                match update_wrestler_trivia(w.id, trivia).await {
+                    Ok(updated_wrestler) => {
+                        set_wrestler.set(Some(updated_wrestler));
+                    }
+                    Err(e) => {
+                        set_error.set(Some(format!("Failed to update trivia: {}", e)));
+                    }
+                }
+            });
+        }
+    };
+
+    // Check for URL changes using web_sys setTimeout in a loop
+    Effect::new(move |_| {
+        use wasm_bindgen::JsCast;
+        
+        let check_url_change = {
+            let set_wrestler_id_clone = set_current_wrestler_id;
+            let current_wrestler_id_clone = current_wrestler_id;
+            
+            Closure::wrap(Box::new(move || {
+                let current_id = extract_wrestler_id_from_url();
+                if current_id != current_wrestler_id_clone.get() {
+                    set_wrestler_id_clone.set(current_id);
+                }
+            }) as Box<dyn Fn()>)
+        };
+        
+        // Set up recurring check every 500ms
+        let check_function = check_url_change.as_ref().unchecked_ref();
+        if let Some(window) = web_sys::window() {
+            window.set_interval_with_callback_and_timeout_and_arguments_0(check_function, 500).ok();
+        }
+        
+        // Don't forget the closure or it will be dropped
+        check_url_change.forget();
+    });
+
+    // Load shows data once on mount
     Effect::new(move |_| {
         spawn_local(async move {
-            set_loading.set(true);
-            set_error.set(None);
-            
-            // Load shows data first
             match fetch_shows().await {
                 Ok(shows_data) => {
                     set_shows.set(shows_data);
                 }
                 Err(e) => {
                     set_error.set(Some(format!("Failed to load shows: {}", e)));
-                    set_loading.set(false);
-                    return;
                 }
             }
+        });
+    });
+
+    // Load wrestler data when wrestler ID changes
+    Effect::new(move |_| {
+        let wrestler_id = current_wrestler_id.get();
+        spawn_local(async move {
+            set_loading.set(true);
+            set_error.set(None);
             
-            if let Some(wrestler_id) = extract_wrestler_id_from_url() {
+            if let Some(wrestler_id) = wrestler_id {
                 match get_wrestler_by_id(wrestler_id).await {
                     Ok(Some(wrestler_data)) => {
                         set_wrestler.set(Some(wrestler_data));
@@ -219,58 +373,28 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
                             view! {
                                 <div class="card-modern rounded-xl relative overflow-hidden">
                                     // Header with sleek styling
-                                    <div class="bg-slate-800/80 backdrop-blur-sm border-b border-slate-700 p-6 text-center relative">
-                                        <div class="absolute top-4 left-6 text-xs font-medium text-slate-400 bg-slate-700/50 px-2 py-1 rounded">
-                                            "WRESTLER"
-                                        </div>
-                                        <div class="absolute top-4 right-6 text-xs font-medium text-slate-400 bg-slate-700/50 px-2 py-1 rounded">
-                                            {format!("#{:03}", w.id)}
-                                        </div>
-                                        <h2 class="text-2xl font-bold text-slate-100">
-                                            "Wrestler Profile"
-                                        </h2>
-                                        <p class="text-slate-400 text-sm mt-1">
-                                            "Character Details & Statistics"
-                                        </p>
-                                    </div>
+                                    <HeaderSection wrestler=wrestler />
 
                                     <div class="grid md:grid-cols-2 gap-6 p-6">
                                         // Left side - Image and basic info
                                         <div class="space-y-4">
                                             // Wrestler image placeholder
-                                            <div class="bg-slate-800/60 border border-slate-700 rounded-lg aspect-[3/4] flex items-center justify-center relative overflow-hidden">
-                                                <div class="absolute inset-4 bg-slate-700/50 backdrop-blur-sm rounded border border-slate-600 flex items-center justify-center">
-                                                    <div class="text-center text-slate-400">
-                                                        <svg class="w-16 h-16 mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24">
-                                                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                                                        </svg>
-                                                        <p class="text-sm font-medium">"Photo Coming Soon"</p>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            <PhotoSection />
 
                                             // Wrestler name banner
-                                            <div class="bg-slate-800/80 backdrop-blur-sm border border-slate-700 p-4 rounded-lg">
-                                                <h3 class="text-3xl font-bold text-slate-100 text-center">
-                                                    {w.name.clone()}
-                                                </h3>
-                                                {w.nickname.as_ref().map(|nickname| view! {
-                                                    <p class="text-center text-slate-400 text-sm mt-1">{nickname.clone()}</p>
-                                                })}
-                                            </div>
+                                            <NameBannerSection 
+                                                wrestler=wrestler
+                                                on_name_change=handle_name_change
+                                            />
                                         </div>
 
                                         // Right side - Stats and info
                                         <div class="space-y-4">
                                             // Real name section
-                                            {w.real_name.as_ref().map(|real_name| view! {
-                                                <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-4">
-                                                    <div class="text-indigo-400 text-sm font-medium mb-2">
-                                                        "Real Name"
-                                                    </div>
-                                                    <p class="text-slate-100 font-semibold text-lg">{real_name.clone()}</p>
-                                                </div>
-                                            })}
+                                            <RealNameSection 
+                                                wrestler=wrestler
+                                                on_real_name_change=handle_real_name_change
+                                            />
 
                                             // Power ratings (only show if any exist)
                                             <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-4">
@@ -396,24 +520,16 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
                                     // Bottom section
                                     <div class="px-6 pb-6 space-y-4">
                                         // Biography
-                                        {w.biography.as_ref().map(|bio| view! {
-                                            <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-4">
-                                                <h4 class="text-slate-100 font-semibold text-lg mb-3">"Biography"</h4>
-                                                <p class="text-slate-300 text-sm leading-relaxed">
-                                                    {bio.clone()}
-                                                </p>
-                                            </div>
-                                        })}
+                                        <BiographySection 
+                                            wrestler=wrestler
+                                            on_biography_change=handle_biography_change
+                                        />
 
                                         // Did you know section (trivia)
-                                        {w.trivia.as_ref().map(|trivia| view! {
-                                            <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-4">
-                                                <h4 class="text-slate-100 font-semibold text-lg mb-3">"Did You Know"</h4>
-                                                <p class="text-slate-300 text-sm leading-relaxed">
-                                                    {trivia.clone()}
-                                                </p>
-                                            </div>
-                                        })}
+                                        <TriviaSection 
+                                            wrestler=wrestler
+                                            on_trivia_change=handle_trivia_change
+                                        />
                                     </div>
                                 </div>
                             }
@@ -732,5 +848,372 @@ where
                 </div>
             </Show>
         </div>
+    }
+}
+
+#[component]
+fn HeaderSection(
+    wrestler: ReadSignal<Option<Wrestler>>,
+) -> impl IntoView {
+    view! {
+        <div class="bg-slate-800/80 backdrop-blur-sm border-b border-slate-700 p-6 text-center relative">
+            <div class="absolute top-4 left-6 text-xs font-medium text-slate-400 bg-slate-700/50 px-2 py-1 rounded">
+                "WRESTLER"
+            </div>
+            <div class="absolute top-4 right-6 text-xs font-medium text-slate-400 bg-slate-700/50 px-2 py-1 rounded">
+                {move || wrestler.get().map(|w| format!("#{:03}", w.id)).unwrap_or_default()}
+            </div>
+            <h2 class="text-2xl font-bold text-slate-100">
+                "Wrestler Profile"
+            </h2>
+            <p class="text-slate-400 text-sm mt-1">
+                "Character Details & Statistics"
+            </p>
+        </div>
+    }
+}
+
+#[component]
+fn PhotoSection() -> impl IntoView {
+    view! {
+        <div class="bg-slate-800/60 border border-slate-700 rounded-lg aspect-[3/4] flex items-center justify-center relative overflow-hidden">
+            <div class="absolute inset-4 bg-slate-700/50 backdrop-blur-sm rounded border border-slate-600 flex items-center justify-center">
+                <div class="text-center text-slate-400">
+                    <svg class="w-16 h-16 mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                    <p class="text-sm font-medium">"Photo Coming Soon"</p>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+fn NameBannerSection<F>(
+    wrestler: ReadSignal<Option<Wrestler>>,
+    on_name_change: F,
+) -> impl IntoView
+where
+    F: Fn(String, Option<String>) + 'static + Copy + Send + Sync,
+{
+    let (editing, set_editing) = signal(false);
+    let (temp_name, set_temp_name) = signal(String::new());
+    let (temp_nickname, set_temp_nickname) = signal(String::new());
+
+    view! {
+        <div class="bg-slate-800/80 backdrop-blur-sm border border-slate-700 p-4 rounded-lg">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex-1"></div>
+                <button
+                    class="text-slate-400 hover:text-slate-200 text-xs font-medium flex items-center space-x-1"
+                    on:click=move |_| {
+                        if let Some(w) = wrestler.get() {
+                            set_temp_name.set(w.name);
+                            set_temp_nickname.set(w.nickname.unwrap_or_default());
+                            set_editing.set(true);
+                        }
+                    }
+                >
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    <span>"Edit"</span>
+                </button>
+            </div>
+            <Show 
+                when=move || !editing.get()
+                fallback=move || view! {
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-slate-400 font-medium text-sm mb-1">"Name"</label>
+                            <input
+                                type="text"
+                                class="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-slate-100 text-lg font-bold text-center"
+                                prop:value=move || temp_name.get()
+                                on:input:target=move |ev| {
+                                    set_temp_name.set(ev.target().value());
+                                }
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 font-medium text-sm mb-1">"Nickname"</label>
+                            <input
+                                type="text"
+                                class="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-slate-100 text-sm text-center"
+                                placeholder="Optional nickname"
+                                prop:value=move || temp_nickname.get()
+                                on:input:target=move |ev| {
+                                    set_temp_nickname.set(ev.target().value());
+                                }
+                            />
+                        </div>
+                    </div>
+                    <div class="flex space-x-2 mt-4">
+                        <button
+                            class="flex-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium"
+                            on:click=move |_| {
+                                let nickname = if temp_nickname.get().is_empty() { None } else { Some(temp_nickname.get()) };
+                                on_name_change(temp_name.get(), nickname);
+                                set_editing.set(false);
+                            }
+                        >
+                            "Save"
+                        </button>
+                        <button
+                            class="flex-1 bg-slate-600 hover:bg-slate-700 text-white px-3 py-2 rounded text-sm font-medium"
+                            on:click=move |_| {
+                                set_editing.set(false);
+                            }
+                        >
+                            "Cancel"
+                        </button>
+                    </div>
+                }
+            >
+                {move || wrestler.get().map(|w| view! {
+                    <h3 class="text-3xl font-bold text-slate-100 text-center">
+                        {w.name}
+                    </h3>
+                    {w.nickname.as_ref().map(|nickname| view! {
+                        <p class="text-center text-slate-400 text-sm mt-1">{nickname.clone()}</p>
+                    })}
+                })}
+            </Show>
+        </div>
+    }
+}
+
+#[component]
+fn RealNameSection<F>(
+    wrestler: ReadSignal<Option<Wrestler>>,
+    on_real_name_change: F,
+) -> impl IntoView
+where
+    F: Fn(Option<String>) + 'static + Copy + Send + Sync,
+{
+    let (editing, set_editing) = signal(false);
+    let (temp_real_name, set_temp_real_name) = signal(String::new());
+
+    view! {
+        <Show when=move || wrestler.get().and_then(|w| w.real_name.clone()).is_some() || editing.get()>
+            <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-4">
+                <div class="flex items-center justify-between mb-2 border-b border-slate-700 pb-2">
+                    <div class="text-indigo-400 text-sm font-medium">
+                        "Real Name"
+                    </div>
+                    <button
+                        class="text-slate-400 hover:text-slate-200 text-xs font-medium flex items-center space-x-1"
+                        on:click=move |_| {
+                            if let Some(w) = wrestler.get() {
+                                set_temp_real_name.set(w.real_name.unwrap_or_default());
+                                set_editing.set(true);
+                            }
+                        }
+                    >
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        <span>"Edit"</span>
+                    </button>
+                </div>
+                <Show 
+                    when=move || !editing.get()
+                    fallback=move || view! {
+                        <div class="space-y-3">
+                            <input
+                                type="text"
+                                class="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-slate-100 text-lg"
+                                placeholder="Enter real name"
+                                prop:value=move || temp_real_name.get()
+                                on:input:target=move |ev| {
+                                    set_temp_real_name.set(ev.target().value());
+                                }
+                            />
+                        </div>
+                        <div class="flex space-x-2 mt-4">
+                            <button
+                                class="flex-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium"
+                                on:click=move |_| {
+                                    let real_name = if temp_real_name.get().is_empty() { None } else { Some(temp_real_name.get()) };
+                                    on_real_name_change(real_name);
+                                    set_editing.set(false);
+                                }
+                            >
+                                "Save"
+                            </button>
+                            <button
+                                class="flex-1 bg-slate-600 hover:bg-slate-700 text-white px-3 py-2 rounded text-sm font-medium"
+                                on:click=move |_| {
+                                    set_editing.set(false);
+                                }
+                            >
+                                "Cancel"
+                            </button>
+                        </div>
+                    }
+                >
+                    {move || wrestler.get().and_then(|w| w.real_name).map(|real_name| view! {
+                        <p class="text-slate-100 font-semibold text-lg">{real_name}</p>
+                    })}
+                </Show>
+            </div>
+        </Show>
+    }
+}
+
+#[component]
+fn BiographySection<F>(
+    wrestler: ReadSignal<Option<Wrestler>>,
+    on_biography_change: F,
+) -> impl IntoView
+where
+    F: Fn(Option<String>) + 'static + Copy + Send + Sync,
+{
+    let (editing, set_editing) = signal(false);
+    let (temp_biography, set_temp_biography) = signal(String::new());
+
+    view! {
+        <Show when=move || wrestler.get().and_then(|w| w.biography.clone()).is_some() || editing.get()>
+            <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-4">
+                <div class="flex items-center justify-between mb-3 border-b border-slate-700 pb-2">
+                    <h4 class="text-slate-100 font-semibold text-lg">"Biography"</h4>
+                    <button
+                        class="text-slate-400 hover:text-slate-200 text-sm font-medium flex items-center space-x-1"
+                        on:click=move |_| {
+                            if let Some(w) = wrestler.get() {
+                                set_temp_biography.set(w.biography.unwrap_or_default());
+                                set_editing.set(true);
+                            }
+                        }
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        <span>"Edit"</span>
+                    </button>
+                </div>
+                <Show 
+                    when=move || !editing.get()
+                    fallback=move || view! {
+                        <div class="space-y-3">
+                            <textarea
+                                class="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-slate-100 text-sm resize-none"
+                                rows="4"
+                                placeholder="Enter biography..."
+                                prop:value=move || temp_biography.get()
+                                on:input:target=move |ev| {
+                                    set_temp_biography.set(ev.target().value());
+                                }
+                            ></textarea>
+                        </div>
+                        <div class="flex space-x-2 mt-4">
+                            <button
+                                class="flex-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium"
+                                on:click=move |_| {
+                                    let biography = if temp_biography.get().is_empty() { None } else { Some(temp_biography.get()) };
+                                    on_biography_change(biography);
+                                    set_editing.set(false);
+                                }
+                            >
+                                "Save"
+                            </button>
+                            <button
+                                class="flex-1 bg-slate-600 hover:bg-slate-700 text-white px-3 py-2 rounded text-sm font-medium"
+                                on:click=move |_| {
+                                    set_editing.set(false);
+                                }
+                            >
+                                "Cancel"
+                            </button>
+                        </div>
+                    }
+                >
+                    {move || wrestler.get().and_then(|w| w.biography).map(|bio| view! {
+                        <p class="text-slate-300 text-sm leading-relaxed">
+                            {bio}
+                        </p>
+                    })}
+                </Show>
+            </div>
+        </Show>
+    }
+}
+
+#[component]
+fn TriviaSection<F>(
+    wrestler: ReadSignal<Option<Wrestler>>,
+    on_trivia_change: F,
+) -> impl IntoView
+where
+    F: Fn(Option<String>) + 'static + Copy + Send + Sync,
+{
+    let (editing, set_editing) = signal(false);
+    let (temp_trivia, set_temp_trivia) = signal(String::new());
+
+    view! {
+        <Show when=move || wrestler.get().and_then(|w| w.trivia.clone()).is_some() || editing.get()>
+            <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-4">
+                <div class="flex items-center justify-between mb-3 border-b border-slate-700 pb-2">
+                    <h4 class="text-slate-100 font-semibold text-lg">"Did You Know"</h4>
+                    <button
+                        class="text-slate-400 hover:text-slate-200 text-sm font-medium flex items-center space-x-1"
+                        on:click=move |_| {
+                            if let Some(w) = wrestler.get() {
+                                set_temp_trivia.set(w.trivia.unwrap_or_default());
+                                set_editing.set(true);
+                            }
+                        }
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        <span>"Edit"</span>
+                    </button>
+                </div>
+                <Show 
+                    when=move || !editing.get()
+                    fallback=move || view! {
+                        <div class="space-y-3">
+                            <textarea
+                                class="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-slate-100 text-sm resize-none"
+                                rows="3"
+                                placeholder="Enter trivia/fun facts..."
+                                prop:value=move || temp_trivia.get()
+                                on:input:target=move |ev| {
+                                    set_temp_trivia.set(ev.target().value());
+                                }
+                            ></textarea>
+                        </div>
+                        <div class="flex space-x-2 mt-4">
+                            <button
+                                class="flex-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium"
+                                on:click=move |_| {
+                                    let trivia = if temp_trivia.get().is_empty() { None } else { Some(temp_trivia.get()) };
+                                    on_trivia_change(trivia);
+                                    set_editing.set(false);
+                                }
+                            >
+                                "Save"
+                            </button>
+                            <button
+                                class="flex-1 bg-slate-600 hover:bg-slate-700 text-white px-3 py-2 rounded text-sm font-medium"
+                                on:click=move |_| {
+                                    set_editing.set(false);
+                                }
+                            >
+                                "Cancel"
+                            </button>
+                        </div>
+                    }
+                >
+                    {move || wrestler.get().and_then(|w| w.trivia).map(|trivia| view! {
+                        <p class="text-slate-300 text-sm leading-relaxed">
+                            {trivia}
+                        </p>
+                    })}
+                </Show>
+            </div>
+        </Show>
     }
 }

@@ -32,6 +32,10 @@ pub fn run() {
             db::update_wrestler_promotion,
             db::update_wrestler_power_ratings,
             db::update_wrestler_basic_stats,
+            db::update_wrestler_name,
+            db::update_wrestler_real_name,
+            db::update_wrestler_biography,
+            db::update_wrestler_trivia,
             db::create_user,
             db::create_wrestler,
             db::create_belt,
@@ -46,19 +50,20 @@ pub fn run() {
         .expect("Failed to run Tauri application");
 }
 
-/// Opens a new window displaying wrestler details
+/// Opens a wrestler details window (only one allowed at a time)
 #[tauri::command]
 async fn open_wrestler_window(app: AppHandle, wrestler_id: Option<String>) -> Result<(), String> {
     let wrestler_id = wrestler_id.unwrap_or_else(|| "default".to_string());
-    let window_label = format!("wrestler-{}", wrestler_id);
+    let window_label = "wrestler-details"; // Use consistent label for all wrestler windows
     
     // Check if window already exists
-    if let Some(_existing_window) = app.get_webview_window(&window_label) {
-        // If window exists, just focus it
-        if let Some(window) = app.get_webview_window(&window_label) {
-            window.set_focus().map_err(|e| e.to_string())?;
-            return Ok(());
-        }
+    if let Some(existing_window) = app.get_webview_window(window_label) {
+        // If window exists, update the URL hash to load the new wrestler
+        let js_code = format!("window.location.hash = '#wrestler?id={}';", wrestler_id);
+        existing_window.eval(&js_code)
+            .map_err(|e| e.to_string())?;
+        existing_window.set_focus().map_err(|e| e.to_string())?;
+        return Ok(());
     }
 
     // Create new window with wrestler ID in the URL hash

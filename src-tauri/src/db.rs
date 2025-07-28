@@ -266,6 +266,66 @@ pub fn internal_update_wrestler_basic_stats(
         .get_result(conn)
 }
 
+/// Updates a wrestler's name and nickname
+pub fn internal_update_wrestler_name(
+    conn: &mut SqliteConnection,
+    wrestler_id: i32,
+    new_name: &str,
+    new_nickname: Option<String>,
+) -> Result<Wrestler, DieselError> {
+    use crate::schema::wrestlers::dsl::*;
+    
+    diesel::update(wrestlers.filter(id.eq(wrestler_id)))
+        .set((
+            name.eq(new_name),
+            nickname.eq(new_nickname),
+        ))
+        .returning(Wrestler::as_returning())
+        .get_result(conn)
+}
+
+/// Updates a wrestler's real name
+pub fn internal_update_wrestler_real_name(
+    conn: &mut SqliteConnection,
+    wrestler_id: i32,
+    new_real_name: Option<String>,
+) -> Result<Wrestler, DieselError> {
+    use crate::schema::wrestlers::dsl::*;
+    
+    diesel::update(wrestlers.filter(id.eq(wrestler_id)))
+        .set(real_name.eq(new_real_name))
+        .returning(Wrestler::as_returning())
+        .get_result(conn)
+}
+
+/// Updates a wrestler's biography
+pub fn internal_update_wrestler_biography(
+    conn: &mut SqliteConnection,
+    wrestler_id: i32,
+    new_biography: Option<String>,
+) -> Result<Wrestler, DieselError> {
+    use crate::schema::wrestlers::dsl::*;
+    
+    diesel::update(wrestlers.filter(id.eq(wrestler_id)))
+        .set(biography.eq(new_biography))
+        .returning(Wrestler::as_returning())
+        .get_result(conn)
+}
+
+/// Updates a wrestler's trivia
+pub fn internal_update_wrestler_trivia(
+    conn: &mut SqliteConnection,
+    wrestler_id: i32,
+    new_trivia: Option<String>,
+) -> Result<Wrestler, DieselError> {
+    use crate::schema::wrestlers::dsl::*;
+    
+    diesel::update(wrestlers.filter(id.eq(wrestler_id)))
+        .set(trivia.eq(new_trivia))
+        .returning(Wrestler::as_returning())
+        .get_result(conn)
+}
+
 /// Creates a new signature move for a wrestler
 pub fn internal_create_signature_move(
     conn: &mut SqliteConnection,
@@ -401,6 +461,79 @@ pub fn update_wrestler_basic_stats(
         error!("Error updating wrestler basic stats: {}", e);
         format!("Failed to update wrestler basic stats: {}", e)
     })
+}
+
+#[tauri::command]
+pub fn update_wrestler_name(
+    state: State<'_, DbState>,
+    wrestler_id: i32,
+    name: String,
+    nickname: Option<String>,
+) -> Result<Wrestler, String> {
+    let mut conn = get_connection(&state)?;
+
+    internal_update_wrestler_name(&mut conn, wrestler_id, &name, nickname)
+        .inspect(|wrestler| {
+            info!("Wrestler '{}' name updated", wrestler.name);
+        })
+        .map_err(|e| {
+            error!("Error updating wrestler name: {}", e);
+            format!("Failed to update wrestler name: {}", e)
+        })
+}
+
+#[tauri::command]
+pub fn update_wrestler_real_name(
+    state: State<'_, DbState>,
+    wrestler_id: i32,
+    real_name: Option<String>,
+) -> Result<Wrestler, String> {
+    let mut conn = get_connection(&state)?;
+
+    internal_update_wrestler_real_name(&mut conn, wrestler_id, real_name)
+        .inspect(|wrestler| {
+            info!("Wrestler '{}' real name updated", wrestler.name);
+        })
+        .map_err(|e| {
+            error!("Error updating wrestler real name: {}", e);
+            format!("Failed to update wrestler real name: {}", e)
+        })
+}
+
+#[tauri::command]
+pub fn update_wrestler_biography(
+    state: State<'_, DbState>,
+    wrestler_id: i32,
+    biography: Option<String>,
+) -> Result<Wrestler, String> {
+    let mut conn = get_connection(&state)?;
+
+    internal_update_wrestler_biography(&mut conn, wrestler_id, biography)
+        .inspect(|wrestler| {
+            info!("Wrestler '{}' biography updated", wrestler.name);
+        })
+        .map_err(|e| {
+            error!("Error updating wrestler biography: {}", e);
+            format!("Failed to update wrestler biography: {}", e)
+        })
+}
+
+#[tauri::command]
+pub fn update_wrestler_trivia(
+    state: State<'_, DbState>,
+    wrestler_id: i32,
+    trivia: Option<String>,
+) -> Result<Wrestler, String> {
+    let mut conn = get_connection(&state)?;
+
+    internal_update_wrestler_trivia(&mut conn, wrestler_id, trivia)
+        .inspect(|wrestler| {
+            info!("Wrestler '{}' trivia updated", wrestler.name);
+        })
+        .map_err(|e| {
+            error!("Error updating wrestler trivia: {}", e);
+            format!("Failed to update wrestler trivia: {}", e)
+        })
 }
 
 // ===== Title Operations =====
