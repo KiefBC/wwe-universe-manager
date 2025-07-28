@@ -25,6 +25,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             // Database operations
+            db::get_promotions,
+            db::create_promotion,
             db::get_shows,
             db::create_show,
             db::get_wrestlers,
@@ -40,8 +42,20 @@ pub fn run() {
             db::create_user_wrestler,
             db::create_belt,
             db::get_titles,
+            db::get_titles_for_show,
+            db::get_unassigned_titles,
             db::update_title_holder,
             db::create_test_data,
+            // Show roster operations
+            db::get_wrestlers_for_show,
+            db::assign_wrestler_to_show,
+            db::remove_wrestler_from_show,
+            // Match booking operations
+            db::create_match,
+            db::get_matches_for_show,
+            db::add_wrestler_to_match,
+            db::get_match_participants,
+            db::set_match_winner,
             // Authentication operations
             auth::verify_credentials,
             auth::register_user,

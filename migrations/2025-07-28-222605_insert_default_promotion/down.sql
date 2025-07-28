@@ -1,0 +1,1 @@
+DELETE FROM promotions WHERE id = 1;

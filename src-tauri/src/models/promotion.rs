@@ -1,32 +1,28 @@
-use crate::models::Promotion;
-use crate::schema::shows;
+use crate::schema::promotions;
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Queryable, Selectable, Identifiable, Associations, Serialize, Deserialize)]
-#[diesel(table_name = shows)]
-#[diesel(belongs_to(Promotion, foreign_key = promotion_id))]
+#[derive(Debug, Queryable, Selectable, Identifiable, Serialize, Deserialize)]
+#[diesel(table_name = promotions)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
-pub struct Show {
+pub struct Promotion {
     pub id: i32,
     pub name: String,
     pub description: String,
     pub created_at: Option<NaiveDateTime>,
     pub updated_at: Option<NaiveDateTime>,
-    pub promotion_id: i32,
 }
 
 #[derive(Insertable)]
-#[diesel(table_name = shows)]
-pub struct NewShow {
+#[diesel(table_name = promotions)]
+pub struct NewPromotion {
     pub name: String,
     pub description: String,
-    pub promotion_id: i32,
 }
 
 #[derive(Deserialize)]
-pub struct ShowData {
+pub struct PromotionData {
     pub name: String,
     pub description: String,
 }

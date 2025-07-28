@@ -1,4 +1,4 @@
-use crate::types::fetch_shows;
+use crate::types::{fetch_shows, Promotion};
 use leptos::prelude::*;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
@@ -10,27 +10,25 @@ extern "C" {
     async fn invoke(cmd: &str, args: JsValue) -> JsValue;
 }
 
-/// Main dashboard component with show selector and action buttons
+/// Promotion-specific dashboard component 
 /// 
-/// Currently displays:
-/// - Show selector dropdown (for future wrestler filtering by show)
+/// Displays promotion-specific:
+/// - Shows for the selected promotion
 /// - Action buttons for creating shows, viewing wrestlers, and managing championships
-/// - Statistics cards showing counts
+/// - Statistics cards showing promotion-specific counts
+/// - Booker button for match booking
 #[component]
-pub fn Dashboard(
+pub fn PromotionDashboard(
     set_current_page: WriteSignal<String>,
     refresh_trigger: ReadSignal<u32>,
+    selected_promotion: ReadSignal<Option<Promotion>>,
 ) -> impl IntoView {
-    let shows_resource = LocalResource::new(move || {
+    // Get promotion-specific shows (filtered by promotion_id in the future)
+    let _shows_resource = LocalResource::new(move || {
         let _trigger = refresh_trigger.get(); // This makes the resource reactive to refresh_trigger
-        fetch_shows()
+        fetch_shows() // TODO: Filter by selected_promotion.get().map(|p| p.id) when backend supports it
     });
-    let (selected_show_name, set_selected_show_name) = signal(String::new());
     
-    // PLANNED ARCHITECTURE:
-    // - Show selector will become a FK in the Wrestler table for categorization
-    // - Wrestler roster will be filtered based on selected show
-    // - Currently shows example data, will connect to real wrestler database
     // Navigate to wrestlers list page
     let navigate_to_wrestlers = move |_| {
         set_current_page.set("wrestlers".to_string());
@@ -58,61 +56,32 @@ pub fn Dashboard(
         });
     };
 
-    let _options_view = move || {
-        shows_resource.get().map(|result| {
-            let mut options = Vec::new();
-
-            match &*result {
-                Ok(shows) => {
-                    // Set first show as default if none selected and shows exist
-                    if !shows.is_empty() && selected_show_name.get().is_empty() {
-                        set_selected_show_name.set(shows[0].name.clone());
-                    }
-
-                    if shows.is_empty() {
-                        options.push(view! {
-                            <option value={String::new()}>
-                                {"-- No shows available --".to_string()}
-                            </option>
-                        });
-                    } else {
-                        for show in shows {
-                            let show_name = show.name.clone();
-
-                            options.push(view! {
-                                <option value={show_name.clone()}>
-                                    {show_name.clone()}
-                                </option>
-                            });
-                        }
-                    }
-                }
-                Err(e) => {
-                    options.push(view! {
-                        <option value={String::new()}>
-                            {format!("Error: {}", e)}
-                        </option>
-                    });
-                }
-            }
-
-            options
-        })
-    };
 
     view! {
         <div class="space-y-8">
             <div class="text-center mb-8">
                 <h2 class="text-3xl font-bold text-base-content mb-2">
-                    "General Manager Dashboard"
+                    {move || {
+                        if let Some(promotion) = selected_promotion.get() {
+                            format!("{} Management Dashboard", promotion.name)
+                        } else {
+                            "Promotion Dashboard".to_string()
+                        }
+                    }}
                 </h2>
                 <p class="text-base-content/70">
-                    "Manage your WWE Universe with executive control"
+                    {move || {
+                        if let Some(promotion) = selected_promotion.get() {
+                            format!("Manage {} shows, wrestlers, and championships", promotion.name)
+                        } else {
+                            "Select a promotion to manage".to_string()
+                        }
+                    }}
                 </p>
             </div>
 
 
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <button
                     class="btn btn-primary gap-2"
                     on:click=move |_| set_current_page.set("create-show".to_string())
@@ -120,7 +89,7 @@ pub fn Dashboard(
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    "Book Show"
+                    "Create Show"
                 </button>
                 <button 
                     class="btn btn-secondary gap-2"
@@ -139,6 +108,15 @@ pub fn Dashboard(
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                     </svg>
                     "Title Management"
+                </button>
+                <button 
+                    class="btn btn-info gap-2"
+                    on:click=move |_| set_current_page.set("booker".to_string())
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 0V3a2 2 0 00-2-2V1a2 2 0 00-2 2v2H9z M8 5h2v6H8V5z" />
+                    </svg>
+                    "Booker"
                 </button>
                 <button 
                     class="btn btn-warning gap-2"

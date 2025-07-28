@@ -1,5 +1,6 @@
 use crate::models::{
-    NewShow, NewSignatureMove, NewTitle, NewTitleHolder, NewUser, NewWrestler, NewEnhancedWrestler, Show, ShowData, SignatureMove, Title, TitleData, TitleHolder, TitleWithHolders, TitleHolderInfo, User, UserData,
+    Match, MatchData, NewMatch, MatchParticipant, NewMatchParticipant,
+    NewPromotion, NewShowRoster, NewShow, NewSignatureMove, NewTitle, NewTitleHolder, NewUser, NewWrestler, NewEnhancedWrestler, Promotion, PromotionData, ShowRoster, Show, ShowData, SignatureMove, Title, TitleData, TitleHolder, TitleWithHolders, TitleHolderInfo, User, UserData,
     Wrestler, WrestlerData, EnhancedWrestlerData,
 };
 use diesel::prelude::*;
@@ -44,10 +45,12 @@ pub fn internal_create_show(
     conn: &mut SqliteConnection,
     name: &str,
     description: &str,
+    promotion_id: i32,
 ) -> Result<Show, DieselError> {
     let new_show = NewShow {
         name: name.to_string(),
         description: description.to_string(),
+        promotion_id,
     };
 
     diesel::insert_into(crate::schema::shows::dsl::shows)
@@ -56,17 +59,22 @@ pub fn internal_create_show(
         .get_result(conn)
 }
 
-/// Gets all shows ordered by ID (used by tests and Tauri commands)
-pub fn internal_get_shows(conn: &mut SqliteConnection) -> Result<Vec<Show>, DieselError> {
+/// Gets all shows for a promotion ordered by ID (used by tests and Tauri commands)
+pub fn internal_get_shows(conn: &mut SqliteConnection, promotion_id: i32) -> Result<Vec<Show>, DieselError> {
     use crate::schema::shows::dsl::*;
-    shows.order(id.asc()).load::<Show>(conn)
+    shows
+        .filter(crate::schema::shows::promotion_id.eq(promotion_id))
+        .order(id.asc())
+        .load::<Show>(conn)
 }
 
 #[tauri::command]
 pub fn create_show(state: State<'_, DbState>, show_data: ShowData) -> Result<Show, String> {
     let mut conn = get_connection(&state)?;
 
-    internal_create_show(&mut conn, &show_data.name, &show_data.description)
+    // TODO: Update to use actual promotion_id from frontend when CEO dashboard is implemented
+    let default_promotion_id = 1;
+    internal_create_show(&mut conn, &show_data.name, &show_data.description, default_promotion_id)
         .inspect(|show| {
             info!("Show '{}' created successfully", show.name);
         })
@@ -80,9 +88,64 @@ pub fn create_show(state: State<'_, DbState>, show_data: ShowData) -> Result<Sho
 pub fn get_shows(state: State<'_, DbState>) -> Result<Vec<Show>, String> {
     let mut conn = get_connection(&state)?;
 
-    internal_get_shows(&mut conn).map_err(|e| {
+    // TODO: Update to use actual promotion_id from frontend when CEO dashboard is implemented
+    let default_promotion_id = 1;
+    internal_get_shows(&mut conn, default_promotion_id).map_err(|e| {
         error!("Error loading shows: {}", e);
         format!("Failed to load shows: {}", e)
+    })
+}
+
+// ===== Promotion Operations =====
+
+/// Creates a new promotion (used by tests and Tauri commands)
+pub fn internal_create_promotion(
+    conn: &mut SqliteConnection,
+    name: &str,
+    description: &str,
+) -> Result<Promotion, DieselError> {
+    let new_promotion = NewPromotion {
+        name: name.to_string(),
+        description: description.to_string(),
+    };
+
+    diesel::insert_into(crate::schema::promotions::dsl::promotions)
+        .values(&new_promotion)
+        .returning(Promotion::as_returning())
+        .get_result(conn)
+}
+
+/// Gets all promotions from the database (used by tests and Tauri commands)
+pub fn internal_get_promotions(conn: &mut SqliteConnection) -> Result<Vec<Promotion>, DieselError> {
+    use crate::schema::promotions::dsl::*;
+    
+    promotions
+        .order(name.asc())
+        .select(Promotion::as_select())
+        .load(conn)
+}
+
+#[tauri::command]
+pub fn create_promotion(
+    state: State<'_, DbState>,
+    promotion_data: PromotionData,
+) -> Result<Promotion, String> {
+    let mut conn = get_connection(&state)?;
+
+    internal_create_promotion(&mut conn, &promotion_data.name, &promotion_data.description)
+        .map_err(|e| {
+            error!("Error creating promotion: {}", e);
+            format!("Failed to create promotion: {}", e)
+        })
+}
+
+#[tauri::command]
+pub fn get_promotions(state: State<'_, DbState>) -> Result<Vec<Promotion>, String> {
+    let mut conn = get_connection(&state)?;
+
+    internal_get_promotions(&mut conn).map_err(|e| {
+        error!("Error loading promotions: {}", e);
+        format!("Failed to load promotions: {}", e)
     })
 }
 
@@ -124,7 +187,9 @@ pub fn create_user(state: State<'_, DbState>, user_data: UserData) -> Result<Use
 /// Gets all wrestlers ordered by ID (used by tests and Tauri commands)
 pub fn internal_get_wrestlers(conn: &mut SqliteConnection) -> Result<Vec<Wrestler>, DieselError> {
     use crate::schema::wrestlers::dsl::*;
-    wrestlers.order(id.asc()).load::<Wrestler>(conn)
+    wrestlers
+        .order(id.asc())
+        .load::<Wrestler>(conn)
 }
 
 /// Gets a specific wrestler by ID (used by tests and Tauri commands)
@@ -230,6 +295,7 @@ pub fn internal_create_user_wrestler(
         technique: wrestler_data.technique,
         biography: wrestler_data.biography.clone(),
         is_user_created: Some(true), // User-created wrestler
+        // Wrestlers are now global - no promotion_id needed
     };
 
     diesel::insert_into(crate::schema::wrestlers::dsl::wrestlers)
@@ -622,7 +688,7 @@ pub fn create_belt(state: State<'_, DbState>, title_data: TitleData) -> Result<T
 pub fn internal_get_titles(conn: &mut SqliteConnection) -> Result<Vec<TitleWithHolders>, DieselError> {
     use crate::schema::{titles, title_holders, wrestlers};
     
-    // Get all active titles
+    // Get all active titles (global, not promotion-specific)
     let all_titles = titles::table
         .filter(titles::is_active.eq(true))
         .order(titles::prestige_tier.asc())
@@ -743,13 +809,148 @@ pub fn update_title_holder(
     Ok("Title holder updated successfully".to_string())
 }
 
+/// Gets all titles filtered by show assignment
+pub fn internal_get_titles_for_show(
+    conn: &mut SqliteConnection,
+    show_id: i32,
+) -> Result<Vec<TitleWithHolders>, DieselError> {
+    use crate::schema::{titles, title_holders, wrestlers};
+    
+    // Get titles assigned to this specific show
+    let all_titles = titles::table
+        .filter(titles::is_active.eq(true))
+        .filter(titles::show_id.eq(show_id))
+        .order(titles::prestige_tier.asc())
+        .then_order_by(titles::name.asc())
+        .load::<Title>(conn)?;
+
+    let mut titles_with_holders = Vec::new();
+
+    for title in all_titles {
+        // Get current holders for this title
+        let current_holders_data = title_holders::table
+            .inner_join(wrestlers::table.on(title_holders::wrestler_id.eq(wrestlers::id)))
+            .filter(title_holders::title_id.eq(title.id))
+            .filter(title_holders::held_until.is_null())
+            .select((TitleHolder::as_select(), wrestlers::name, wrestlers::gender))
+            .load::<(TitleHolder, String, String)>(conn)?;
+
+        let current_holders: Vec<TitleHolderInfo> = current_holders_data
+            .into_iter()
+            .map(|(holder, wrestler_name, wrestler_gender)| TitleHolderInfo {
+                holder,
+                wrestler_name,
+                wrestler_gender,
+            })
+            .collect();
+
+        // Calculate days held for the first holder (for single titles)
+        let days_held = if let Some(first_holder) = current_holders.first() {
+            let now = Utc::now().naive_utc();
+            let duration = now - first_holder.holder.held_since;
+            Some(duration.num_days() as i32)
+        } else {
+            None
+        };
+
+        titles_with_holders.push(TitleWithHolders {
+            title,
+            current_holders,
+            days_held,
+        });
+    }
+
+    Ok(titles_with_holders)
+}
+
+/// Gets all unassigned titles (not assigned to any show)
+pub fn internal_get_unassigned_titles(
+    conn: &mut SqliteConnection,
+) -> Result<Vec<TitleWithHolders>, DieselError> {
+    use crate::schema::{titles, title_holders, wrestlers};
+    
+    // Get titles not assigned to any show
+    let all_titles = titles::table
+        .filter(titles::is_active.eq(true))
+        .filter(titles::show_id.is_null())
+        .order(titles::prestige_tier.asc())
+        .then_order_by(titles::name.asc())
+        .load::<Title>(conn)?;
+
+    let mut titles_with_holders = Vec::new();
+
+    for title in all_titles {
+        // Get current holders for this title
+        let current_holders_data = title_holders::table
+            .inner_join(wrestlers::table.on(title_holders::wrestler_id.eq(wrestlers::id)))
+            .filter(title_holders::title_id.eq(title.id))
+            .filter(title_holders::held_until.is_null())
+            .select((TitleHolder::as_select(), wrestlers::name, wrestlers::gender))
+            .load::<(TitleHolder, String, String)>(conn)?;
+
+        let current_holders: Vec<TitleHolderInfo> = current_holders_data
+            .into_iter()
+            .map(|(holder, wrestler_name, wrestler_gender)| TitleHolderInfo {
+                holder,
+                wrestler_name,
+                wrestler_gender,
+            })
+            .collect();
+
+        // Calculate days held for the first holder (for single titles)
+        let days_held = if let Some(first_holder) = current_holders.first() {
+            let now = Utc::now().naive_utc();
+            let duration = now - first_holder.holder.held_since;
+            Some(duration.num_days() as i32)
+        } else {
+            None
+        };
+
+        titles_with_holders.push(TitleWithHolders {
+            title,
+            current_holders,
+            days_held,
+        });
+    }
+
+    Ok(titles_with_holders)
+}
+
+#[tauri::command]
+pub fn get_titles_for_show(
+    state: State<'_, DbState>,
+    show_id: i32,
+) -> Result<Vec<TitleWithHolders>, String> {
+    let mut conn = get_connection(&state)?;
+    
+    internal_get_titles_for_show(&mut conn, show_id)
+        .map_err(|e| {
+            error!("Error fetching titles for show: {}", e);
+            format!("Failed to fetch titles for show: {}", e)
+        })
+}
+
+#[tauri::command]
+pub fn get_unassigned_titles(
+    state: State<'_, DbState>,
+) -> Result<Vec<TitleWithHolders>, String> {
+    let mut conn = get_connection(&state)?;
+    
+    internal_get_unassigned_titles(&mut conn)
+        .map_err(|e| {
+            error!("Error fetching unassigned titles: {}", e);
+            format!("Failed to fetch unassigned titles: {}", e)
+        })
+}
+
 /// Creates test data if it doesn't already exist
 #[tauri::command]
 pub fn create_test_data(state: State<'_, DbState>) -> Result<String, String> {
     let mut conn = get_connection(&state)?;
     
     // Check if specific test data already exists
-    let existing_shows = internal_get_shows(&mut conn).map_err(|e| format!("Error checking shows: {}", e))?;
+    let default_promotion_id = 1;
+    let existing_shows = internal_get_shows(&mut conn, default_promotion_id).map_err(|e| format!("Error checking shows: {}", e))?;
     
     // Check for specific test shows instead of any shows
     let test_show_names = ["Monday Night RAW", "Friday Night SmackDown"];
@@ -768,7 +969,7 @@ pub fn create_test_data(state: State<'_, DbState>) -> Result<String, String> {
     ];
     
     for (name, description) in test_shows {
-        internal_create_show(&mut conn, name, description)
+        internal_create_show(&mut conn, name, description, default_promotion_id)
             .map_err(|e| format!("Failed to create show '{}': {}", name, e))?;
     }
     
@@ -854,10 +1055,10 @@ pub fn create_test_data(state: State<'_, DbState>) -> Result<String, String> {
     }
     
     // Create test titles
-    let raw_show = internal_get_shows(&mut conn).map_err(|e| format!("Error getting shows: {}", e))?
+    let raw_show = internal_get_shows(&mut conn, default_promotion_id).map_err(|e| format!("Error getting shows: {}", e))?
         .into_iter()
         .find(|show| show.name == "Monday Night RAW");
-    let smackdown_show = internal_get_shows(&mut conn).map_err(|e| format!("Error getting shows: {}", e))?
+    let smackdown_show = internal_get_shows(&mut conn, default_promotion_id).map_err(|e| format!("Error getting shows: {}", e))?
         .into_iter()
         .find(|show| show.name == "Friday Night SmackDown");
 
@@ -895,4 +1096,297 @@ pub fn create_test_data(state: State<'_, DbState>) -> Result<String, String> {
     
     info!("Test data created successfully");
     Ok(format!("Test data created: 2 shows, 5 wrestlers, and {} titles", title_count))
+}
+
+// ===== Show Roster Operations =====
+
+/// Gets all wrestlers assigned to a specific show
+pub fn internal_get_wrestlers_for_show(
+    conn: &mut SqliteConnection,
+    show_id: i32,
+) -> Result<Vec<Wrestler>, DieselError> {
+    use crate::schema::{wrestlers, show_rosters};
+    
+    wrestlers::table
+        .inner_join(show_rosters::table.on(wrestlers::id.eq(show_rosters::wrestler_id)))
+        .filter(show_rosters::show_id.eq(show_id))
+        .filter(show_rosters::is_active.eq(true))
+        .select(Wrestler::as_select())
+        .order(wrestlers::name.asc())
+        .load::<Wrestler>(conn)
+}
+
+/// Assigns a wrestler to a show roster
+pub fn internal_assign_wrestler_to_show(
+    conn: &mut SqliteConnection,
+    show_id: i32,
+    wrestler_id: i32,
+) -> Result<(), DieselError> {
+    use crate::schema::show_rosters;
+    use chrono::Utc;
+    
+    // Check if the assignment already exists and is active
+    let existing = show_rosters::table
+        .filter(show_rosters::show_id.eq(show_id))
+        .filter(show_rosters::wrestler_id.eq(wrestler_id))
+        .filter(show_rosters::is_active.eq(true))
+        .first::<ShowRoster>(conn)
+        .optional()?;
+    
+    if existing.is_some() {
+        // Assignment already exists and is active
+        return Ok(());
+    }
+    
+    // Create new assignment
+    let new_assignment = NewShowRoster {
+        show_id,
+        wrestler_id,
+        assigned_at: Some(Utc::now().naive_utc()),
+        is_active: true,
+    };
+    
+    diesel::insert_into(show_rosters::table)
+        .values(&new_assignment)
+        .execute(conn)?;
+    
+    Ok(())
+}
+
+/// Removes a wrestler from a show roster (sets is_active to false)
+pub fn internal_remove_wrestler_from_show(
+    conn: &mut SqliteConnection,
+    show_id: i32,
+    wrestler_id: i32,
+) -> Result<(), DieselError> {
+    use crate::schema::show_rosters;
+    
+    diesel::update(show_rosters::table)
+        .filter(show_rosters::show_id.eq(show_id))
+        .filter(show_rosters::wrestler_id.eq(wrestler_id))
+        .filter(show_rosters::is_active.eq(true))
+        .set(show_rosters::is_active.eq(false))
+        .execute(conn)?;
+    
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_wrestlers_for_show(
+    state: State<'_, DbState>,
+    show_id: i32,
+) -> Result<Vec<Wrestler>, String> {
+    let mut conn = get_connection(&state)?;
+    
+    internal_get_wrestlers_for_show(&mut conn, show_id)
+        .map_err(|e| {
+            error!("Error loading wrestlers for show: {}", e);
+            format!("Failed to load wrestlers for show: {}", e)
+        })
+}
+
+#[tauri::command]
+pub fn assign_wrestler_to_show(
+    state: State<'_, DbState>,
+    show_id: i32,
+    wrestler_id: i32,
+) -> Result<String, String> {
+    let mut conn = get_connection(&state)?;
+    
+    internal_assign_wrestler_to_show(&mut conn, show_id, wrestler_id)
+        .map_err(|e| {
+            error!("Error assigning wrestler to show: {}", e);
+            format!("Failed to assign wrestler to show: {}", e)
+        })
+        .map(|_| "Wrestler assigned to show successfully".to_string())
+}
+
+#[tauri::command]
+pub fn remove_wrestler_from_show(
+    state: State<'_, DbState>,
+    show_id: i32,
+    wrestler_id: i32,
+) -> Result<String, String> {
+    let mut conn = get_connection(&state)?;
+    
+    internal_remove_wrestler_from_show(&mut conn, show_id, wrestler_id)
+        .map_err(|e| {
+            error!("Error removing wrestler from show: {}", e);
+            format!("Failed to remove wrestler from show: {}", e)
+        })
+        .map(|_| "Wrestler removed from show successfully".to_string())
+}
+
+// ===== Match Booking Operations =====
+
+/// Creates a new match for a show
+pub fn internal_create_match(
+    conn: &mut SqliteConnection,
+    match_data: &MatchData,
+) -> Result<Match, DieselError> {
+    use crate::schema::matches;
+    use chrono::NaiveDate;
+    
+    // Parse the date string if provided
+    let scheduled_date = match_data.scheduled_date.as_ref()
+        .and_then(|date_str| NaiveDate::parse_from_str(date_str, "%Y-%m-%d").ok());
+    
+    let new_match = NewMatch {
+        show_id: match_data.show_id,
+        match_name: match_data.match_name.clone(),
+        match_type: match_data.match_type.clone(),
+        match_stipulation: match_data.match_stipulation.clone(),
+        scheduled_date,
+        match_order: match_data.match_order,
+        winner_id: None, // Will be set later when match is concluded
+        is_title_match: match_data.is_title_match,
+        title_id: match_data.title_id,
+    };
+    
+    diesel::insert_into(matches::table)
+        .values(&new_match)
+        .returning(Match::as_returning())
+        .get_result(conn)
+}
+
+/// Gets all matches for a specific show
+pub fn internal_get_matches_for_show(
+    conn: &mut SqliteConnection,
+    show_id: i32,
+) -> Result<Vec<Match>, DieselError> {
+    use crate::schema::matches;
+    
+    matches::table
+        .filter(matches::show_id.eq(show_id))
+        .order(matches::match_order.asc())
+        .then_order_by(matches::id.asc())
+        .load::<Match>(conn)
+}
+
+/// Adds a wrestler to a match
+pub fn internal_add_wrestler_to_match(
+    conn: &mut SqliteConnection,
+    match_id: i32,
+    wrestler_id: i32,
+    team_number: Option<i32>,
+    entrance_order: Option<i32>,
+) -> Result<MatchParticipant, DieselError> {
+    use crate::schema::match_participants;
+    
+    let new_participant = NewMatchParticipant {
+        match_id,
+        wrestler_id,
+        team_number,
+        entrance_order,
+    };
+    
+    diesel::insert_into(match_participants::table)
+        .values(&new_participant)
+        .returning(MatchParticipant::as_returning())
+        .get_result(conn)
+}
+
+/// Gets all participants for a specific match
+pub fn internal_get_match_participants(
+    conn: &mut SqliteConnection,
+    match_id: i32,
+) -> Result<Vec<(MatchParticipant, Wrestler)>, DieselError> {
+    use crate::schema::{match_participants, wrestlers};
+    
+    match_participants::table
+        .inner_join(wrestlers::table.on(match_participants::wrestler_id.eq(wrestlers::id)))
+        .filter(match_participants::match_id.eq(match_id))
+        .order(match_participants::entrance_order.asc())
+        .then_order_by(match_participants::id.asc())
+        .select((MatchParticipant::as_select(), Wrestler::as_select()))
+        .load::<(MatchParticipant, Wrestler)>(conn)
+}
+
+/// Updates the winner of a match
+pub fn internal_set_match_winner(
+    conn: &mut SqliteConnection,
+    match_id: i32,
+    winner_id: i32,
+) -> Result<Match, DieselError> {
+    use crate::schema::matches;
+    
+    diesel::update(matches::table)
+        .filter(matches::id.eq(match_id))
+        .set(matches::winner_id.eq(winner_id))
+        .returning(Match::as_returning())
+        .get_result(conn)
+}
+
+#[tauri::command]
+pub fn create_match(
+    state: State<'_, DbState>,
+    match_data: MatchData,
+) -> Result<Match, String> {
+    let mut conn = get_connection(&state)?;
+    
+    internal_create_match(&mut conn, &match_data)
+        .map_err(|e| {
+            error!("Error creating match: {}", e);
+            format!("Failed to create match: {}", e)
+        })
+}
+
+#[tauri::command]
+pub fn get_matches_for_show(
+    state: State<'_, DbState>,
+    show_id: i32,
+) -> Result<Vec<Match>, String> {
+    let mut conn = get_connection(&state)?;
+    
+    internal_get_matches_for_show(&mut conn, show_id)
+        .map_err(|e| {
+            error!("Error loading matches for show: {}", e);
+            format!("Failed to load matches for show: {}", e)
+        })
+}
+
+#[tauri::command]
+pub fn add_wrestler_to_match(
+    state: State<'_, DbState>,
+    match_id: i32,
+    wrestler_id: i32,
+    team_number: Option<i32>,
+    entrance_order: Option<i32>,
+) -> Result<MatchParticipant, String> {
+    let mut conn = get_connection(&state)?;
+    
+    internal_add_wrestler_to_match(&mut conn, match_id, wrestler_id, team_number, entrance_order)
+        .map_err(|e| {
+            error!("Error adding wrestler to match: {}", e);
+            format!("Failed to add wrestler to match: {}", e)
+        })
+}
+
+#[tauri::command]
+pub fn get_match_participants(
+    state: State<'_, DbState>,
+    match_id: i32,
+) -> Result<Vec<(MatchParticipant, Wrestler)>, String> {
+    let mut conn = get_connection(&state)?;
+    
+    internal_get_match_participants(&mut conn, match_id)
+        .map_err(|e| {
+            error!("Error loading match participants: {}", e);
+            format!("Failed to load match participants: {}", e)
+        })
+}
+
+#[tauri::command]
+pub fn set_match_winner(
+    state: State<'_, DbState>,
+    match_id: i32,
+    winner_id: i32,
+) -> Result<Match, String> {
+    let mut conn = get_connection(&state)?;
+    
+    internal_set_match_winner(&mut conn, match_id, winner_id)
+        .map_err(|e| {
+            error!("Error setting match winner: {}", e);
+            format!("Failed to set match winner: {}", e)
+        })
 }

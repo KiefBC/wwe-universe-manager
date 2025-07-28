@@ -62,25 +62,40 @@ pub fn CreateShow(
     };
 
     view! {
-        <div class="max-w-2xl mx-auto">
+        <div class="container mx-auto p-6 bg-base-100 min-h-screen">
+            <div class="mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <button
+                        class="btn btn-ghost gap-2"
+                        on:click=move |_| set_current_page.set("home".to_string())
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                        "Back to Dashboard"
+                    </button>
+                </div>
+                <h1 class="text-4xl font-bold text-base-content mb-2">
+                    "Create New Show"
+                </h1>
+                <p class="text-base-content/70">
+                    "Add a new wrestling show to your universe"
+                </p>
+            </div>
+
             <div class="card bg-base-200 border border-base-300">
                 <div class="card-body">
-                    <div class="text-center mb-8">
-                        <h2 class="text-3xl font-bold text-base-content mb-2">
-                            "Create New Show"
-                        </h2>
-                        <p class="text-base-content/70">
-                            "Add a new wrestling show to your universe"
-                        </p>
-                    </div>
 
-                    <form class="space-y-6" on:submit=move |ev| {
-                        ev.prevent_default();
-                        submit_form();
-                    }>
+                <form on:submit=move |ev| {
+                    ev.prevent_default();
+                    submit_form();
+                }>
+                    <div class="space-y-6">
+                        <h3 class="text-xl font-semibold text-base-content mb-4">"Show Information"</h3>
+                        
                         <div class="form-control">
                             <label class="label">
-                                <span class="label-text">"Show Name"</span>
+                                <span class="label-text">"Show Name" <span class="text-error">"*"</span></span>
                             </label>
                             <input
                                 type="text"
@@ -95,7 +110,7 @@ pub fn CreateShow(
 
                         <div class="form-control">
                             <label class="label">
-                                <span class="label-text">"Description"</span>
+                                <span class="label-text">"Description" <span class="text-error">"*"</span></span>
                             </label>
                             <textarea
                                 placeholder="Enter show description..."
@@ -107,57 +122,59 @@ pub fn CreateShow(
                                 prop:value=description
                             ></textarea>
                         </div>
+                    </div>
 
-                        <Show
-                            when=move || !submit_message.get().is_empty()
-                            fallback=|| view! {}
-                        >
-                            <div class={move || {
-                                let is_error = submit_message.get().contains("Error");
-                                if is_error {
-                                    "alert alert-error"
-                                } else {
-                                    "alert alert-success"
-                                }
-                            }}>
-                                {move || submit_message.get()}
-                            </div>
-                        </Show>
-
-                        <div class="card-actions justify-end pt-4">
-                            <button
-                                type="button"
-                                class="btn btn-ghost gap-2"
-                                on:click=move |_| {
-                                    console::log_1(&"Back button clicked!!!".into());
-                                    set_current_page.set("home".to_string());
-                                }
-                            >
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                                </svg>
-                                "Back"
-                        </button>
-                            <button
-                                type="submit"
-                                class="btn btn-primary gap-2"
-                                disabled=is_submitting
-                            >
-                                <Show
-                                    when=move || is_submitting.get()
-                                    fallback=|| view! {
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                        </svg>
-                                        "Create Show"
+                    // Submit Message
+                    <Show when=move || !submit_message.get().is_empty()>
+                        <div class={move || {
+                            let is_error = submit_message.get().contains("Error");
+                            if is_error {
+                                "alert alert-error mt-6"
+                            } else {
+                                "alert alert-success mt-6"
+                            }
+                        }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={move || {
+                                    let is_error = submit_message.get().contains("Error");
+                                    if is_error {
+                                        "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    } else {
+                                        "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                                     }
-                                >
-                                    <span class="loading loading-spinner loading-sm"></span>
-                                    "Creating..."
-                                </Show>
-                            </button>
+                                }} />
+                            </svg>
+                            <div>
+                                <h3 class="font-bold">{move || {
+                                    let is_error = submit_message.get().contains("Error");
+                                    if is_error { "Error Creating Show" } else { "Show Created Successfully!" }
+                                }}</h3>
+                                <div class="text-xs">{move || submit_message.get()}</div>
+                            </div>
                         </div>
-                    </form>
+                    </Show>
+
+                    // Submit Button
+                    <div class="mt-8 flex justify-end space-x-4">
+                        <button
+                            type="button"
+                            class="btn btn-ghost"
+                            on:click=move |_| set_current_page.set("home".to_string())
+                        >
+                            "Cancel"
+                        </button>
+                        <button
+                            type="submit"
+                            class="btn btn-primary"
+                            disabled=move || is_submitting.get()
+                        >
+                            <Show when=move || is_submitting.get()>
+                                <span class="loading loading-spinner loading-sm"></span>
+                            </Show>
+                            <span>{move || if is_submitting.get() { "Creating..." } else { "Create Show" }}</span>
+                        </button>
+                    </div>
+                </form>
                 </div>
             </div>
         </div>

@@ -1,0 +1,1 @@
+ALTER TABLE shows DROP COLUMN promotion_id;

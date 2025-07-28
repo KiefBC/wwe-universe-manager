@@ -267,17 +267,11 @@ pub fn TitlesList(
 
             <Show when=move || !loading.get() && error.get().is_none() && !titles.get().is_empty()>
                 <div class="space-y-12">
-                    // Tier 1 - World Championships (1 per row, gold styling)
+                    // Tier 1 - World Championships (2 per row, gold styling)
                     <div>
                         <Show when=move || !filtered_tier_1_titles().is_empty()>
                             <div class="mb-8">
-                                <h2 class="text-2xl font-bold text-warning mb-6 flex items-center">
-                                    <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                                    </svg>
-                                    "World Championships"
-                                </h2>
-                                <div class="space-y-4">
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                     <For
                                         each=move || filtered_tier_1_titles()
                                         key=|title| title.title.id
@@ -339,12 +333,6 @@ pub fn TitlesList(
                                 // Tier 2 - Secondary Championships (2 per row, silver styling)
                         <Show when=move || !filtered_tier_2_titles().is_empty()>
                             <div class="mb-8">
-                                <h2 class="text-2xl font-bold text-base-content/70 mb-6 flex items-center">
-                                    <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
-                                    </svg>
-                                    "Secondary Championships"
-                                </h2>
                                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                     <For
                                         each=move || filtered_tier_2_titles()
@@ -388,16 +376,10 @@ pub fn TitlesList(
                                     </div>
                                 </Show>
 
-                        // Tier 3 - Tag Team Championships (3 per row, bronze styling)
+                        // Tier 3 - Tag Team Championships (2 per row, bronze styling)
                         <Show when=move || !filtered_tier_3_titles().is_empty()>
                             <div class="mb-8">
-                                <h2 class="text-2xl font-bold text-accent mb-6 flex items-center">
-                                    <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    "Tag Team Championships"
-                                </h2>
-                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                     <For
                                         each=move || filtered_tier_3_titles()
                                         key=|title| title.title.id
@@ -444,16 +426,10 @@ pub fn TitlesList(
                                     </div>
                                 </Show>
 
-                        // Tier 4 - Specialty Championships (4 per row, themed colors)
+                        // Tier 4 - Specialty Championships (2 per row, themed colors)
                         <Show when=move || !filtered_tier_4_titles().is_empty()>
                             <div class="mb-8">
-                                <h2 class="text-xl font-bold text-secondary mb-6 flex items-center">
-                                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
-                                    </svg>
-                                    "Specialty Championships"
-                                </h2>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                     <For
                                         each=move || filtered_tier_4_titles()
                                         key=|title| title.title.id

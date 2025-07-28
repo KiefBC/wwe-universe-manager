@@ -1,11 +1,13 @@
-use crate::components::{CreateShow, CreateTitle, CreateWrestler, Dashboard, TitleDetailsWindow, TitlesList, WrestlerDetailsWindow, WrestlersList};
+use crate::components::{CeoDashboard, CreatePromotion, CreateShow, CreateTitle, CreateWrestler, PromotionDashboard, TitleDetailsWindow, TitlesList, WrestlerDetailsWindow, WrestlersList};
+use crate::types::Promotion;
 use leptos::prelude::*;
 use web_sys::window;
 
 #[component]
 pub fn App() -> impl IntoView {
-    let (current_page, set_current_page) = signal("home".to_string());
+    let (current_page, set_current_page) = signal("ceo".to_string()); // Start with CEO dashboard
     let (refresh_trigger, set_refresh_trigger) = signal(0u32);
+    let (selected_promotion, set_selected_promotion) = signal(None::<Promotion>);
     
     // Check if this is a wrestler window based on URL hash
     let is_wrestler_window = move || {
@@ -33,7 +35,7 @@ pub fn App() -> impl IntoView {
                             when=is_title_window
                             fallback=move || view! {
                     <div class="flex flex-col h-screen">
-                        <Header />
+                        <Header selected_promotion set_selected_promotion set_current_page />
                         <main class="flex-1 container mx-auto px-6 py-8 overflow-auto">
                             <div class="max-w-6xl mx-auto">
                                 <Show
@@ -53,10 +55,28 @@ pub fn App() -> impl IntoView {
                                                                         fallback=move || {
                                                                             view! {
                                                                                 <Show
-                                                                                    when=move || current_page.get() == "create-title"
-                                                                                    fallback=move || view! { <Dashboard set_current_page refresh_trigger /> }
+                                                                                    when=move || current_page.get() == "create-promotion"
+                                                                                    fallback=move || {
+                                                                                        view! {
+                                                                                            <Show
+                                                                                                when=move || current_page.get() == "create-title"
+                                                                                                fallback=move || {
+                                                                                                    view! {
+                                                                                                        <Show
+                                                                                                            when=move || current_page.get() == "promotion-dashboard"
+                                                                                                            fallback=move || view! { <CeoDashboard set_current_page set_selected_promotion /> }
+                                                                                                        >
+                                                                                                            <PromotionDashboard set_current_page refresh_trigger selected_promotion />
+                                                                                                        </Show>
+                                                                                                    }
+                                                                                                }
+                                                                                            >
+                                                                                                <CreateTitle set_current_page />
+                                                                                            </Show>
+                                                                                        }
+                                                                                    }
                                                                                 >
-                                                                                    <CreateTitle set_current_page />
+                                                                                    <CreatePromotion set_current_page />
                                                                                 </Show>
                                                                             }
                                                                         }
@@ -96,7 +116,34 @@ pub fn App() -> impl IntoView {
 }
 
 #[component]
-fn Header() -> impl IntoView {
+fn Header(
+    selected_promotion: ReadSignal<Option<Promotion>>,
+    set_selected_promotion: WriteSignal<Option<Promotion>>,
+    set_current_page: WriteSignal<String>,
+) -> impl IntoView {
+    use crate::types::fetch_promotions;
+    
+    let promotions_resource = LocalResource::new(|| fetch_promotions());
+    
+    // Handle promotion change
+    let on_promotion_change = move |event| {
+        let value = event_target_value(&event);
+        if let Ok(promotion_id) = value.parse::<i32>() {
+            // Find the promotion by ID and set it
+            if let Some(promotions_result) = promotions_resource.get() {
+                if let Ok(promotions) = promotions_result.as_ref() {
+                if let Some(promotion) = promotions.iter().find(|p| p.id == promotion_id) {
+                    set_selected_promotion.set(Some(promotion.clone()));
+                    set_current_page.set("promotion-dashboard".to_string());
+                }
+            }
+            }
+        } else if value == "ceo" {
+            set_selected_promotion.set(None);
+            set_current_page.set("ceo".to_string());
+        }
+    };
+    
     view! {
         <header class="bg-base-200/80 border-b border-base-300 backdrop-blur-sm">
             <div class="container mx-auto px-6 py-3">
@@ -118,12 +165,39 @@ fn Header() -> impl IntoView {
                     </div>
                     <div class="flex items-center space-x-4">
                         <div class="flex items-center space-x-2">
-                            <label class="text-sm font-medium text-base-content">"Show:"</label>
-                            <select class="select select-bordered select-sm w-48 max-w-xs">
-                                <option disabled selected>"Select Show"</option>
-                                <option>"Monday Night RAW"</option>
-                                <option>"Friday Night SmackDown"</option>
-                                <option>"NXT"</option>
+                            <label class="text-sm font-medium text-base-content">"Promotion:"</label>
+                            <select 
+                                class="select select-bordered select-sm w-48 max-w-xs"
+                                on:change=on_promotion_change
+                            >
+                                <option value="ceo" selected=selected_promotion.get().is_none()>
+                                    "CEO Dashboard"
+                                </option>
+                                <Suspense fallback=move || view! { <option>"Loading promotions..."</option> }>
+                                    {move || {
+                                        if let Some(promotions_result) = promotions_resource.get() {
+                                            if let Ok(promotions) = promotions_result.as_ref() {
+                                                promotions.iter().map(|promotion| {
+                                                    let is_selected = selected_promotion.get()
+                                                        .map(|p| p.id == promotion.id)
+                                                        .unwrap_or(false);
+                                                    let id_str = promotion.id.to_string();
+                                                    let name_str = promotion.name.clone();
+                                                    
+                                                    view! {
+                                                        <option value=id_str selected=is_selected>
+                                                            {name_str}
+                                                        </option>
+                                                    }.into_any()
+                                                }).collect::<Vec<_>>()
+                                            } else {
+                                                vec![view! { <option>"Error loading promotions"</option> }.into_any()]
+                                            }
+                                        } else {
+                                            vec![view! { <option>"Loading..."</option> }.into_any()]
+                                        }
+                                    }}
+                                </Suspense>
                             </select>
                         </div>
                     </div>

@@ -1,11 +1,19 @@
+mod match_model;
+mod match_participant;
+mod promotion;
 mod show;
+mod show_roster;
 mod signature_move;
 mod title;
 mod title_holder;
 mod user;
 mod wrestler;
 
+pub use match_model::{Match, NewMatch, MatchData};
+pub use match_participant::{MatchParticipant, NewMatchParticipant, MatchParticipantData};
+pub use promotion::{NewPromotion, Promotion, PromotionData};
 pub use show::{NewShow, Show, ShowData};
+pub use show_roster::{ShowRoster, NewShowRoster, ShowRosterData};
 pub use signature_move::{MoveType, NewSignatureMove, SignatureMove, SignatureMoveData};
 pub use title::{NewTitle, Title, TitleData};
 pub use title_holder::{NewTitleHolder, TitleHolder, TitleHolderData, TitleWithHolders, TitleHolderInfo};

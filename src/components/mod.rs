@@ -1,3 +1,5 @@
+pub mod ceo_dashboard;
+pub mod create_promotion;
 pub mod create_show;
 pub mod create_title;
 pub mod create_wrestler;
@@ -7,10 +9,12 @@ pub mod titles_list;
 pub mod wrestler_details_window;
 pub mod wrestlers_list;
 
+pub use ceo_dashboard::CeoDashboard;
+pub use create_promotion::CreatePromotion;
 pub use create_show::CreateShow;
 pub use create_title::CreateTitle;
 pub use create_wrestler::CreateWrestler;
-pub use dashboard::Dashboard;
+pub use dashboard::PromotionDashboard;
 pub use title_details_window::TitleDetailsWindow;
 pub use titles_list::TitlesList;
 pub use wrestler_details_window::WrestlerDetailsWindow;

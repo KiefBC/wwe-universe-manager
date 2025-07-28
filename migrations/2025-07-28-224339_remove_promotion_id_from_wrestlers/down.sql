@@ -1,0 +1,1 @@
+ALTER TABLE wrestlers ADD COLUMN promotion_id INTEGER NOT NULL DEFAULT 1 REFERENCES promotions(id);

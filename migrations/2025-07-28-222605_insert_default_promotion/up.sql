@@ -1,0 +1,1 @@
+INSERT INTO promotions (id, name, description) VALUES (1, 'WWE Universe', 'Default promotion for existing data');

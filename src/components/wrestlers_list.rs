@@ -148,7 +148,7 @@ pub fn WrestlersList(
                         <div class="input-group">
                             <input 
                                 type="text"
-                                placeholder="Search wrestlers by name, nickname, or real name..."
+                                placeholder="Search wrestlers by name or real name..."
                                 class="input input-bordered w-full"
                                 prop:value=move || search_term.get()
                                 on:input=move |ev| {
@@ -258,16 +258,9 @@ pub fn WrestlersList(
                                         </Show>
                                         
                                         <div class="text-center">
-                                            <h3 class="text-lg font-bold text-base-content group-hover:text-secondary transition-colors mb-2">
+                                            <h3 class="text-lg font-bold text-base-content group-hover:text-secondary transition-colors">
                                                 {wrestler.name.clone()}
                                             </h3>
-                                            <div class="h-4">
-                                                {wrestler.nickname.as_ref().map(|nickname| view! {
-                                                    <p class="text-base-content/60 text-xs italic">
-                                                        {format!("\"{}\"", nickname)}
-                                                    </p>
-                                                })}
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
