@@ -242,6 +242,30 @@ pub fn internal_update_wrestler_power_ratings(
         .get_result(conn)
 }
 
+/// Updates a wrestler's basic stats
+pub fn internal_update_wrestler_basic_stats(
+    conn: &mut SqliteConnection,
+    wrestler_id: i32,
+    new_height: Option<String>,
+    new_weight: Option<String>,
+    new_debut_year: Option<i32>,
+    new_wins: i32,
+    new_losses: i32,
+) -> Result<Wrestler, DieselError> {
+    use crate::schema::wrestlers::dsl::*;
+    
+    diesel::update(wrestlers.filter(id.eq(wrestler_id)))
+        .set((
+            height.eq(new_height),
+            weight.eq(new_weight),
+            debut_year.eq(new_debut_year),
+            wins.eq(new_wins),
+            losses.eq(new_losses),
+        ))
+        .returning(Wrestler::as_returning())
+        .get_result(conn)
+}
+
 /// Creates a new signature move for a wrestler
 pub fn internal_create_signature_move(
     conn: &mut SqliteConnection,
@@ -346,6 +370,36 @@ pub fn update_wrestler_power_ratings(
     .map_err(|e| {
         error!("Error updating wrestler power ratings: {}", e);
         format!("Failed to update wrestler power ratings: {}", e)
+    })
+}
+
+#[tauri::command]
+pub fn update_wrestler_basic_stats(
+    state: State<'_, DbState>,
+    wrestler_id: i32,
+    height: Option<String>,
+    weight: Option<String>,
+    debut_year: Option<i32>,
+    wins: i32,
+    losses: i32,
+) -> Result<Wrestler, String> {
+    let mut conn = get_connection(&state)?;
+
+    internal_update_wrestler_basic_stats(
+        &mut conn, 
+        wrestler_id, 
+        height, 
+        weight, 
+        debut_year, 
+        wins, 
+        losses
+    )
+    .inspect(|wrestler| {
+        info!("Wrestler '{}' basic stats updated", wrestler.name);
+    })
+    .map_err(|e| {
+        error!("Error updating wrestler basic stats: {}", e);
+        format!("Failed to update wrestler basic stats: {}", e)
     })
 }
 

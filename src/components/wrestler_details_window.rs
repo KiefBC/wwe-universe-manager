@@ -78,6 +78,28 @@ async fn update_wrestler_power_ratings(
     serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
 }
 
+async fn update_wrestler_basic_stats(
+    wrestler_id: i32,
+    height: Option<String>,
+    weight: Option<String>,
+    debut_year: Option<i32>,
+    wins: i32,
+    losses: i32,
+) -> Result<Wrestler, String> {
+    let args = serde_wasm_bindgen::to_value(&serde_json::json!({
+        "wrestlerId": wrestler_id,
+        "height": height,
+        "weight": weight,
+        "debutYear": debut_year,
+        "wins": wins,
+        "losses": losses
+    }))
+    .map_err(|e| e.to_string())?;
+
+    let result = invoke("update_wrestler_basic_stats", args).await;
+    serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
+}
+
 fn extract_wrestler_id_from_url() -> Option<i32> {
     web_sys::window()?
         .location()
@@ -114,6 +136,22 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
                     }
                     Err(e) => {
                         set_error.set(Some(format!("Failed to update promotion: {}", e)));
+                    }
+                }
+            });
+        }
+    };
+
+    // Handler for basic stats change
+    let handle_basic_stats_change = move |height: Option<String>, weight: Option<String>, debut_year: Option<i32>, wins: i32, losses: i32| {
+        if let Some(w) = wrestler.get() {
+            spawn_local(async move {
+                match update_wrestler_basic_stats(w.id, height, weight, debut_year, wins, losses).await {
+                    Ok(updated_wrestler) => {
+                        set_wrestler.set(Some(updated_wrestler));
+                    }
+                    Err(e) => {
+                        set_error.set(Some(format!("Failed to update basic stats: {}", e)));
                     }
                 }
             });
@@ -274,12 +312,12 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
                                                         when=move || !editing_power_ratings.get()
                                                         fallback=move || view! {
                                                             <div class="space-y-3">
-                                                                <PowerBarEdit label="STRENGTH" value=temp_strength set_value=set_temp_strength color="bg-red-500" />
-                                                                <PowerBarEdit label="SPEED" value=temp_speed set_value=set_temp_speed color="bg-blue-500" />
-                                                                <PowerBarEdit label="AGILITY" value=temp_agility set_value=set_temp_agility color="bg-green-500" />
-                                                                <PowerBarEdit label="STAMINA" value=temp_stamina set_value=set_temp_stamina color="bg-purple-500" />
-                                                                <PowerBarEdit label="CHARISMA" value=temp_charisma set_value=set_temp_charisma color="bg-indigo-500" />
-                                                                <PowerBarEdit label="TECHNIQUE" value=temp_technique set_value=set_temp_technique color="bg-cyan-500" />
+                                                                <PowerBarEdit label="STRENGTH" value=temp_strength set_value=set_temp_strength _color="bg-red-500" />
+                                                                <PowerBarEdit label="SPEED" value=temp_speed set_value=set_temp_speed _color="bg-blue-500" />
+                                                                <PowerBarEdit label="AGILITY" value=temp_agility set_value=set_temp_agility _color="bg-green-500" />
+                                                                <PowerBarEdit label="STAMINA" value=temp_stamina set_value=set_temp_stamina _color="bg-purple-500" />
+                                                                <PowerBarEdit label="CHARISMA" value=temp_charisma set_value=set_temp_charisma _color="bg-indigo-500" />
+                                                                <PowerBarEdit label="TECHNIQUE" value=temp_technique set_value=set_temp_technique _color="bg-cyan-500" />
                                                             </div>
                                                             <div class="flex space-x-2 mt-4">
                                                                 <button
@@ -347,37 +385,11 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
                                                 on_promotion_change=handle_promotion_change
                                             />
 
-                                            // Basic stats
-                                            <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-4">
-                                                <div class="grid grid-cols-2 gap-4 text-sm">
-                                                    {w.height.as_ref().map(|height| view! {
-                                                        <div>
-                                                            <span class="text-slate-400 font-medium">"Height: "</span>
-                                                            <span class="text-slate-100">{height.clone()}</span>
-                                                        </div>
-                                                    })}
-                                                    {w.weight.as_ref().map(|weight| view! {
-                                                        <div>
-                                                            <span class="text-slate-400 font-medium">"Weight: "</span>
-                                                            <span class="text-slate-100">{weight.clone()}</span>
-                                                        </div>
-                                                    })}
-                                                    {w.debut_year.map(|year| view! {
-                                                        <div>
-                                                            <span class="text-slate-400 font-medium">"Debut: "</span>
-                                                            <span class="text-slate-100">{year.to_string()}</span>
-                                                        </div>
-                                                    })}
-                                                    <div>
-                                                        <span class="text-slate-400 font-medium">"Gender: "</span>
-                                                        <span class="text-slate-100">{w.gender.clone()}</span>
-                                                    </div>
-                                                    <div>
-                                                        <span class="text-slate-400 font-medium">"Record: "</span>
-                                                        <span class="text-slate-100">{format!("{}-{}", w.wins, w.losses)}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            // Basic stats (separate component)
+                                            <BasicStatsSection 
+                                                wrestler=wrestler
+                                                on_stats_change=handle_basic_stats_change
+                                            />
                                         </div>
                                     </div>
 
@@ -441,7 +453,7 @@ fn PowerBarEdit(
     #[prop(into)] label: String,
     value: ReadSignal<i32>,
     set_value: WriteSignal<i32>,
-    #[prop(into)] color: String,
+    #[prop(into)] _color: String,
 ) -> impl IntoView {
     view! {
         <div class="flex items-center space-x-3">
@@ -538,6 +550,187 @@ where
                     </select>
                 </div>
             </div>
+        </div>
+    }
+}
+
+#[component]
+fn BasicStatsSection<F>(
+    wrestler: ReadSignal<Option<Wrestler>>,
+    on_stats_change: F,
+) -> impl IntoView
+where
+    F: Fn(Option<String>, Option<String>, Option<i32>, i32, i32) + 'static + Copy + Send + Sync,
+{
+    let (editing, set_editing) = signal(false);
+    let (temp_height, set_temp_height) = signal(String::new());
+    let (temp_weight, set_temp_weight) = signal(String::new());
+    let (temp_debut_year, set_temp_debut_year) = signal(String::new());
+    let (temp_wins, set_temp_wins) = signal(0i32);
+    let (temp_losses, set_temp_losses) = signal(0i32);
+
+    view! {
+        <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-4 border-b border-slate-700 pb-2">
+                <h4 class="text-slate-100 font-bold text-lg">
+                    "Basic Stats"
+                </h4>
+                <button
+                    class="text-slate-400 hover:text-slate-200 text-sm font-medium flex items-center space-x-1"
+                    on:click=move |_| {
+                        if let Some(w) = wrestler.get() {
+                            set_temp_height.set(w.height.unwrap_or_default());
+                            set_temp_weight.set(w.weight.unwrap_or_default());
+                            set_temp_debut_year.set(w.debut_year.map(|y| y.to_string()).unwrap_or_default());
+                            set_temp_wins.set(w.wins);
+                            set_temp_losses.set(w.losses);
+                            set_editing.set(true);
+                        }
+                    }
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    <span>"Edit"</span>
+                </button>
+            </div>
+            <Show 
+                when=move || !editing.get()
+                fallback=move || view! {
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-slate-400 font-medium text-sm mb-1">"Height"</label>
+                                <input
+                                    type="text"
+                                    class="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-slate-100 text-sm"
+                                    placeholder="e.g., 6'5\""
+                                    prop:value=move || temp_height.get()
+                                    on:input:target=move |ev| {
+                                        set_temp_height.set(ev.target().value());
+                                    }
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-slate-400 font-medium text-sm mb-1">"Weight"</label>
+                                <input
+                                    type="text"
+                                    class="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-slate-100 text-sm"
+                                    placeholder="e.g., 250 lbs"
+                                    prop:value=move || temp_weight.get()
+                                    on:input:target=move |ev| {
+                                        set_temp_weight.set(ev.target().value());
+                                    }
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-slate-400 font-medium text-sm mb-1">"Debut Year"</label>
+                                <input
+                                    type="number"
+                                    class="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-slate-100 text-sm"
+                                    placeholder="e.g., 2010"
+                                    prop:value=move || temp_debut_year.get()
+                                    on:input:target=move |ev| {
+                                        set_temp_debut_year.set(ev.target().value());
+                                    }
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-slate-400 font-medium text-sm mb-1">"Gender"</label>
+                                <div class="bg-slate-700/30 border border-slate-600 rounded px-3 py-2 text-slate-300 text-sm">
+                                    {move || wrestler.get().map(|w| w.gender).unwrap_or_default()}
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-slate-400 font-medium text-sm mb-1">"Wins"</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    class="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-slate-100 text-sm"
+                                    prop:value=move || temp_wins.get().to_string()
+                                    on:input:target=move |ev| {
+                                        if let Ok(val) = ev.target().value().parse::<i32>() {
+                                            set_temp_wins.set(val.max(0));
+                                        }
+                                    }
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-slate-400 font-medium text-sm mb-1">"Losses"</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    class="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-slate-100 text-sm"
+                                    prop:value=move || temp_losses.get().to_string()
+                                    on:input:target=move |ev| {
+                                        if let Ok(val) = ev.target().value().parse::<i32>() {
+                                            set_temp_losses.set(val.max(0));
+                                        }
+                                    }
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2 mt-4">
+                        <button
+                            class="flex-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium"
+                            on:click=move |_| {
+                                let height = if temp_height.get().is_empty() { None } else { Some(temp_height.get()) };
+                                let weight = if temp_weight.get().is_empty() { None } else { Some(temp_weight.get()) };
+                                let debut_year = if temp_debut_year.get().is_empty() { 
+                                    None 
+                                } else { 
+                                    temp_debut_year.get().parse::<i32>().ok() 
+                                };
+                                
+                                on_stats_change(height, weight, debut_year, temp_wins.get(), temp_losses.get());
+                                set_editing.set(false);
+                            }
+                        >
+                            "Save"
+                        </button>
+                        <button
+                            class="flex-1 bg-slate-600 hover:bg-slate-700 text-white px-3 py-2 rounded text-sm font-medium"
+                            on:click=move |_| {
+                                set_editing.set(false);
+                            }
+                        >
+                            "Cancel"
+                        </button>
+                    </div>
+                }
+            >
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    {move || wrestler.get().map(|w| view! {
+                        {w.height.as_ref().map(|height| view! {
+                            <div>
+                                <span class="text-slate-400 font-medium">"Height: "</span>
+                                <span class="text-slate-100">{height.clone()}</span>
+                            </div>
+                        })}
+                        {w.weight.as_ref().map(|weight| view! {
+                            <div>
+                                <span class="text-slate-400 font-medium">"Weight: "</span>
+                                <span class="text-slate-100">{weight.clone()}</span>
+                            </div>
+                        })}
+                        {w.debut_year.map(|year| view! {
+                            <div>
+                                <span class="text-slate-400 font-medium">"Debut: "</span>
+                                <span class="text-slate-100">{year.to_string()}</span>
+                            </div>
+                        })}
+                        <div>
+                            <span class="text-slate-400 font-medium">"Gender: "</span>
+                            <span class="text-slate-100">{w.gender.clone()}</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 font-medium">"Record: "</span>
+                            <span class="text-slate-100">{format!("{}-{}", w.wins, w.losses)}</span>
+                        </div>
+                    })}
+                </div>
+            </Show>
         </div>
     }
 }
