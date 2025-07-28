@@ -28,7 +28,15 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y sqlite3
+        sudo apt-get install -y \
+          sqlite3 \
+          libwebkit2gtk-4.0-dev \
+          libwebkit2gtk-4.1-dev \
+          libappindicator3-dev \
+          librsvg2-dev \
+          patchelf \
+          libssl-dev \
+          pkg-config
 
     - name: Install Diesel CLI
       run: cargo install diesel_cli --no-default-features --features sqlite --locked
