@@ -63,7 +63,7 @@ diesel::table! {
         charisma -> Nullable<Integer>,
         technique -> Nullable<Integer>,
         biography -> Nullable<Text>,
-        trivia -> Nullable<Text>,
+        is_user_created -> Nullable<Bool>,
     }
 }
 

@@ -1,0 +1,425 @@
+---
+title: 'Shows API'
+description: 'API endpoints for managing wrestling shows'
+---
+
+## Overview
+
+The Shows API provides commands for creating and retrieving wrestling shows in WWE Universe Manager. Shows represent wrestling programs like "Monday Night RAW" or "Friday Night SmackDown".
+
+## Commands
+
+### get_shows
+
+Retrieves all shows from the database.
+
+<Tabs>
+  <Tab title="Command">
+    ```rust
+    #[tauri::command]
+    pub fn get_shows(state: State<'_, DbState>) -> Result<Vec<Show>, String>
+    ```
+  </Tab>
+  
+  <Tab title="Parameters">
+    No parameters required.
+  </Tab>
+  
+  <Tab title="Response">
+    ```rust
+    Result<Vec<Show>, String>
+    ```
+    
+    **Success**: Array of Show objects
+    **Error**: String describing the error
+  </Tab>
+</Tabs>
+
+#### Frontend Usage
+
+<CodeGroup>
+
+```rust Rust (Leptos)
+use crate::types::*;
+
+pub async fn get_shows() -> Result<Vec<Show>, String> {
+    let result_js = invoke("get_shows", JsValue::NULL).await;
+    serde_wasm_bindgen::from_value(result_js)
+        .map_err(|e| format!("Failed to parse shows: {}", e))
+}
+
+// Usage in component
+let shows_resource = Resource::new(|| (), |_| get_shows());
+```
+
+```typescript TypeScript
+import { invoke } from '@tauri-apps/api/tauri';
+
+interface Show {
+  id: number;
+  name: string;
+  description: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+async function getShows(): Promise<Show[]> {
+  try {
+    const shows = await invoke<Show[]>('get_shows');
+    return shows;
+  } catch (error) {
+    throw new Error(`Failed to get shows: ${error}`);
+  }
+}
+```
+
+</CodeGroup>
+
+#### Example Response
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Monday Night RAW",
+    "description": "The flagship show of WWE",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+  },
+  {
+    "id": 2,
+    "name": "Friday Night SmackDown",
+    "description": "The blue brand of WWE",
+    "created_at": "2024-01-15T11:00:00Z",
+    "updated_at": "2024-01-15T11:00:00Z"
+  }
+]
+```
+
+### create_show
+
+Creates a new wrestling show.
+
+<Tabs>
+  <Tab title="Command">
+    ```rust
+    #[tauri::command]
+    pub fn create_show(
+        state: State<'_, DbState>, 
+        show_data: ShowData
+    ) -> Result<Show, String>
+    ```
+  </Tab>
+  
+  <Tab title="Parameters">
+    **show_data** (`ShowData`): The show information to create
+    
+    ```rust
+    #[derive(Deserialize)]
+    pub struct ShowData {
+        pub name: String,
+        pub description: String,
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Response">
+    ```rust
+    Result<Show, String>
+    ```
+    
+    **Success**: The created Show object with generated ID
+    **Error**: String describing the error
+  </Tab>
+</Tabs>
+
+#### Frontend Usage
+
+<CodeGroup>
+
+```rust Rust (Leptos)
+use crate::types::*;
+
+pub async fn create_show(show_data: ShowData) -> Result<Show, String> {
+    let args = serde_json::json!({
+        "showData": show_data
+    });
+    let args_value = serde_wasm_bindgen::to_value(&args)
+        .map_err(|e| format!("Failed to serialize args: {}", e))?;
+    let result_js = invoke("create_show", args_value).await;
+    serde_wasm_bindgen::from_value(result_js)
+        .map_err(|e| format!("Failed to parse show: {}", e))
+}
+
+// Usage in component
+let show_data = ShowData {
+    name: "NXT".to_string(),
+    description: "WWE's developmental brand".to_string(),
+};
+
+spawn_local(async move {
+    match create_show(show_data).await {
+        Ok(show) => {
+            // Handle success
+            logging::log!("Created show: {}", show.name);
+        }
+        Err(e) => {
+            // Handle error
+            logging::log!("Error creating show: {}", e);
+        }
+    }
+});
+```
+
+```typescript TypeScript
+import { invoke } from '@tauri-apps/api/tauri';
+
+interface ShowData {
+  name: string;
+  description: string;
+}
+
+async function createShow(showData: ShowData): Promise<Show> {
+  try {
+    const show = await invoke<Show>('create_show', { showData });
+    return show;
+  } catch (error) {
+    throw new Error(`Failed to create show: ${error}`);
+  }
+}
+
+// Usage
+const newShow = await createShow({
+  name: "NXT",
+  description: "WWE's developmental brand"
+});
+```
+
+</CodeGroup>
+
+#### Example Request
+
+```json
+{
+  "showData": {
+    "name": "NXT",
+    "description": "WWE's developmental brand"
+  }
+}
+```
+
+#### Example Response
+
+```json
+{
+  "id": 3,
+  "name": "NXT",
+  "description": "WWE's developmental brand",
+  "created_at": "2024-01-15T14:30:00Z",
+  "updated_at": "2024-01-15T14:30:00Z"
+}
+```
+
+## Data Types
+
+### Show
+
+The main Show entity returned by API commands:
+
+```rust
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Show {
+    pub id: i32,
+    pub name: String,
+    pub description: String,
+    pub created_at: Option<NaiveDateTime>,
+    pub updated_at: Option<NaiveDateTime>,
+}
+```
+
+<AccordionGroup>
+  <Accordion title="Field Descriptions">
+    - **id**: Unique identifier for the show (auto-generated)
+    - **name**: The show's display name (e.g., "Monday Night RAW")
+    - **description**: Brief description of the show's theme or purpose
+    - **created_at**: Timestamp when the show was created (optional)
+    - **updated_at**: Timestamp when the show was last modified (optional)
+  </Accordion>
+</AccordionGroup>
+
+### ShowData
+
+Input data structure for creating shows:
+
+```rust
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShowData {
+    pub name: String,
+    pub description: String,
+}
+```
+
+<AccordionGroup>
+  <Accordion title="Validation Rules">
+    - **name**: Required, non-empty string
+    - **description**: Required, non-empty string
+    - Maximum length limits may apply (check database schema)
+  </Accordion>
+</AccordionGroup>
+
+## Error Handling
+
+### Common Errors
+
+<Tabs>
+  <Tab title="Database Errors">
+    - `"Failed to get database connection from pool"`
+    - `"Database operation failed: <details>"`
+    - `"Failed to establish database connection"`
+  </Tab>
+  
+  <Tab title="Validation Errors">
+    - `"Show name cannot be empty"`
+    - `"Show description cannot be empty"`
+    - `"Invalid show data format"`
+  </Tab>
+  
+  <Tab title="Serialization Errors">
+    - `"Failed to serialize show data"`
+    - `"Failed to parse show from database"`
+    - `"JSON serialization error"`
+  </Tab>
+</Tabs>
+
+### Error Response Format
+
+All errors are returned as strings in the `Err` variant:
+
+```rust
+Result<Show, String>  // For single show operations
+Result<Vec<Show>, String>  // For multiple show operations
+```
+
+Example error response:
+
+```json
+{
+  "error": "Failed to create show: Database connection error"
+}
+```
+
+## Database Schema
+
+Shows are stored in the `shows` table:
+
+```sql
+CREATE TABLE shows (
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+);
+```
+
+### Indexes
+
+```sql
+-- Future indexes for performance
+CREATE INDEX idx_shows_name ON shows(name);
+CREATE INDEX idx_shows_created_at ON shows(created_at);
+```
+
+## Implementation Details
+
+### Internal Functions
+
+The API commands wrap internal database functions:
+
+```rust
+// Internal database operation
+pub fn internal_create_show(
+    conn: &mut SqliteConnection,
+    name: &str,
+    description: &str,
+) -> Result<Show, DieselError> {
+    use crate::schema::shows::dsl::*;
+    
+    let new_show = NewShow {
+        name: name.to_string(),
+        description: description.to_string(),
+    };
+    
+    diesel::insert_into(shows)
+        .values(&new_show)
+        .get_result(conn)
+}
+
+// Tauri command wrapper
+#[tauri::command]
+pub fn create_show(
+    state: State<'_, DbState>, 
+    show_data: ShowData
+) -> Result<Show, String> {
+    let mut conn = get_connection(&state)?;
+    internal_create_show(&mut conn, &show_data.name, &show_data.description)
+        .map_err(|e| format!("Failed to create show: {}", e))
+}
+```
+
+### Connection Management
+
+All commands use connection pooling:
+
+```rust
+use r2d2::Pool;
+use r2d2_sqlite::SqliteConnectionManager;
+
+pub type DbPool = Pool<SqliteConnectionManager>;
+
+pub fn get_connection(state: &State<'_, DbState>) -> Result<PooledConnection<SqliteConnectionManager>, String> {
+    state.pool.get()
+        .map_err(|e| format!("Failed to get database connection from pool: {}", e))
+}
+```
+
+## Future Enhancements
+
+### Planned Features
+
+<CardGroup cols={2}>
+  <Card
+    title="Show Categories"
+    icon="folder"
+  >
+    Ability to categorize shows by brand (RAW, SmackDown, NXT)
+  </Card>
+  <Card
+    title="Show Scheduling"
+    icon="calendar"
+  >
+    Schedule shows with dates and times
+  </Card>
+  <Card
+    title="Show Statistics"
+    icon="chart-bar"
+  >
+    Track show viewership and ratings
+  </Card>
+  <Card
+    title="Show Roster"
+    icon="users"
+  >
+    Assign wrestlers to specific shows
+  </Card>
+</CardGroup>
+
+### API Additions
+
+Future API commands may include:
+
+- `update_show`: Modify existing show details
+- `delete_show`: Remove shows (with cascade handling)
+- `get_show_by_id`: Retrieve a specific show
+- `search_shows`: Find shows by name or description
+- `get_show_roster`: Get wrestlers assigned to a show

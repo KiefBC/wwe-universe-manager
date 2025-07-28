@@ -13,18 +13,24 @@ WWE Universe Manager is organized as a Rust workspace with two main packages:
 wwe-universe-manager/
 ├── src/                    # Frontend (Leptos + WASM)
 │   ├── components/         # UI Components
+│   │   ├── dashboard.rs    # Main dashboard component
+│   │   ├── create_show.rs  # Show creation form
+│   │   ├── wrestler_details_window.rs  # Wrestler profile window
+│   │   ├── app.rs          # Root application component
+│   │   └── mod.rs          # Component module exports
 │   ├── types.rs           # Shared types and API functions
-│   ├── app.rs             # Main application component
 │   └── main.rs            # Entry point
 ├── src-tauri/             # Backend (Tauri + Rust)
 │   ├── src/
-│   │   ├── models/        # Database models
-│   │   ├── db.rs          # Database operations
-│   │   ├── auth.rs        # Authentication utilities
-│   │   └── lib.rs         # Main entry point
-│   └── migrations/        # Database migrations
-├── style/                 # Tailwind CSS
-└── docs/                  # Documentation (Mintlify)
+│   │   ├── models/        # Database models (User, Wrestler, Title, Show)
+│   │   ├── db.rs          # Database operations and Tauri commands
+│   │   ├── auth.rs        # Authentication utilities (Argon2)
+│   │   ├── schema.rs      # Diesel-generated database schema
+│   │   └── lib.rs         # Main entry point and window management
+│   └── migrations/        # Database migrations (SQLite)
+├── style/                 # Tailwind CSS configuration and build
+├── docs/                  # Documentation (Mintlify)
+└── migrations/            # Additional database migrations
 ```
 
 ### Development Workflow
@@ -151,14 +157,15 @@ Components are organized in the `src/components/` directory:
 
 ### Styling Guidelines
 
-We use Tailwind CSS with DaisyUI and a custom WWE theme:
+We use Tailwind CSS v4 with DaisyUI and a custom WWE theme:
 
 <Tabs>
   <Tab title="Color Palette">
-    - Primary: Red (#DC2626)
+    - Primary: Red (#DC2626) 
     - Secondary: Yellow (#EAB308)
     - Accent: Purple (#7C3AED)
-    - Background: Black gradients
+    - Background: Slate/modern dark theme (#1E293B)
+    - Text: White/light colors for contrast
   </Tab>
   <Tab title="Common Classes">
     ```css
@@ -167,12 +174,14 @@ We use Tailwind CSS with DaisyUI and a custom WWE theme:
     .btn-accent      /* WWE purple button */
     .card            /* DaisyUI card component */
     .loading         /* Loading spinner */
+    .grid            /* Responsive grid layouts */
     ```
   </Tab>
   <Tab title="Responsive Design">
     - Use `sm:`, `md:`, `lg:` prefixes
-    - Design mobile-first
+    - Design mobile-first approach
     - Test on different screen sizes
+    - Grid layouts for dashboard components
   </Tab>
 </Tabs>
 

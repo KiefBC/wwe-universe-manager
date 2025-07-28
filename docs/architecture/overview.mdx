@@ -53,19 +53,22 @@ The presentation layer is built with Leptos and compiled to WebAssembly:
 ```rust
 src/
 ├── main.rs              # Application entry point
-├── app.rs               # Main App component with routing
 ├── components/          # Reusable UI components
+│   ├── app.rs           # Main App component with hash-based routing
+│   ├── dashboard.rs     # Main dashboard with show selector and action buttons
 │   ├── create_show.rs   # Show creation form
-│   ├── show_selector.rs # Show selection interface
+│   ├── wrestler_details_window.rs  # Wrestler profile in separate window
 │   └── mod.rs           # Component exports
 └── types.rs             # Shared types and API functions
 ```
 
 **Key Features:**
 - Reactive state management with signals
-- Component-based architecture
+- Component-based architecture with separate windows
+- Hash-based routing for window detection  
 - Type-safe props and state
 - Automatic re-rendering on state changes
+- Integration with Tauri window management
 
 ### Business Logic Layer (Backend)
 
@@ -73,22 +76,25 @@ The business logic layer handles all application logic and data operations:
 
 ```rust
 src-tauri/src/
-├── lib.rs               # Main entry point and Tauri setup
-├── db.rs                # Database operations and connection pooling
-├── auth.rs              # Authentication and password hashing
+├── lib.rs               # Main entry point, Tauri setup, and window management
+├── db.rs                # Database operations, connection pooling, and all Tauri commands
+├── auth.rs              # Authentication utilities and Argon2 password hashing
 ├── models/              # Data models and structures
-│   ├── show.rs          # Show model and data types
-│   ├── wrestler.rs      # Wrestler model and data types
-│   ├── title.rs         # Title model and data types
-│   └── user.rs          # User model and authentication
-└── schema.rs            # Database schema (auto-generated)
+│   ├── mod.rs           # Model module exports
+│   ├── user.rs          # User model and authentication types
+│   ├── wrestler.rs      # Wrestler model and statistics
+│   ├── title.rs         # Championship title model
+│   └── show.rs          # Wrestling show model
+└── schema.rs            # Diesel-generated database schema
 ```
 
 **Key Features:**
 - Connection pooling with r2d2
 - Type-safe database operations with Diesel
 - Secure password hashing with Argon2
-- Comprehensive error handling
+- Window management for separate UI windows
+- Comprehensive error handling and logging
+- Modular internal functions with Tauri command wrappers
 
 ### Data Layer (Database)
 

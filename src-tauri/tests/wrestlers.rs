@@ -160,7 +160,7 @@ fn test_create_enhanced_wrestler_success() {
         new_wrestler.charisma.unwrap(),
         new_wrestler.technique.unwrap(),
         new_wrestler.biography.as_ref().unwrap(),
-        new_wrestler.trivia.as_ref().unwrap(),
+        false, // is_user_created
     )
     .expect("Failed to create enhanced wrestler");
 
@@ -181,7 +181,6 @@ fn test_create_enhanced_wrestler_success() {
     assert_eq!(wrestler.charisma, new_wrestler.charisma);
     assert_eq!(wrestler.technique, new_wrestler.technique);
     assert_eq!(wrestler.biography, new_wrestler.biography);
-    assert_eq!(wrestler.trivia, new_wrestler.trivia);
     assert!(wrestler.id > 0);
 
     // Cleanup
@@ -305,7 +304,7 @@ fn test_enhanced_wrestler_with_optional_fields() {
         8,
         9,
         "Short biography.",
-        "Interesting trivia."
+        false // is_user_created
     )
     .expect("Failed to create enhanced wrestler");
 

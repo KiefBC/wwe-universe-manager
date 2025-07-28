@@ -1,4 +1,4 @@
-use crate::components::{CreateShow, Dashboard, WrestlerDetailsWindow, WrestlersList};
+use crate::components::{CreateShow, CreateWrestler, Dashboard, WrestlerDetailsWindow, WrestlersList};
 use leptos::prelude::*;
 use web_sys::window;
 
@@ -29,10 +29,19 @@ pub fn App() -> impl IntoView {
                                     fallback=move || {
                                         view! {
                                             <Show
-                                                when=move || current_page.get() == "wrestlers"
-                                                fallback=move || view! { <Dashboard set_current_page refresh_trigger /> }
+                                                when=move || current_page.get() == "create-wrestler"
+                                                fallback=move || {
+                                                    view! {
+                                                        <Show
+                                                            when=move || current_page.get() == "wrestlers"
+                                                            fallback=move || view! { <Dashboard set_current_page refresh_trigger /> }
+                                                        >
+                                                            <WrestlersList set_current_page />
+                                                        </Show>
+                                                    }
+                                                }
                                             >
-                                                <WrestlersList set_current_page />
+                                                <CreateWrestler set_current_page />
                                             </Show>
                                         }
                                     }

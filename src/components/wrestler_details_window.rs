@@ -24,7 +24,7 @@ pub struct Wrestler {
     pub charisma: Option<i32>,
     pub technique: Option<i32>,
     pub biography: Option<String>,
-    pub trivia: Option<String>,
+    pub is_user_created: Option<bool>,
 }
 
 #[wasm_bindgen]
@@ -144,19 +144,6 @@ async fn update_wrestler_biography(
     serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
 }
 
-async fn update_wrestler_trivia(
-    wrestler_id: i32,
-    trivia: Option<String>,
-) -> Result<Wrestler, String> {
-    let args = serde_wasm_bindgen::to_value(&serde_json::json!({
-        "wrestlerId": wrestler_id,
-        "trivia": trivia
-    }))
-    .map_err(|e| e.to_string())?;
-
-    let result = invoke("update_wrestler_trivia", args).await;
-    serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
-}
 
 fn extract_wrestler_id_from_url() -> Option<i32> {
     web_sys::window()?
@@ -267,21 +254,6 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
         }
     };
 
-    // Handler for trivia change
-    let handle_trivia_change = move |trivia: Option<String>| {
-        if let Some(w) = wrestler.get() {
-            spawn_local(async move {
-                match update_wrestler_trivia(w.id, trivia).await {
-                    Ok(updated_wrestler) => {
-                        set_wrestler.set(Some(updated_wrestler));
-                    }
-                    Err(e) => {
-                        set_error.set(Some(format!("Failed to update trivia: {}", e)));
-                    }
-                }
-            });
-        }
-    };
 
     // Check for URL changes using web_sys setTimeout in a loop
     Effect::new(move |_| {
@@ -385,6 +357,11 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
                                             <NameBannerSection 
                                                 wrestler=wrestler
                                                 on_name_change=handle_name_change
+                                            />
+
+                                            // Championship & Team Status
+                                            <ChampionshipTeamSection 
+                                                wrestler=wrestler
                                             />
                                         </div>
 
@@ -514,23 +491,15 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
                                                 wrestler=wrestler
                                                 on_stats_change=handle_basic_stats_change
                                             />
+
+                                            // Biography
+                                            <BiographySection 
+                                                wrestler=wrestler
+                                                on_biography_change=handle_biography_change
+                                            />
                                         </div>
                                     </div>
 
-                                    // Bottom section
-                                    <div class="px-6 pb-6 space-y-4">
-                                        // Biography
-                                        <BiographySection 
-                                            wrestler=wrestler
-                                            on_biography_change=handle_biography_change
-                                        />
-
-                                        // Did you know section (trivia)
-                                        <TriviaSection 
-                                            wrestler=wrestler
-                                            on_trivia_change=handle_trivia_change
-                                        />
-                                    </div>
                                 </div>
                             }
                         })
@@ -613,7 +582,7 @@ fn PromotionSection<F>(
     on_promotion_change: F,
 ) -> impl IntoView
 where
-    F: Fn(String) + 'static,
+    F: Fn(String) + 'static + Copy + Send + Sync,
 {
     view! {
         <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-4 mb-4">
@@ -691,24 +660,26 @@ where
                 <h4 class="text-slate-100 font-bold text-lg">
                     "Basic Stats"
                 </h4>
-                <button
-                    class="text-slate-400 hover:text-slate-200 text-sm font-medium flex items-center space-x-1"
-                    on:click=move |_| {
-                        if let Some(w) = wrestler.get() {
-                            set_temp_height.set(w.height.unwrap_or_default());
-                            set_temp_weight.set(w.weight.unwrap_or_default());
-                            set_temp_debut_year.set(w.debut_year.map(|y| y.to_string()).unwrap_or_default());
-                            set_temp_wins.set(w.wins);
-                            set_temp_losses.set(w.losses);
-                            set_editing.set(true);
+                <Show when=move || wrestler.get().and_then(|w| w.is_user_created).unwrap_or(false)>
+                    <button
+                        class="text-slate-400 hover:text-slate-200 text-sm font-medium flex items-center space-x-1"
+                        on:click=move |_| {
+                            if let Some(w) = wrestler.get() {
+                                set_temp_height.set(w.height.unwrap_or_default());
+                                set_temp_weight.set(w.weight.unwrap_or_default());
+                                set_temp_debut_year.set(w.debut_year.map(|y| y.to_string()).unwrap_or_default());
+                                set_temp_wins.set(w.wins);
+                                set_temp_losses.set(w.losses);
+                                set_editing.set(true);
+                            }
                         }
-                    }
-                >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    <span>"Edit"</span>
-                </button>
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        <span>"Edit"</span>
+                    </button>
+                </Show>
             </div>
             <Show 
                 when=move || !editing.get()
@@ -840,10 +811,6 @@ where
                             <span class="text-slate-400 font-medium">"Gender: "</span>
                             <span class="text-slate-100">{w.gender.clone()}</span>
                         </div>
-                        <div>
-                            <span class="text-slate-400 font-medium">"Record: "</span>
-                            <span class="text-slate-100">{format!("{}-{}", w.wins, w.losses)}</span>
-                        </div>
                     })}
                 </div>
             </Show>
@@ -905,21 +872,23 @@ where
         <div class="bg-slate-800/80 backdrop-blur-sm border border-slate-700 p-4 rounded-lg">
             <div class="flex items-center justify-between mb-2">
                 <div class="flex-1"></div>
-                <button
-                    class="text-slate-400 hover:text-slate-200 text-xs font-medium flex items-center space-x-1"
-                    on:click=move |_| {
-                        if let Some(w) = wrestler.get() {
-                            set_temp_name.set(w.name);
-                            set_temp_nickname.set(w.nickname.unwrap_or_default());
-                            set_editing.set(true);
+                <Show when=move || wrestler.get().and_then(|w| w.is_user_created).unwrap_or(false)>
+                    <button
+                        class="text-slate-400 hover:text-slate-200 text-xs font-medium flex items-center space-x-1"
+                        on:click=move |_| {
+                            if let Some(w) = wrestler.get() {
+                                set_temp_name.set(w.name);
+                                set_temp_nickname.set(w.nickname.unwrap_or_default());
+                                set_editing.set(true);
+                            }
                         }
-                    }
-                >
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    <span>"Edit"</span>
-                </button>
+                    >
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        <span>"Edit"</span>
+                    </button>
+                </Show>
             </div>
             <Show 
                 when=move || !editing.get()
@@ -1002,20 +971,22 @@ where
                     <div class="text-indigo-400 text-sm font-medium">
                         "Real Name"
                     </div>
-                    <button
-                        class="text-slate-400 hover:text-slate-200 text-xs font-medium flex items-center space-x-1"
-                        on:click=move |_| {
-                            if let Some(w) = wrestler.get() {
-                                set_temp_real_name.set(w.real_name.unwrap_or_default());
-                                set_editing.set(true);
+                    <Show when=move || wrestler.get().and_then(|w| w.is_user_created).unwrap_or(false)>
+                        <button
+                            class="text-slate-400 hover:text-slate-200 text-xs font-medium flex items-center space-x-1"
+                            on:click=move |_| {
+                                if let Some(w) = wrestler.get() {
+                                    set_temp_real_name.set(w.real_name.unwrap_or_default());
+                                    set_editing.set(true);
+                                }
                             }
-                        }
-                    >
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                        <span>"Edit"</span>
-                    </button>
+                        >
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            <span>"Edit"</span>
+                        </button>
+                    </Show>
                 </div>
                 <Show 
                     when=move || !editing.get()
@@ -1078,20 +1049,22 @@ where
             <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-4">
                 <div class="flex items-center justify-between mb-3 border-b border-slate-700 pb-2">
                     <h4 class="text-slate-100 font-semibold text-lg">"Biography"</h4>
-                    <button
-                        class="text-slate-400 hover:text-slate-200 text-sm font-medium flex items-center space-x-1"
-                        on:click=move |_| {
-                            if let Some(w) = wrestler.get() {
-                                set_temp_biography.set(w.biography.unwrap_or_default());
-                                set_editing.set(true);
+                    <Show when=move || wrestler.get().and_then(|w| w.is_user_created).unwrap_or(false)>
+                        <button
+                            class="text-slate-400 hover:text-slate-200 text-sm font-medium flex items-center space-x-1"
+                            on:click=move |_| {
+                                if let Some(w) = wrestler.get() {
+                                    set_temp_biography.set(w.biography.unwrap_or_default());
+                                    set_editing.set(true);
+                                }
                             }
-                        }
-                    >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                        <span>"Edit"</span>
-                    </button>
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            <span>"Edit"</span>
+                        </button>
+                    </Show>
                 </div>
                 <Show 
                     when=move || !editing.get()
@@ -1140,80 +1113,74 @@ where
     }
 }
 
-#[component]
-fn TriviaSection<F>(
-    wrestler: ReadSignal<Option<Wrestler>>,
-    on_trivia_change: F,
-) -> impl IntoView
-where
-    F: Fn(Option<String>) + 'static + Copy + Send + Sync,
-{
-    let (editing, set_editing) = signal(false);
-    let (temp_trivia, set_temp_trivia) = signal(String::new());
 
+#[component]
+fn ChampionshipTeamSection(
+    wrestler: ReadSignal<Option<Wrestler>>,
+) -> impl IntoView {
     view! {
-        <Show when=move || wrestler.get().and_then(|w| w.trivia.clone()).is_some() || editing.get()>
-            <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-4">
-                <div class="flex items-center justify-between mb-3 border-b border-slate-700 pb-2">
-                    <h4 class="text-slate-100 font-semibold text-lg">"Did You Know"</h4>
-                    <button
-                        class="text-slate-400 hover:text-slate-200 text-sm font-medium flex items-center space-x-1"
-                        on:click=move |_| {
-                            if let Some(w) = wrestler.get() {
-                                set_temp_trivia.set(w.trivia.unwrap_or_default());
-                                set_editing.set(true);
-                            }
-                        }
-                    >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                        <span>"Edit"</span>
-                    </button>
+        <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-4">
+            <h4 class="text-slate-100 font-bold text-lg mb-4 border-b border-slate-700 pb-2">
+                "Championship & Team Status"
+            </h4>
+            
+            <div class="space-y-4">
+                // Record section
+                <div class="flex items-center justify-between">
+                    <span class="text-slate-400 font-medium text-sm">"Record:"</span>
+                    <span class="text-slate-100 font-semibold">
+                        {move || wrestler.get().map(|w| format!("{}-{}", w.wins, w.losses)).unwrap_or_default()}
+                    </span>
                 </div>
-                <Show 
-                    when=move || !editing.get()
-                    fallback=move || view! {
-                        <div class="space-y-3">
-                            <textarea
-                                class="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-slate-100 text-sm resize-none"
-                                rows="3"
-                                placeholder="Enter trivia/fun facts..."
-                                prop:value=move || temp_trivia.get()
-                                on:input:target=move |ev| {
-                                    set_temp_trivia.set(ev.target().value());
-                                }
-                            ></textarea>
+                
+                // Current Belt section
+                <div class="space-y-2">
+                    <span class="text-slate-400 font-medium text-sm">"Current Belt:"</span>
+                    <div class="bg-slate-700/50 border border-slate-600 rounded-lg p-3 flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-yellow-600/20 border border-yellow-600/50 rounded-lg flex items-center justify-center">
+                            // Championship belt icon
+                            <svg class="w-6 h-6 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M5 16L3 14l5.5-5.5L10 10l4-4 4 4 1.5-1.5L15 3l-4 4L7 3 2.5 8.5 5 11v5zm2.5 2.5L9 17l1.5 1.5L12 17l1.5 1.5L15 17l1.5 1.5L18 17v-2l-1.5-1.5L15 15l-1.5-1.5L12 15l-1.5-1.5L9 15l-1.5 1.5L6 17v2l1.5-1.5z"/>
+                            </svg>
                         </div>
-                        <div class="flex space-x-2 mt-4">
-                            <button
-                                class="flex-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium"
-                                on:click=move |_| {
-                                    let trivia = if temp_trivia.get().is_empty() { None } else { Some(temp_trivia.get()) };
-                                    on_trivia_change(trivia);
-                                    set_editing.set(false);
-                                }
-                            >
-                                "Save"
-                            </button>
-                            <button
-                                class="flex-1 bg-slate-600 hover:bg-slate-700 text-white px-3 py-2 rounded text-sm font-medium"
-                                on:click=move |_| {
-                                    set_editing.set(false);
-                                }
-                            >
-                                "Cancel"
-                            </button>
+                        <div class="flex-1">
+                            <p class="text-slate-300 text-sm italic">"No championship held"</p>
+                            <p class="text-slate-500 text-xs">"Belt management coming soon"</p>
                         </div>
-                    }
-                >
-                    {move || wrestler.get().and_then(|w| w.trivia).map(|trivia| view! {
-                        <p class="text-slate-300 text-sm leading-relaxed">
-                            {trivia}
-                        </p>
-                    })}
-                </Show>
+                    </div>
+                </div>
+                
+                // Tag Team section
+                <div class="space-y-2">
+                    <span class="text-slate-400 font-medium text-sm">"Tag Team:"</span>
+                    <div class="bg-slate-700/50 border border-slate-600 rounded-lg p-3">
+                        <div class="flex items-center space-x-2 mb-2">
+                            // Partner placeholders
+                            <div class="flex space-x-2">
+                                <div class="w-8 h-8 bg-slate-600/50 border border-slate-500 rounded-full flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-slate-400" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                                    </svg>
+                                </div>
+                                <div class="w-8 h-8 bg-slate-600/50 border border-slate-500 rounded-full flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-slate-400" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                                    </svg>
+                                </div>
+                                <div class="w-8 h-8 bg-slate-600/30 border border-slate-500/50 rounded-full flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-slate-500" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-slate-300 text-sm italic">"No tag team partners"</p>
+                            <p class="text-slate-500 text-xs">"Tag team management coming soon"</p>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </Show>
+        </div>
     }
 }

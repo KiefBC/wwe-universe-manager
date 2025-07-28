@@ -1,0 +1,272 @@
+---
+title: 'Wrestler Details Window'
+description: 'Separate window component displaying wrestler profile information'
+---
+
+## Overview
+
+The WrestlerDetailsWindow component displays detailed wrestler information in a separate Tauri window. This provides a dedicated space for viewing wrestler profiles without cluttering the main dashboard interface.
+
+## Window Architecture
+
+### Separate Window Design
+
+The wrestler details are displayed in a completely separate application window, not a modal or overlay:
+
+<CardGroup cols={2}>
+  <Card
+    title="Independent Window"
+    icon="window"
+  >
+    Runs as a separate Tauri window with its own web context
+  </Card>
+  <Card
+    title="URL-based Routing"
+    icon="link"
+  >
+    Uses URL hash (#wrestler) to detect and render appropriate content
+  </Card>
+  <Card
+    title="Isolated State"
+    icon="shield"
+  >
+    Maintains its own component state independent of main window
+  </Card>
+  <Card
+    title="WWE Theming"
+    icon="palette"
+  >
+    Consistent styling with main application theme
+  </Card>
+</CardGroup>
+
+## Technical Implementation
+
+### Window Creation
+
+The window is created via a Tauri command from the main dashboard:
+
+```rust
+// Tauri backend command
+#[tauri::command]
+pub async fn open_wrestler_window(app: AppHandle) -> Result<(), String> {
+    let window = WebviewWindowBuilder::new(
+        &app,
+        "wrestler-details",
+        WebviewUrl::App("index.html#wrestler".into())
+    )
+    .title("Wrestler Details")
+    .inner_size(800.0, 600.0)
+    .resizable(true)
+    .build()
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+```
+
+### Frontend Detection
+
+The component detects it's in a separate window by checking the URL hash:
+
+```rust
+#[component]
+pub fn App() -> impl IntoView {
+    let hash = window().location().hash().unwrap_or_default();
+    
+    if hash == "#wrestler" {
+        view! { <WrestlerDetailsWindow /> }
+    } else {
+        view! { <Dashboard /> }
+    }
+}
+```
+
+### Component Structure
+
+```rust
+#[component]
+pub fn WrestlerDetailsWindow() -> impl IntoView {
+    view! {
+        <div class="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6">
+            <div class="max-w-4xl mx-auto">
+                // Wrestler profile content
+            </div>
+        </div>
+    }
+}
+```
+
+## Current Content
+
+### Sample Wrestler: The Rock
+
+The component currently displays hardcoded information for demonstration purposes:
+
+<Tabs>
+  <Tab title="Basic Info">
+    - **Name**: The Rock
+    - **Real Name**: Dwayne Johnson
+    - **Height**: 6'5"
+    - **Weight**: 260 lbs
+    - **From**: Miami, Florida
+  </Tab>
+  
+  <Tab title="Career Stats">
+    - **Wins**: 342
+    - **Losses**: 89
+    - **Championships**: 17
+    - **Years Active**: 1996-2004, 2011-2013
+  </Tab>
+  
+  <Tab title="Signature Moves">
+    - Rock Bottom
+    - People's Elbow
+    - Samoan Drop
+    - Spit Punch
+  </Tab>
+  
+  <Tab title="Achievements">
+    - 10x WWE Champion
+    - 2x Intercontinental Champion
+    - 5x Tag Team Champion
+    - Royal Rumble Winner (2000)
+  </Tab>
+</Tabs>
+
+## User Interface
+
+### Profile Layout
+
+The wrestler details are organized in a card-based layout:
+
+```rust
+view! {
+    // Header with wrestler name and image
+    <div class="text-center mb-8">
+        <h1 class="text-4xl font-bold mb-2">"The Rock"</h1>
+        <p class="text-xl text-gray-300">"The People's Champion"</p>
+    </div>
+
+    // Stats grid
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        // Individual stat cards
+    </div>
+}
+```
+
+### Responsive Design
+
+The layout adapts to different window sizes:
+
+- **Desktop**: 3-column grid for stats
+- **Tablet**: 2-column grid
+- **Mobile**: Single column stack
+
+### WWE Theming
+
+Consistent with the main application:
+
+- **Background**: Dark slate gradient
+- **Text**: White/light colors
+- **Accents**: WWE red and yellow
+- **Cards**: Dark backgrounds with subtle borders
+
+## Future Enhancements
+
+### Planned Features
+
+<AccordionGroup>
+  <Accordion title="Database Integration">
+    Replace hardcoded data with actual wrestler information from the database
+  </Accordion>
+  
+  <Accordion title="Dynamic Wrestler Selection">
+    Allow opening specific wrestlers from a roster list or search
+  </Accordion>
+  
+  <Accordion title="Editable Profiles">
+    Add forms to edit wrestler information directly in the window
+  </Accordion>
+  
+  <Accordion title="Match History">
+    Display detailed match history and statistics
+  </Accordion>
+  
+  <Accordion title="Photo Management">
+    Upload and manage wrestler profile photos
+  </Accordion>
+</AccordionGroup>
+
+### Current Limitations
+
+<Warning>
+The component currently shows hardcoded sample data for "The Rock" and doesn't connect to the database.
+</Warning>
+
+<Info>
+Only one wrestler window can be open at a time. Opening a new one will replace the existing window.
+</Info>
+
+## Window Management
+
+### Opening the Window
+
+From the main dashboard:
+
+<Steps>
+  <Step title="Click Wrestlers Button">
+    User clicks the "Wrestlers" button on the dashboard
+  </Step>
+  <Step title="Tauri Command Execution">
+    Frontend calls the `open_wrestler_window` Tauri command
+  </Step>
+  <Step title="Window Creation">
+    Tauri creates a new window with the wrestler URL hash
+  </Step>
+  <Step title="Component Rendering">
+    App component detects the hash and renders WrestlerDetailsWindow
+  </Step>
+</Steps>
+
+### Window Properties
+
+The wrestler window is configured with:
+
+- **Size**: 800x600 pixels (resizable)
+- **Title**: "Wrestler Details"
+- **URL**: `index.html#wrestler`
+- **Independence**: Separate from main window
+
+## Related Features
+
+<CardGroup cols={2}>
+  <Card
+    title="Dashboard"
+    icon="dashboard"
+    href="/components/dashboard"
+  >
+    Main component that opens wrestler windows
+  </Card>
+  <Card
+    title="Wrestler Management"
+    icon="users"
+    href="/features/wrestler-management"
+  >
+    Future feature for managing wrestler rosters
+  </Card>
+  <Card
+    title="Window Management"
+    icon="window"
+    href="/architecture/backend"
+  >
+    Backend architecture for Tauri window handling
+  </Card>
+  <Card
+    title="App Router"
+    icon="route"
+    href="/components/app"
+  >
+    Root component managing hash-based routing
+  </Card>
+</CardGroup>

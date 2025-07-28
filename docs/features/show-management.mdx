@@ -11,15 +11,18 @@ The Show Management feature allows you to create, organize, and manage wrestling
 
 <Steps>
   <Step title="Navigate to Create Show">
-    Click the "CREATE SHOW" button from the main dashboard
+    Click the "Create Show" button from the main dashboard action buttons
   </Step>
   <Step title="Fill in Show Details">
     Provide a name and description for your show:
-    - **Name**: The show's title (e.g., "Monday Night Raw", "SmackDown Live")
+    - **Name**: The show's title (e.g., "Monday Night RAW", "Friday Night SmackDown")
     - **Description**: A brief description of the show's theme or purpose
   </Step>
   <Step title="Save the Show">
-    Click "CREATE SHOW" to save your new show to the database
+    Click "Create Show" to save your new show to the database
+  </Step>
+  <Step title="Return to Dashboard">
+    After successful creation, you'll return to the dashboard where the new show appears in the dropdown
   </Step>
 </Steps>
 
@@ -111,23 +114,25 @@ pub fn get_shows(state: State<'_, DbState>) -> Result<Vec<Show>, String>
 The show management feature uses these components:
 
 <Tabs>
-  <Tab title="ShowSelector">
-    Displays a dropdown list of all available shows and allows users to select one for management.
+  <Tab title="Dashboard Show Dropdown">
+    Displays a dropdown list of all available shows on the main dashboard for selection.
     
     **Features:**
     - Loading state with spinner
     - Error handling for failed requests
     - Real-time updates when shows are added
+    - Integration with dashboard action buttons
     - Responsive design for all screen sizes
   </Tab>
-  <Tab title="CreateShow">
-    A form component for creating new shows with validation and submission handling.
+  <Tab title="CreateShow Form">
+    A dedicated form component for creating new shows with validation and submission handling.
     
     **Features:**
-    - Form validation
+    - Form validation for required fields
     - Loading states during submission
     - Success/error messaging
-    - Automatic navigation after creation
+    - Automatic navigation back to dashboard
+    - Modern WWE-themed styling
   </Tab>
 </Tabs>
 

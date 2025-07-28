@@ -2,8 +2,8 @@ use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::sqlite::SqliteConnection;
 use std::sync::Once;
+use std::env;
 
-use wwe_universe_manager_lib::db::establish_connection;
 use wwe_universe_manager_lib::models::*;
 
 static INIT: Once = Once::new();
@@ -12,7 +12,14 @@ pub fn setup_test_db() -> Pool<ConnectionManager<SqliteConnection>> {
     INIT.call_once(|| {
         env_logger::init();
     });
-    establish_connection()
+    
+    // Use the root database.db file where migrations have been run
+    let database_url = env::var("DATABASE_URL").unwrap_or_else(|_| "../database.db".to_string());
+    
+    let manager = ConnectionManager::<SqliteConnection>::new(database_url);
+    diesel::r2d2::Pool::builder()
+        .build(manager)
+        .expect("Failed to create database connection pool")
 }
 
 pub struct TestData {
@@ -99,6 +106,7 @@ pub fn create_test_wrestler() -> NewWrestler {
         gender: "Male".to_string(),
         wins: 0,
         losses: 0,
+        is_user_created: Some(false),
     }
 }
 
@@ -122,7 +130,7 @@ pub fn create_test_enhanced_wrestler() -> NewEnhancedWrestler {
         charisma: Some(9),
         technique: Some(8),
         biography: Some("A test wrestler for testing enhanced features.".to_string()),
-        trivia: Some("This wrestler exists only for testing purposes.".to_string()),
+        is_user_created: Some(false),
     }
 }
 

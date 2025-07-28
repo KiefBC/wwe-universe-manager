@@ -24,6 +24,7 @@ pub struct Wrestler {
     pub technique: Option<i32>,
     pub biography: Option<String>,
     pub trivia: Option<String>,
+    pub is_user_created: Option<bool>,
 }
 
 #[wasm_bindgen]
@@ -93,12 +94,21 @@ pub fn WrestlersList(
                         </svg>
                         <span>"Back to Dashboard"</span>
                     </button>
+                    <button
+                        class="btn bg-purple-600 hover:bg-purple-700 border-purple-500 text-white px-6 py-2 rounded-lg flex items-center space-x-2 font-semibold"
+                        on:click=move |_| set_current_page.set("create-wrestler".to_string())
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        <span>"Create Wrestler"</span>
+                    </button>
                 </div>
                 <h1 class="text-4xl font-bold text-white mb-2">
                     "WWE Universe Roster"
                 </h1>
                 <p class="text-slate-400">
-                    "Select a wrestler to view their detailed profile"
+                    "Select a wrestler to view their detailed profile. Custom wrestlers can be edited, system wrestlers are read-only."
                 </p>
             </div>
 
@@ -131,10 +141,35 @@ pub fn WrestlersList(
                         key=|wrestler| wrestler.id
                         children=move |wrestler| {
                             let wrestler_id = wrestler.id;
+                            let is_user_created = wrestler.is_user_created.unwrap_or(false);
 
                             view! {
-                                <div class="bg-slate-800 border border-slate-600 rounded-lg p-4 h-32 hover:border-purple-500 hover:shadow-lg hover:shadow-purple-500/20 transition-all duration-200 cursor-pointer group flex flex-col justify-center"
+                                <div class="bg-slate-800 border border-slate-600 rounded-lg p-4 h-32 hover:border-purple-500 hover:shadow-lg hover:shadow-purple-500/20 transition-all duration-200 cursor-pointer group flex flex-col justify-center relative"
                                      on:click=move |_| handle_wrestler_click(wrestler_id)>
+                                    
+                                    // System wrestler indicator
+                                    <Show when=move || !is_user_created>
+                                        <div class="absolute top-2 right-2">
+                                            <div class="bg-slate-600 text-slate-300 px-2 py-1 rounded text-xs font-medium flex items-center space-x-1">
+                                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z" clip-rule="evenodd" />
+                                                </svg>
+                                                <span>"System"</span>
+                                            </div>
+                                        </div>
+                                    </Show>
+
+                                    // User-created wrestler indicator
+                                    <Show when=move || is_user_created>
+                                        <div class="absolute top-2 right-2">
+                                            <div class="bg-green-600 text-green-100 px-2 py-1 rounded text-xs font-medium flex items-center space-x-1">
+                                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                                </svg>
+                                                <span>"Custom"</span>
+                                            </div>
+                                        </div>
+                                    </Show>
                                     
                                     <div class="text-center">
                                         <h3 class="text-lg font-bold text-white group-hover:text-purple-400 transition-colors mb-2">

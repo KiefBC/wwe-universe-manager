@@ -1,6 +1,6 @@
 use crate::models::{
     NewShow, NewSignatureMove, NewTitle, NewUser, NewWrestler, NewEnhancedWrestler, Show, ShowData, SignatureMove, Title, TitleData, User, UserData,
-    Wrestler, WrestlerData,
+    Wrestler, WrestlerData, EnhancedWrestlerData,
 };
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
@@ -145,6 +145,7 @@ pub fn internal_create_wrestler(
         gender: gender.to_string(),
         wins,
         losses,
+        is_user_created: Some(false), // Default to system wrestler
     };
 
     diesel::insert_into(crate::schema::wrestlers::dsl::wrestlers)
@@ -173,7 +174,7 @@ pub fn internal_create_enhanced_wrestler(
     wrestler_charisma: i32,
     wrestler_technique: i32,
     wrestler_biography: &str,
-    wrestler_trivia: &str,
+    is_user_created: bool,
 ) -> Result<Wrestler, DieselError> {
     let new_wrestler = NewEnhancedWrestler {
         name: wrestler_name.to_string(),
@@ -193,7 +194,41 @@ pub fn internal_create_enhanced_wrestler(
         charisma: Some(wrestler_charisma),
         technique: Some(wrestler_technique),
         biography: Some(wrestler_biography.to_string()),
-        trivia: Some(wrestler_trivia.to_string()),
+        is_user_created: Some(is_user_created),
+    };
+
+    diesel::insert_into(crate::schema::wrestlers::dsl::wrestlers)
+        .values(&new_wrestler)
+        .returning(Wrestler::as_returning())
+        .get_result(conn)
+}
+
+/// Creates a new user-created wrestler with enhanced details
+pub fn internal_create_user_wrestler(
+    conn: &mut SqliteConnection,
+    wrestler_data: &EnhancedWrestlerData,
+) -> Result<Wrestler, DieselError> {
+    let gender_str: String = wrestler_data.gender.clone().into();
+    
+    let new_wrestler = NewEnhancedWrestler {
+        name: wrestler_data.name.clone(),
+        gender: gender_str,
+        wins: 0, // New wrestlers start with 0 wins/losses
+        losses: 0,
+        real_name: wrestler_data.real_name.clone(),
+        nickname: wrestler_data.nickname.clone(),
+        height: wrestler_data.height.clone(),
+        weight: wrestler_data.weight.clone(),
+        debut_year: wrestler_data.debut_year,
+        promotion: wrestler_data.promotion.clone(),
+        strength: wrestler_data.strength,
+        speed: wrestler_data.speed,
+        agility: wrestler_data.agility,
+        stamina: wrestler_data.stamina,
+        charisma: wrestler_data.charisma,
+        technique: wrestler_data.technique,
+        biography: wrestler_data.biography.clone(),
+        is_user_created: Some(true), // User-created wrestler
     };
 
     diesel::insert_into(crate::schema::wrestlers::dsl::wrestlers)
@@ -312,19 +347,6 @@ pub fn internal_update_wrestler_biography(
         .get_result(conn)
 }
 
-/// Updates a wrestler's trivia
-pub fn internal_update_wrestler_trivia(
-    conn: &mut SqliteConnection,
-    wrestler_id: i32,
-    new_trivia: Option<String>,
-) -> Result<Wrestler, DieselError> {
-    use crate::schema::wrestlers::dsl::*;
-    
-    diesel::update(wrestlers.filter(id.eq(wrestler_id)))
-        .set(trivia.eq(new_trivia))
-        .returning(Wrestler::as_returning())
-        .get_result(conn)
-}
 
 /// Creates a new signature move for a wrestler
 pub fn internal_create_signature_move(
@@ -360,6 +382,23 @@ pub fn create_wrestler(
         .map_err(|e| {
             error!("Error creating wrestler: {}", e);
             format!("Failed to create wrestler: {}", e)
+        })
+}
+
+#[tauri::command]
+pub fn create_user_wrestler(
+    state: State<'_, DbState>,
+    wrestler_data: EnhancedWrestlerData,
+) -> Result<Wrestler, String> {
+    let mut conn = get_connection(&state)?;
+
+    internal_create_user_wrestler(&mut conn, &wrestler_data)
+        .inspect(|wrestler| {
+            info!("User wrestler '{}' created successfully", wrestler.name);
+        })
+        .map_err(|e| {
+            error!("Error creating user wrestler: {}", e);
+            format!("Failed to create user wrestler: {}", e)
         })
 }
 
@@ -518,23 +557,6 @@ pub fn update_wrestler_biography(
         })
 }
 
-#[tauri::command]
-pub fn update_wrestler_trivia(
-    state: State<'_, DbState>,
-    wrestler_id: i32,
-    trivia: Option<String>,
-) -> Result<Wrestler, String> {
-    let mut conn = get_connection(&state)?;
-
-    internal_update_wrestler_trivia(&mut conn, wrestler_id, trivia)
-        .inspect(|wrestler| {
-            info!("Wrestler '{}' trivia updated", wrestler.name);
-        })
-        .map_err(|e| {
-            error!("Error updating wrestler trivia: {}", e);
-            format!("Failed to update wrestler trivia: {}", e)
-        })
-}
 
 // ===== Title Operations =====
 
@@ -604,39 +626,39 @@ pub fn create_test_data(state: State<'_, DbState>) -> Result<String, String> {
             "The Rock", "Dwayne Johnson", "The People's Champion", "Male", 245, 67,
             "6'5\"", "260 lbs", 1996, "WWE", 9, 6, 7, 9, 10, 8,
             "The Rock is one of the most electrifying superstars in sports entertainment history. Known for his incredible charisma, devastating finishing moves, and ability to captivate audiences worldwide. From his days as 'Rocky Maivia' to becoming 'The People's Champion,' The Rock has dominated both the wrestling ring and Hollywood.",
-            "The Rock is not only a wrestling legend but also one of the highest-paid actors in Hollywood! He's starred in major blockbuster films and has become a global icon beyond the wrestling world."
+            true // This wrestler is user-created for testing modifications
         ),
         (
             "Stone Cold Steve Austin", "Steven James Anderson", "The Texas Rattlesnake", "Male", 312, 89,
             "6'2\"", "252 lbs", 1989, "WWE", 8, 7, 6, 8, 9, 7,
             "Stone Cold Steve Austin is the beer-drinking, hell-raising anti-hero who defined the Attitude Era. With his rebellious nature and iconic catchphrases, Austin became the face of WWE during its most successful period.",
-            "Austin's entrance music is one of the most recognizable in wrestling history, and his feuds with Mr. McMahon are considered among the greatest storylines ever told in sports entertainment."
+            false
         ),
         (
             "Becky Lynch", "Rebecca Quin", "The Man", "Female", 156, 43,
             "5'6\"", "135 lbs", 2013, "WWE", 7, 8, 9, 8, 9, 8,
             "Becky Lynch transformed from 'The Irish Lass Kicker' to 'The Man' - the top superstar in all of WWE. Her journey from underdog to champion inspired millions and redefined what it means to be a top star in sports entertainment.",
-            "Becky was the first woman to main event WrestleMania when she headlined WrestleMania 35 in a historic Triple Threat match for both the Raw and SmackDown Women's Championships."
+            false
         ),
         (
             "Charlotte Flair", "Ashley Elizabeth Fliehr", "The Queen", "Female", 198, 52,
             "5'10\"", "143 lbs", 2012, "WWE", 7, 8, 8, 8, 9, 9,
             "Charlotte Flair is a second-generation superstar who has established herself as one of the most dominant competitors in WWE history. The daughter of 'Nature Boy' Ric Flair, she has carved out her own legendary legacy.",
-            "Charlotte is a 14-time Women's Champion and has been featured in several historic firsts for women's wrestling, including the first women's Hell in a Cell match and the first women's main event on Monday Night Raw."
+            false
         ),
         (
             "John Cena", "John Felix Anthony Cena Jr.", "The Cenation Leader", "Male", 289, 78,
             "6'1\"", "251 lbs", 2002, "WWE", 8, 7, 7, 9, 10, 8,
             "John Cena is a 16-time World Champion who became the face of WWE for over a decade. Known for his 'Never Give Up' attitude and incredible work ethic, Cena has inspired millions of fans worldwide while also pursuing a successful acting career.",
-            "Cena has granted over 650 Make-A-Wish requests, more than any other celebrity in the organization's history. His dedication to philanthropy matches his success in the ring."
+            false
         ),
     ];
     
-    for (name, real_name, nickname, gender, wins, losses, height, weight, debut_year, promotion, strength, speed, agility, stamina, charisma, technique, biography, trivia) in test_wrestlers {
+    for (name, real_name, nickname, gender, wins, losses, height, weight, debut_year, promotion, strength, speed, agility, stamina, charisma, technique, biography, is_user_created) in test_wrestlers {
         let wrestler = internal_create_enhanced_wrestler(
             &mut conn, name, real_name, nickname, gender, wins, losses, 
             height, weight, debut_year, promotion, strength, speed, agility, 
-            stamina, charisma, technique, biography, trivia
+            stamina, charisma, technique, biography, is_user_created
         ).map_err(|e| format!("Failed to create wrestler '{}': {}", name, e))?;
         
         // Add signature moves for each wrestler

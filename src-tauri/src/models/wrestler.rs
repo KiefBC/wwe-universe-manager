@@ -31,7 +31,7 @@ pub struct Wrestler {
     pub technique: Option<i32>,
     // Content
     pub biography: Option<String>,
-    pub trivia: Option<String>,
+    pub is_user_created: Option<bool>,
 }
 
 #[derive(Insertable)]
@@ -41,6 +41,7 @@ pub struct NewWrestler {
     pub gender: String,
     pub wins: i32,
     pub losses: i32,
+    pub is_user_created: Option<bool>,
 }
 
 #[derive(Insertable)]
@@ -63,11 +64,30 @@ pub struct NewEnhancedWrestler {
     pub charisma: Option<i32>,
     pub technique: Option<i32>,
     pub biography: Option<String>,
-    pub trivia: Option<String>,
+    pub is_user_created: Option<bool>,
 }
 
 #[derive(Deserialize)]
 pub struct WrestlerData {
     pub name: String,
     pub gender: Gender,
+}
+
+#[derive(Deserialize)]
+pub struct EnhancedWrestlerData {
+    pub name: String,
+    pub gender: Gender,
+    pub real_name: Option<String>,
+    pub nickname: Option<String>,
+    pub height: Option<String>,
+    pub weight: Option<String>,
+    pub debut_year: Option<i32>,
+    pub promotion: Option<String>,
+    pub strength: Option<i32>,
+    pub speed: Option<i32>,
+    pub agility: Option<i32>,
+    pub stamina: Option<i32>,
+    pub charisma: Option<i32>,
+    pub technique: Option<i32>,
+    pub biography: Option<String>,
 }

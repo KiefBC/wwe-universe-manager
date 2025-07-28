@@ -1,0 +1,368 @@
+---
+title: 'Shared Types'
+description: 'Common data structures and API functions used across the application'
+---
+
+## Overview
+
+The shared types module (`src/types.rs`) contains all the data structures, API functions, and utilities that are used across the frontend application. This ensures consistency and type safety when communicating with the Tauri backend.
+
+## Core Data Structures
+
+### Database Models
+
+These types mirror the database schema and are used for data transfer:
+
+<Tabs>
+  <Tab title="Show">
+    ```rust
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct Show {
+        pub id: i32,
+        pub name: String,
+        pub description: String,
+    }
+    ```
+    Represents a wrestling show like "Monday Night RAW" or "Friday Night SmackDown".
+  </Tab>
+  
+  <Tab title="Wrestler">
+    ```rust
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct Wrestler {
+        pub id: i32,
+        pub name: String,
+        pub gender: String,
+        pub wins: i32,
+        pub losses: i32,
+    }
+    ```
+    Represents a wrestler with basic statistics and information.
+  </Tab>
+  
+  <Tab title="User">
+    ```rust
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct User {
+        pub id: i32,
+        pub username: String,
+        // Password is handled separately for security
+    }
+    ```
+    Represents a user account in the system.
+  </Tab>
+  
+  <Tab title="Title">
+    ```rust
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct Title {
+        pub id: i32,
+        pub name: String,
+        pub current_holder: Option<String>,
+    }
+    ```
+    Represents a championship title that can be held by wrestlers.
+  </Tab>
+</Tabs>
+
+### Input Data Structures
+
+These types are used for creating new entities:
+
+<CodeGroup>
+
+```rust ShowData
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShowData {
+    pub name: String,
+    pub description: String,
+}
+```
+
+```rust WrestlerData
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WrestlerData {
+    pub name: String,
+    pub gender: String,
+    pub wins: i32,
+    pub losses: i32,
+}
+```
+
+```rust UserRegistrationData
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserRegistrationData {
+    pub username: String,
+    pub password: String,
+}
+```
+
+```rust BeltData
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BeltData {
+    pub name: String,
+    pub current_holder: Option<String>,
+}
+```
+
+</CodeGroup>
+
+## API Functions
+
+The module provides async functions that wrap Tauri commands for frontend use:
+
+### Show Management
+
+<CodeGroup>
+
+```rust Get Shows
+pub async fn get_shows() -> Result<Vec<Show>, String> {
+    let result_js = invoke("get_shows", JsValue::NULL).await;
+    serde_wasm_bindgen::from_value(result_js)
+        .map_err(|e| format!("Failed to parse shows: {}", e))
+}
+```
+
+```rust Create Show
+pub async fn create_show(show_data: ShowData) -> Result<Show, String> {
+    let args = serde_json::json!({
+        "showData": show_data
+    });
+    let args_value = serde_wasm_bindgen::to_value(&args)
+        .map_err(|e| format!("Failed to serialize args: {}", e))?;
+    let result_js = invoke("create_show", args_value).await;
+    serde_wasm_bindgen::from_value(result_js)
+        .map_err(|e| format!("Failed to parse show: {}", e))
+}
+```
+
+</CodeGroup>
+
+### Wrestler Management
+
+```rust
+pub async fn create_wrestler(wrestler_data: WrestlerData) -> Result<Wrestler, String> {
+    let args = serde_json::json!({
+        "wrestlerData": wrestler_data
+    });
+    let args_value = serde_wasm_bindgen::to_value(&args)?;
+    let result_js = invoke("create_wrestler", args_value).await;
+    serde_wasm_bindgen::from_value(result_js)
+}
+```
+
+### User Authentication
+
+<CodeGroup>
+
+```rust Register User
+pub async fn register_user(user_data: UserRegistrationData) -> Result<User, String> {
+    let args = serde_json::json!({
+        "userData": user_data
+    });
+    let args_value = serde_wasm_bindgen::to_value(&args)?;
+    let result_js = invoke("register_user", args_value).await;
+    serde_wasm_bindgen::from_value(result_js)
+}
+```
+
+```rust Verify Credentials
+pub async fn verify_credentials(username: String, password: String) -> Result<bool, String> {
+    let args = serde_json::json!({
+        "username": username,
+        "password": password
+    });
+    let args_value = serde_wasm_bindgen::to_value(&args)?;
+    let result_js = invoke("verify_credentials", args_value).await;
+    serde_wasm_bindgen::from_value(result_js)
+}
+```
+
+</CodeGroup>
+
+### Window Management
+
+```rust
+pub async fn open_wrestler_window() -> Result<(), String> {
+    let result_js = invoke("open_wrestler_window", JsValue::NULL).await;
+    serde_wasm_bindgen::from_value(result_js)
+}
+```
+
+### Test Data
+
+```rust
+pub async fn create_test_data() -> Result<String, String> {
+    let result_js = invoke("create_test_data", JsValue::NULL).await;
+    serde_wasm_bindgen::from_value(result_js)
+}
+```
+
+## Error Handling
+
+### Consistent Error Types
+
+All API functions return `Result<T, String>` for consistent error handling:
+
+```rust
+pub type ApiResult<T> = Result<T, String>;
+```
+
+### Error Categories
+
+<AccordionGroup>
+  <Accordion title="Serialization Errors">
+    Errors that occur when converting between Rust types and JavaScript values:
+    ```rust
+    .map_err(|e| format!("Failed to serialize args: {}", e))
+    ```
+  </Accordion>
+  
+  <Accordion title="Network/Tauri Errors">
+    Errors from the Tauri invoke process or backend communication:
+    ```rust
+    .map_err(|e| format!("Failed to invoke command: {}", e))
+    ```
+  </Accordion>
+  
+  <Accordion title="Business Logic Errors">
+    Errors returned from the backend business logic:
+    ```rust
+    // These come directly from the Tauri command results
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Serialization
+
+### Dependencies
+
+The module uses these crates for serialization:
+
+```rust
+use serde::{Deserialize, Serialize};
+use serde_json;
+use serde_wasm_bindgen;
+use wasm_bindgen::prelude::*;
+```
+
+### Tauri Invoke Pattern
+
+All API functions follow this pattern:
+
+<Steps>
+  <Step title="Prepare Arguments">
+    Serialize input data into a JSON object:
+    ```rust
+    let args = serde_json::json!({
+        "fieldName": input_data
+    });
+    ```
+  </Step>
+  
+  <Step title="Convert to JS Value">
+    Convert JSON to JavaScript value for Tauri:
+    ```rust
+    let args_value = serde_wasm_bindgen::to_value(&args)?;
+    ```
+  </Step>
+  
+  <Step title="Invoke Command">
+    Call the Tauri command:
+    ```rust
+    let result_js = invoke("command_name", args_value).await;
+    ```
+  </Step>
+  
+  <Step title="Parse Response">
+    Convert the result back to Rust types:
+    ```rust
+    serde_wasm_bindgen::from_value(result_js)
+    ```
+  </Step>
+</Steps>
+
+## Type Safety Benefits
+
+### Compile-time Validation
+
+Using shared types provides several benefits:
+
+<CardGroup cols={2}>
+  <Card
+    title="Field Validation"
+    icon="check-circle"
+  >
+    Rust compiler ensures all required fields are present
+  </Card>
+  <Card
+    title="Type Consistency"
+    icon="shield"
+  >
+    Same types used in frontend and backend prevent mismatches
+  </Card>
+  <Card
+    title="Refactoring Safety"
+    icon="tools"
+  >
+    Changes to types are caught at compile time across the codebase
+  </Card>
+  <Card
+    title="Auto-completion"
+    icon="code"
+  >
+    IDEs can provide accurate field suggestions and documentation
+  </Card>
+</CardGroup>
+
+## Best Practices
+
+### Type Definitions
+
+<Tabs>
+  <Tab title="Naming Conventions">
+    - Use PascalCase for type names: `ShowData`, `WrestlerData`
+    - Use snake_case for field names: `current_holder`, `created_at`
+    - Add descriptive suffixes: `Data` for input types, no suffix for entities
+  </Tab>
+  
+  <Tab title="Field Types">
+    - Use `String` for text fields that come from user input
+    - Use `i32` for database IDs and integer fields
+    - Use `Option<T>` for nullable database fields
+    - Use `bool` for binary state flags
+  </Tab>
+  
+  <Tab title="Serialization">
+    - Always derive `Serialize` and `Deserialize`
+    - Add `Debug` and `Clone` for development convenience
+    - Use `#[serde(rename = "...")]` if needed for field name mapping
+  </Tab>
+</Tabs>
+
+## Future Enhancements
+
+### Planned Additions
+
+- **Pagination types**: For handling large data sets
+- **Filter types**: For search and filtering functionality
+- **Validation types**: For form validation and business rules
+- **Event types**: For real-time updates and notifications
+
+### Type Extensions
+
+As features are added, new types will be introduced:
+
+```rust
+// Future types (examples)
+pub struct PaginationParams {
+    pub page: u32,
+    pub per_page: u32,
+}
+
+pub struct WrestlerFilter {
+    pub name: Option<String>,
+    pub show_id: Option<i32>,
+    pub gender: Option<String>,
+}
+```

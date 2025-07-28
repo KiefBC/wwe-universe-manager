@@ -35,9 +35,9 @@ pub fn run() {
             db::update_wrestler_name,
             db::update_wrestler_real_name,
             db::update_wrestler_biography,
-            db::update_wrestler_trivia,
             db::create_user,
             db::create_wrestler,
+            db::create_user_wrestler,
             db::create_belt,
             db::create_test_data,
             // Authentication operations

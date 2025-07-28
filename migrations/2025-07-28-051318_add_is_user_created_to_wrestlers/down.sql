@@ -1,0 +1,1 @@
+ALTER TABLE wrestlers DROP COLUMN is_user_created;

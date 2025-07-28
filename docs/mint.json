@@ -8,8 +8,8 @@
   "favicon": "/favicon.svg",
   "colors": {
     "primary": "#DC2626",
-    "light": "#EAB308",
-    "dark": "#DC2626",
+    "light": "#EAB308", 
+    "dark": "#1E293B",
     "anchors": {
       "from": "#DC2626",
       "to": "#EAB308"
@@ -61,9 +61,10 @@
       "group": "Features",
       "pages": [
         "features/show-management",
-        "features/wrestler-management",
+        "features/wrestler-management", 
         "features/title-management",
-        "features/user-authentication"
+        "features/user-authentication",
+        "features/test-data"
       ]
     },
     {
@@ -78,8 +79,9 @@
     {
       "group": "Components",
       "pages": [
+        "components/dashboard",
         "components/create-show",
-        "components/show-selector",
+        "components/wrestler-details-window",
         "components/shared-types"
       ]
     },
