@@ -63,100 +63,102 @@ pub fn CreateShow(
 
     view! {
         <div class="max-w-2xl mx-auto">
-            <div class="card-modern rounded-xl p-8">
-                <div class="text-center mb-8">
-                    <h2 class="text-3xl font-bold text-slate-100 mb-2">
-                        "Create New Show"
-                    </h2>
-                    <p class="text-slate-400">
-                        "Add a new wrestling show to your universe"
-                    </p>
-                </div>
-
-                <form class="space-y-6" on:submit=move |ev| {
-                    ev.prevent_default();
-                    submit_form();
-                }>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">
-                            "Show Name"
-                        </label>
-                        <input
-                            type="text"
-                            placeholder="Enter show name (e.g., Monday Night Raw)"
-                            class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-slate-100 placeholder-slate-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                            on:input:target=move |ev| {
-                                set_name.set(ev.target().value());
-                            }
-                            prop:value=name
-                        />
+            <div class="card bg-base-200 border border-base-300">
+                <div class="card-body">
+                    <div class="text-center mb-8">
+                        <h2 class="text-3xl font-bold text-base-content mb-2">
+                            "Create New Show"
+                        </h2>
+                        <p class="text-base-content/70">
+                            "Add a new wrestling show to your universe"
+                        </p>
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">
-                            "Description"
-                        </label>
-                        <textarea
-                            placeholder="Enter show description..."
-                            rows="4"
-                            class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-slate-100 placeholder-slate-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-none"
-                            on:input:target=move |ev| {
-                                set_description.set(ev.target().value());
-                            }
-                            prop:value=description
-                        ></textarea>
-                    </div>
-
-                    <Show
-                        when=move || !submit_message.get().is_empty()
-                        fallback=|| view! {}
-                    >
-                        <div class={move || {
-                            let is_error = submit_message.get().contains("Error");
-                            if is_error {
-                                "p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-center"
-                            } else {
-                                "p-4 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-center"
-                            }
-                        }}>
-                            {move || submit_message.get()}
+                    <form class="space-y-6" on:submit=move |ev| {
+                        ev.prevent_default();
+                        submit_form();
+                    }>
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">"Show Name"</span>
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Enter show name (e.g., Monday Night Raw)"
+                                class="input input-bordered w-full"
+                                on:input:target=move |ev| {
+                                    set_name.set(ev.target().value());
+                                }
+                                prop:value=name
+                            />
                         </div>
-                    </Show>
 
-                    <div class="flex gap-4 pt-4">
-                        <button
-                            type="button"
-                            class="flex-1 bg-slate-600 hover:bg-slate-700 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center space-x-2"
-                            on:click=move |_| {
-                                console::log_1(&"Back button clicked!!!".into());
-                                set_current_page.set("home".to_string());
-                            }
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">"Description"</span>
+                            </label>
+                            <textarea
+                                placeholder="Enter show description..."
+                                rows="4"
+                                class="textarea textarea-bordered w-full resize-none"
+                                on:input:target=move |ev| {
+                                    set_description.set(ev.target().value());
+                                }
+                                prop:value=description
+                            ></textarea>
+                        </div>
+
+                        <Show
+                            when=move || !submit_message.get().is_empty()
+                            fallback=|| view! {}
                         >
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                            </svg>
-                            <span>"Back"</span>
-                        </button>
-                        <button
-                            type="submit"
-                            class="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-800 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center space-x-2"
-                            disabled=is_submitting
-                        >
-                            <Show
-                                when=move || is_submitting.get()
-                                fallback=|| view! {
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                    </svg>
-                                    <span>"Create Show"</span>
+                            <div class={move || {
+                                let is_error = submit_message.get().contains("Error");
+                                if is_error {
+                                    "alert alert-error"
+                                } else {
+                                    "alert alert-success"
+                                }
+                            }}>
+                                {move || submit_message.get()}
+                            </div>
+                        </Show>
+
+                        <div class="card-actions justify-end pt-4">
+                            <button
+                                type="button"
+                                class="btn btn-ghost gap-2"
+                                on:click=move |_| {
+                                    console::log_1(&"Back button clicked!!!".into());
+                                    set_current_page.set("home".to_string());
                                 }
                             >
-                                <div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                <span>"Creating..."</span>
-                            </Show>
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                </svg>
+                                "Back"
                         </button>
-                    </div>
-                </form>
+                            <button
+                                type="submit"
+                                class="btn btn-primary gap-2"
+                                disabled=is_submitting
+                            >
+                                <Show
+                                    when=move || is_submitting.get()
+                                    fallback=|| view! {
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                        </svg>
+                                        "Create Show"
+                                    }
+                                >
+                                    <span class="loading loading-spinner loading-sm"></span>
+                                    "Creating..."
+                                </Show>
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     }

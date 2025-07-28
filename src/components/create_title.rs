@@ -201,67 +201,74 @@ pub fn CreateTitle(
     };
 
     view! {
-        <div class="container mx-auto p-6 bg-slate-900 min-h-screen">
+        <div class="container mx-auto p-6 bg-base-100 min-h-screen">
             <div class="mb-8">
                 <div class="flex items-center justify-between mb-4">
                     <button
-                        class="btn bg-slate-700 hover:bg-slate-600 border-slate-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                        class="btn btn-ghost gap-2"
                         on:click=move |_| set_current_page.set("titles".to_string())
                     >
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
-                        <span>"Back to Titles"</span>
+                        "Back to Titles"
                     </button>
                 </div>
-                <h1 class="text-4xl font-bold text-white mb-2">
+                <h1 class="text-4xl font-bold text-base-content mb-2">
                     "Create New Championship"
                 </h1>
-                <p class="text-slate-400">
+                <p class="text-base-content/70">
                     "Add a new championship title to your universe"
                 </p>
             </div>
 
             <Show when=move || success.get()>
-                <div class="bg-green-900/50 border border-green-600 rounded-lg p-6 text-center mb-6">
-                    <h3 class="text-green-400 text-lg font-semibold mb-2">"Title Created Successfully!"</h3>
-                    <p class="text-green-300">"Redirecting to titles list..."</p>
+                <div class="alert alert-success mb-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <div>
+                        <h3 class="font-bold">"Title Created Successfully!"</h3>
+                        <div class="text-xs">"Redirecting to titles list..."</div>
+                    </div>
                 </div>
             </Show>
 
             <Show when=move || error.get().is_some()>
-                <div class="bg-red-900/50 border border-red-600 rounded-lg p-6 text-center mb-6">
-                    <h3 class="text-red-400 text-lg font-semibold mb-2">"Error Creating Title"</h3>
-                    <p class="text-red-300">{move || error.get().unwrap_or_default()}</p>
+                <div class="alert alert-error mb-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <div>
+                        <h3 class="font-bold">"Error Creating Title"</h3>
+                        <div class="text-xs">{move || error.get().unwrap_or_default()}</div>
+                    </div>
                 </div>
             </Show>
 
-            <div class="bg-slate-800 border border-slate-600 rounded-lg p-8">
+            <div class="card bg-base-200 border border-base-300">
+                <div class="card-body">
                 <form on:submit=submit_title>
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         // Basic Information
                         <div class="space-y-6">
-                            <h3 class="text-xl font-semibold text-white mb-4">"Basic Information"</h3>
+                            <h3 class="text-xl font-semibold text-base-content mb-4">"Basic Information"</h3>
                             
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">
-                                    "Title Name" <span class="text-red-400">"*"</span>
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">"Title Name" <span class="text-error">"*"</span></span>
                                 </label>
                                 <input
                                     type="text"
-                                    class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                                    class="input input-bordered w-full"
                                     placeholder="e.g., WWE Championship"
                                     prop:value=name
                                     on:input=move |ev| set_name.set(event_target_value(&ev))
                                 />
                             </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">
-                                    "Title Type" <span class="text-red-400">"*"</span>
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">"Title Type" <span class="text-error">"*"</span></span>
                                 </label>
                                 <select
-                                    class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                                    class="select select-bordered w-full"
                                     prop:value=title_type
                                     on:change=move |ev| set_title_type.set(event_target_value(&ev))
                                 >
@@ -271,12 +278,12 @@ pub fn CreateTitle(
                                 </select>
                             </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">
-                                    "Division" <span class="text-red-400">"*"</span>
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">"Division" <span class="text-error">"*"</span></span>
                                 </label>
                                 <select
-                                    class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                                    class="select select-bordered w-full"
                                     prop:value=division
                                     on:change=move |ev| set_division.set(event_target_value(&ev))
                                 >
@@ -314,18 +321,18 @@ pub fn CreateTitle(
                                 </select>
                             </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">
-                                    "Prestige Tier (Auto-calculated)"
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">"Prestige Tier (Auto-calculated)"</span>
                                 </label>
-                                <div class="px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-300">
+                                <div class="bg-base-200 border border-base-300 rounded-lg px-4 py-3 text-base-content">
                                     {move || {
                                         let tier = prestige_tier();
                                         let (tier_name, tier_color) = match tier {
-                                            1 => ("Tier 1 - World Championship", "text-yellow-400"),
-                                            2 => ("Tier 2 - Secondary Championship", "text-slate-300"),
-                                            3 => ("Tier 3 - Tag Team Championship", "text-orange-400"),
-                                            _ => ("Tier 4 - Specialty Championship", "text-purple-400"),
+                                            1 => ("Tier 1 - World Championship", "text-warning"),
+                                            2 => ("Tier 2 - Secondary Championship", "text-base-content"),
+                                            3 => ("Tier 3 - Tag Team Championship", "text-accent"),
+                                            _ => ("Tier 4 - Specialty Championship", "text-secondary"),
                                         };
                                         view! {
                                             <span class={tier_color}>{tier_name}</span>
@@ -337,14 +344,14 @@ pub fn CreateTitle(
 
                         // Championship Settings
                         <div class="space-y-6">
-                            <h3 class="text-xl font-semibold text-white mb-4">"Championship Settings"</h3>
+                            <h3 class="text-xl font-semibold text-base-content mb-4">"Championship Settings"</h3>
                             
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">
-                                    "Gender Division" <span class="text-red-400">"*"</span>
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">"Gender Division" <span class="text-error">"*"</span></span>
                                 </label>
                                 <select
-                                    class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                                    class="select select-bordered w-full"
                                     prop:value=gender
                                     on:change=move |ev| set_gender.set(event_target_value(&ev))
                                 >
@@ -354,12 +361,12 @@ pub fn CreateTitle(
                                 </select>
                             </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">
-                                    "Assigned Show"
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">"Assigned Show"</span>
                                 </label>
                                 <select
-                                    class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                                    class="select select-bordered w-full"
                                     on:change=move |ev| {
                                         let value = event_target_value(&ev);
                                         if value.is_empty() || value == "none" {
@@ -385,12 +392,12 @@ pub fn CreateTitle(
                                 </select>
                             </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">
-                                    "Initial Champion (Optional)"
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">"Initial Champion (Optional)"</span>
                                 </label>
                                 <select
-                                    class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                                    class="select select-bordered w-full"
                                     on:change=move |ev| {
                                         let value = event_target_value(&ev);
                                         if value.is_empty() || value == "none" {
@@ -414,14 +421,16 @@ pub fn CreateTitle(
                                         }
                                     />
                                 </select>
-                                <p class="text-xs text-slate-500 mt-1">
-                                    {move || {
-                                        match gender.get().as_str() {
-                                            "Mixed" => "Showing all wrestlers (Mixed division)".to_string(),
-                                            gender => format!("Showing {} wrestlers only", gender)
-                                        }
-                                    }}
-                                </p>
+                                <div class="label">
+                                    <span class="label-text-alt">
+                                        {move || {
+                                            match gender.get().as_str() {
+                                                "Mixed" => "Showing all wrestlers (Mixed division)".to_string(),
+                                                gender => format!("Showing {} wrestlers only", gender)
+                                            }
+                                        }}
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -430,23 +439,24 @@ pub fn CreateTitle(
                     <div class="mt-8 flex justify-end space-x-4">
                         <button
                             type="button"
-                            class="px-6 py-3 bg-slate-600 hover:bg-slate-500 border border-slate-500 text-white rounded-lg transition-colors"
+                            class="btn btn-ghost"
                             on:click=move |_| set_current_page.set("titles".to_string())
                         >
                             "Cancel"
                         </button>
                         <button
                             type="submit"
-                            class="px-6 py-3 bg-cyan-600 hover:bg-cyan-700 border border-cyan-500 text-white rounded-lg font-semibold transition-colors flex items-center space-x-2"
+                            class="btn btn-primary"
                             disabled=move || loading.get()
                         >
                             <Show when=move || loading.get()>
-                                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                <span class="loading loading-spinner loading-sm"></span>
                             </Show>
                             <span>{move || if loading.get() { "Creating..." } else { "Create Championship" }}</span>
                         </button>
                     </div>
                 </form>
+                </div>
             </div>
         </div>
     }

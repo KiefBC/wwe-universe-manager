@@ -113,55 +113,60 @@ pub fn TitlesList(
     });
 
     view! {
-        <div class="container mx-auto p-6 bg-slate-900 min-h-screen">
+        <div class="container mx-auto p-6 bg-base-100 min-h-screen">
             <div class="mb-8">
                 <div class="flex items-center justify-between mb-4">
                     <button
-                        class="btn bg-slate-700 hover:bg-slate-600 border-slate-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                        class="btn btn-ghost gap-2"
                         on:click=move |_| set_current_page.set("home".to_string())
                     >
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
-                        <span>"Back to Dashboard"</span>
+                        "Back to Dashboard"
                     </button>
                     <button
-                        class="btn bg-cyan-600 hover:bg-cyan-700 border-cyan-500 text-white px-6 py-2 rounded-lg flex items-center space-x-2 font-semibold"
+                        class="btn btn-accent gap-2"
                         on:click=move |_| set_current_page.set("create-title".to_string())
                     >
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                         </svg>
-                        <span>"Create Title"</span>
+                        "Create Title"
                     </button>
                 </div>
-                <h1 class="text-4xl font-bold text-white mb-2">
+                <h1 class="text-4xl font-bold text-base-content mb-2">
                     "Championship Titles"
                 </h1>
-                <p class="text-slate-400">
+                <p class="text-base-content/70">
                     "Select a title to view detailed information and championship history."
                 </p>
             </div>
 
             <Show when=move || loading.get()>
                 <div class="flex justify-center items-center py-12">
-                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600"></div>
-                    <span class="ml-3 text-slate-400">"Loading titles..."</span>
+                    <span class="loading loading-spinner loading-lg text-accent"></span>
+                    <span class="ml-3 text-base-content/70">"Loading titles..."</span>
                 </div>
             </Show>
 
             <Show when=move || error.get().is_some()>
-                <div class="bg-red-900/50 border border-red-600 rounded-lg p-6 text-center">
-                    <h3 class="text-red-400 text-lg font-semibold mb-2">"Error Loading Titles"</h3>
-                    <p class="text-red-300">{move || error.get().unwrap_or_default()}</p>
+                <div class="alert alert-error">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <div>
+                        <h3 class="font-bold">"Error Loading Titles"</h3>
+                        <div class="text-xs">{move || error.get().unwrap_or_default()}</div>
+                    </div>
                 </div>
             </Show>
 
             <Show when=move || !loading.get() && error.get().is_none() && titles.get().is_empty()>
-                <div class="bg-slate-800 border border-slate-600 rounded-lg p-8 text-center">
-                    <h3 class="text-slate-400 text-lg font-semibold mb-2">"No Titles Found"</h3>
-                    <p class="text-slate-500 mb-4">"No championship titles are currently in the database."</p>
-                    <p class="text-slate-600 text-sm">"Use the Create Title button to add championships to your universe."</p>
+                <div class="alert alert-warning">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+                    <div>
+                        <h3 class="font-bold">"No Titles Found"</h3>
+                        <div class="text-xs">"No championship titles are currently in the database. Use the Create Title button to add championships to your universe."</div>
+                    </div>
                 </div>
             </Show>
 
@@ -171,7 +176,7 @@ pub fn TitlesList(
                     <div>
                         <Show when=move || !tier_1_titles.get().is_empty()>
                             <div class="mb-8">
-                                <h2 class="text-2xl font-bold text-yellow-400 mb-6 flex items-center">
+                                <h2 class="text-2xl font-bold text-warning mb-6 flex items-center">
                                     <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                                     </svg>
@@ -198,32 +203,34 @@ pub fn TitlesList(
                                                         .unwrap_or_else(|| "No current holder".to_string());
 
                                                     view! {
-                                                        <div class="bg-gradient-to-r from-yellow-600/20 to-yellow-500/20 border-2 border-yellow-500 rounded-xl p-6 hover:border-yellow-400 hover:shadow-lg hover:shadow-yellow-500/30 transition-all duration-300 cursor-pointer group"
+                                                        <div class="card bg-warning/20 border border-warning hover:border-warning-focus hover:shadow-lg hover:shadow-warning/30 transition-all duration-300 cursor-pointer group"
                                                              on:click=move |_| handle_title_click(title_id)>
-                                                            <div class="flex items-center justify-between">
-                                                                <div class="flex-1">
-                                                                    <h3 class="text-lg font-bold text-yellow-400 group-hover:text-yellow-300 transition-colors mb-2">
-                                                                        {title.title.name.clone()}
-                                                                    </h3>
-                                                                    <p class="text-yellow-200 text-sm mb-2">
-                                                                        {title.title.division.clone()}
-                                                                    </p>
-                                                                    <div class="flex items-center space-x-4 text-slate-300">
-                                                                        <span class="font-semibold">
-                                                                            "Champion: " <span class="text-yellow-400">{holders_text}</span>
-                                                                        </span>
-                                                                        <span class="text-slate-400">
-                                                                            "•"
-                                                                        </span>
-                                                                        <span>
-                                                                            {days_text}
-                                                                        </span>
+                                                            <div class="card-body">
+                                                                <div class="flex items-center justify-between">
+                                                                    <div class="flex-1">
+                                                                        <h2 class="card-title text-lg text-warning group-hover:text-warning-focus transition-colors mb-2">
+                                                                            {title.title.name.clone()}
+                                                                        </h2>
+                                                                        <p class="text-warning-content text-sm mb-2">
+                                                                            {title.title.division.clone()}
+                                                                        </p>
+                                                                        <div class="flex items-center space-x-4 text-base-content/70">
+                                                                            <span class="font-semibold">
+                                                                                "Champion: " <span class="text-warning">{holders_text}</span>
+                                                                            </span>
+                                                                            <span class="text-base-content/40">
+                                                                                "•"
+                                                                            </span>
+                                                                            <span>
+                                                                                {days_text}
+                                                                            </span>
+                                                                        </div>
                                                                     </div>
-                                                                </div>
-                                                                <div class="text-yellow-500 group-hover:text-yellow-400 transition-colors">
-                                                                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                                                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                                                                    </svg>
+                                                                    <div class="text-warning group-hover:text-warning-focus transition-colors">
+                                                                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                                                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                                                        </svg>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -237,7 +244,7 @@ pub fn TitlesList(
                                 // Tier 2 - Secondary Championships (2 per row, silver styling)
                         <Show when=move || !tier_2_titles.get().is_empty()>
                             <div class="mb-8">
-                                <h2 class="text-2xl font-bold text-slate-300 mb-6 flex items-center">
+                                <h2 class="text-2xl font-bold text-base-content/70 mb-6 flex items-center">
                                     <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
                                     </svg>
@@ -260,20 +267,22 @@ pub fn TitlesList(
                                                         .unwrap_or_else(|| "No current holder".to_string());
 
                                                     view! {
-                                                        <div class="bg-slate-800/60 border border-slate-400 rounded-lg p-6 hover:border-slate-300 hover:shadow-lg hover:shadow-slate-500/20 transition-all duration-200 cursor-pointer group"
+                                                        <div class="card bg-base-200 border border-base-300 hover:border-base-content/30 hover:shadow-lg hover:shadow-base-content/20 transition-all duration-200 cursor-pointer group"
                                                              on:click=move |_| handle_title_click(title_id)>
-                                                            <h3 class="text-lg font-bold text-slate-300 group-hover:text-slate-100 transition-colors mb-2">
-                                                                {title.title.name.clone()}
-                                                            </h3>
-                                                            <p class="text-slate-400 text-sm mb-3">
-                                                                {title.title.division.clone()}
-                                                            </p>
-                                                            <div class="space-y-1 text-sm text-slate-400">
-                                                                <div>
-                                                                    "Champion: " <span class="text-slate-300">{holders_text}</span>
-                                                                </div>
-                                                                <div>
-                                                                    {days_text}
+                                                            <div class="card-body">
+                                                                <h2 class="card-title text-lg text-base-content/70 group-hover:text-base-content transition-colors mb-2">
+                                                                    {title.title.name.clone()}
+                                                                </h2>
+                                                                <p class="text-base-content/50 text-sm mb-3">
+                                                                    {title.title.division.clone()}
+                                                                </p>
+                                                                <div class="space-y-1 text-sm text-base-content/50">
+                                                                    <div>
+                                                                        "Champion: " <span class="text-base-content/70">{holders_text}</span>
+                                                                    </div>
+                                                                    <div>
+                                                                        {days_text}
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -287,7 +296,7 @@ pub fn TitlesList(
                         // Tier 3 - Tag Team Championships (3 per row, bronze styling)
                         <Show when=move || !tier_3_titles.get().is_empty()>
                             <div class="mb-8">
-                                <h2 class="text-2xl font-bold text-orange-400 mb-6 flex items-center">
+                                <h2 class="text-2xl font-bold text-accent mb-6 flex items-center">
                                     <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                         <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
@@ -314,20 +323,22 @@ pub fn TitlesList(
                                                         .unwrap_or_else(|| "No current holder".to_string());
 
                                                     view! {
-                                                        <div class="bg-slate-800/40 border border-orange-600/50 rounded-lg p-4 hover:border-orange-500 hover:shadow-lg hover:shadow-orange-500/20 transition-all duration-200 cursor-pointer group"
+                                                        <div class="card bg-base-200 border border-accent/50 hover:border-accent hover:shadow-lg hover:shadow-accent/20 transition-all duration-200 cursor-pointer group"
                                                              on:click=move |_| handle_title_click(title_id)>
-                                                            <h3 class="text-lg font-bold text-orange-400 group-hover:text-orange-300 transition-colors mb-2">
-                                                                {title.title.name.clone()}
-                                                            </h3>
-                                                            <p class="text-orange-300 text-sm mb-2">
-                                                                {title.title.division.clone()}
-                                                            </p>
-                                                            <div class="space-y-1 text-sm text-slate-400">
-                                                                <div>
-                                                                    "Champions: " <span class="text-orange-300">{holders_text}</span>
-                                                                </div>
-                                                                <div>
-                                                                    {days_text}
+                                                            <div class="card-body card-compact">
+                                                                <h2 class="card-title text-lg text-accent group-hover:text-accent-focus transition-colors mb-2">
+                                                                    {title.title.name.clone()}
+                                                                </h2>
+                                                                <p class="text-accent-content text-sm mb-2">
+                                                                    {title.title.division.clone()}
+                                                                </p>
+                                                                <div class="space-y-1 text-sm text-base-content/60">
+                                                                    <div>
+                                                                        "Champions: " <span class="text-accent">{holders_text}</span>
+                                                                    </div>
+                                                                    <div>
+                                                                        {days_text}
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -341,7 +352,7 @@ pub fn TitlesList(
                         // Tier 4 - Specialty Championships (4 per row, themed colors)
                         <Show when=move || !tier_4_titles.get().is_empty()>
                             <div class="mb-8">
-                                <h2 class="text-xl font-bold text-purple-400 mb-6 flex items-center">
+                                <h2 class="text-xl font-bold text-secondary mb-6 flex items-center">
                                     <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
                                     </svg>
@@ -364,29 +375,31 @@ pub fn TitlesList(
                                                         .unwrap_or_else(|| "No current holder".to_string());
 
                                                     view! {
-                                                        <div class="bg-slate-800/30 border border-purple-600/40 rounded-lg p-3 hover:border-purple-500 hover:shadow-lg hover:shadow-purple-500/20 transition-all duration-200 cursor-pointer group"
+                                                        <div class="card bg-base-200 border border-secondary/40 hover:border-secondary hover:shadow-lg hover:shadow-secondary/20 transition-all duration-200 cursor-pointer group"
                                                              on:click=move |_| handle_title_click(title_id)>
-                                                            <h3 class="text-lg font-bold text-purple-400 group-hover:text-purple-300 transition-colors mb-2">
-                                                                {title.title.name.clone()}
-                                                            </h3>
-                                                            <p class="text-purple-300 text-sm mb-2">
-                                                                {title.title.division.clone()}
-                                                            </p>
-                                                            <div class="space-y-1 text-sm text-slate-500">
-                                                                <div>
-                                                                    <span class="text-purple-300">{holders_text}</span>
+                                                            <div class="card-body card-compact">
+                                                                <h2 class="card-title text-lg text-secondary group-hover:text-secondary-focus transition-colors mb-2">
+                                                                    {title.title.name.clone()}
+                                                                </h2>
+                                                                <p class="text-secondary-content text-sm mb-2">
+                                                                    {title.title.division.clone()}
+                                                                </p>
+                                                                <div class="space-y-1 text-sm text-base-content/50">
+                                                                    <div>
+                                                                        <span class="text-secondary">{holders_text}</span>
+                                                                    </div>
+                                                                    <div>
+                                                                        {days_text}
+                                                                    </div>
                                                                 </div>
-                                                                <div>
-                                                                    {days_text}
-                                                                </div>
-                                                    </div>
-                                                </div>
-                                            }
-                                        }
-                                    />
-                                </div>
-                            </div>
-                        </Show>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                }
+                                            />
+                                        </div>
+                                    </div>
+                                </Show>
                     </div>
                 </div>
             </Show>

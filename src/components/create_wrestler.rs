@@ -115,67 +115,74 @@ pub fn CreateWrestler(
     };
 
     view! {
-        <div class="container mx-auto p-6 bg-slate-900 min-h-screen">
+        <div class="container mx-auto p-6 bg-base-100 min-h-screen">
             <div class="mb-8">
                 <div class="flex items-center justify-between mb-4">
                     <button
-                        class="btn bg-slate-700 hover:bg-slate-600 border-slate-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                        class="btn btn-ghost gap-2"
                         on:click=move |_| set_current_page.set("wrestlers".to_string())
                     >
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
-                        <span>"Back to Wrestlers"</span>
+                        "Back to Wrestlers"
                     </button>
                 </div>
-                <h1 class="text-4xl font-bold text-white mb-2">
+                <h1 class="text-4xl font-bold text-base-content mb-2">
                     "Create New Wrestler"
                 </h1>
-                <p class="text-slate-400">
+                <p class="text-base-content/70">
                     "Add a custom wrestler to your universe"
                 </p>
             </div>
 
             <Show when=move || success.get()>
-                <div class="bg-green-900/50 border border-green-600 rounded-lg p-6 text-center mb-6">
-                    <h3 class="text-green-400 text-lg font-semibold mb-2">"Wrestler Created Successfully!"</h3>
-                    <p class="text-green-300">"Redirecting to wrestlers list..."</p>
+                <div class="alert alert-success mb-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <div>
+                        <h3 class="font-bold">"Wrestler Created Successfully!"</h3>
+                        <div class="text-xs">"Redirecting to wrestlers list..."</div>
+                    </div>
                 </div>
             </Show>
 
             <Show when=move || error.get().is_some()>
-                <div class="bg-red-900/50 border border-red-600 rounded-lg p-6 text-center mb-6">
-                    <h3 class="text-red-400 text-lg font-semibold mb-2">"Error Creating Wrestler"</h3>
-                    <p class="text-red-300">{move || error.get().unwrap_or_default()}</p>
+                <div class="alert alert-error mb-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <div>
+                        <h3 class="font-bold">"Error Creating Wrestler"</h3>
+                        <div class="text-xs">{move || error.get().unwrap_or_default()}</div>
+                    </div>
                 </div>
             </Show>
 
-            <div class="bg-slate-800 border border-slate-600 rounded-lg p-8">
+            <div class="card bg-base-200 border border-base-300">
+                <div class="card-body">
                 <form on:submit=submit_wrestler>
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         // Basic Information
                         <div class="space-y-6">
-                            <h3 class="text-xl font-semibold text-white mb-4">"Basic Information"</h3>
+                            <h3 class="text-xl font-semibold text-base-content mb-4">"Basic Information"</h3>
                             
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">
-                                    "Wrestler Name" <span class="text-red-400">"*"</span>
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">"Wrestler Name" <span class="text-error">"*"</span></span>
                                 </label>
                                 <input
                                     type="text"
-                                    class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    class="input input-bordered w-full"
                                     placeholder="e.g., The Rock"
                                     prop:value=name
                                     on:input=move |ev| set_name.set(event_target_value(&ev))
                                 />
                             </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">
-                                    "Gender" <span class="text-red-400">"*"</span>
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">"Gender" <span class="text-error">"*"</span></span>
                                 </label>
                                 <select
-                                    class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    class="select select-bordered w-full"
                                     prop:value=gender
                                     on:change=move |ev| set_gender.set(event_target_value(&ev))
                                 >
@@ -184,26 +191,26 @@ pub fn CreateWrestler(
                                 </select>
                             </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">
-                                    "Real Name"
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">"Real Name"</span>
                                 </label>
                                 <input
                                     type="text"
-                                    class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    class="input input-bordered w-full"
                                     placeholder="e.g., Dwayne Johnson"
                                     prop:value=real_name
                                     on:input=move |ev| set_real_name.set(event_target_value(&ev))
                                 />
                             </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">
-                                    "Nickname"
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">"Nickname"</span>
                                 </label>
                                 <input
                                     type="text"
-                                    class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    class="input input-bordered w-full"
                                     placeholder="e.g., The People's Champion"
                                     prop:value=nickname
                                     on:input=move |ev| set_nickname.set(event_target_value(&ev))
@@ -213,28 +220,28 @@ pub fn CreateWrestler(
 
                         // Physical Stats & Career
                         <div class="space-y-6">
-                            <h3 class="text-xl font-semibold text-white mb-4">"Physical Stats & Career"</h3>
+                            <h3 class="text-xl font-semibold text-base-content mb-4">"Physical Stats & Career"</h3>
                             
                             <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-300 mb-2">
-                                        "Height"
+                                <div class="form-control">
+                                    <label class="label">
+                                        <span class="label-text">"Height"</span>
                                     </label>
                                     <input
                                         type="text"
-                                        class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                        class="input input-bordered w-full"
                                         placeholder="e.g., 6'5\""
                                         prop:value=height
                                         on:input=move |ev| set_height.set(event_target_value(&ev))
                                     />
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-300 mb-2">
-                                        "Weight"
+                                <div class="form-control">
+                                    <label class="label">
+                                        <span class="label-text">"Weight"</span>
                                     </label>
                                     <input
                                         type="text"
-                                        class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                        class="input input-bordered w-full"
                                         placeholder="e.g., 260 lbs"
                                         prop:value=weight
                                         on:input=move |ev| set_weight.set(event_target_value(&ev))
@@ -243,25 +250,25 @@ pub fn CreateWrestler(
                             </div>
 
                             <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-300 mb-2">
-                                        "Debut Year"
+                                <div class="form-control">
+                                    <label class="label">
+                                        <span class="label-text">"Debut Year"</span>
                                     </label>
                                     <input
                                         type="number"
-                                        class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                        class="input input-bordered w-full"
                                         placeholder="e.g., 1996"
                                         prop:value=debut_year
                                         on:input=move |ev| set_debut_year.set(event_target_value(&ev))
                                     />
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-300 mb-2">
-                                        "Promotion"
+                                <div class="form-control">
+                                    <label class="label">
+                                        <span class="label-text">"Promotion"</span>
                                     </label>
                                     <input
                                         type="text"
-                                        class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                        class="input input-bordered w-full"
                                         placeholder="e.g., WWE"
                                         prop:value=promotion
                                         on:input=move |ev| set_promotion.set(event_target_value(&ev))
@@ -273,76 +280,76 @@ pub fn CreateWrestler(
 
                     // Power Ratings
                     <div class="mt-8">
-                        <h3 class="text-xl font-semibold text-white mb-6">"Power Ratings"</h3>
+                        <h3 class="text-xl font-semibold text-base-content mb-6">"Power Ratings"</h3>
                         <div class="grid grid-cols-2 lg:grid-cols-3 gap-6">
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">
-                                    "Strength: " <span class="text-purple-400">{strength}</span>
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">"Strength: " <span class="text-secondary">{strength}</span></span>
                                 </label>
                                 <input
                                     type="range"
                                     min="1" max="10"
-                                    class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider"
+                                    class="range range-secondary"
                                     prop:value=strength
                                     on:input=move |ev| set_strength.set(event_target_value(&ev).parse().unwrap_or(5))
                                 />
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">
-                                    "Speed: " <span class="text-purple-400">{speed}</span>
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">"Speed: " <span class="text-secondary">{speed}</span></span>
                                 </label>
                                 <input
                                     type="range"
                                     min="1" max="10"
-                                    class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider"
+                                    class="range range-secondary"
                                     prop:value=speed
                                     on:input=move |ev| set_speed.set(event_target_value(&ev).parse().unwrap_or(5))
                                 />
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">
-                                    "Agility: " <span class="text-purple-400">{agility}</span>
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">"Agility: " <span class="text-secondary">{agility}</span></span>
                                 </label>
                                 <input
                                     type="range"
                                     min="1" max="10"
-                                    class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider"
+                                    class="range range-secondary"
                                     prop:value=agility
                                     on:input=move |ev| set_agility.set(event_target_value(&ev).parse().unwrap_or(5))
                                 />
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">
-                                    "Stamina: " <span class="text-purple-400">{stamina}</span>
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">"Stamina: " <span class="text-secondary">{stamina}</span></span>
                                 </label>
                                 <input
                                     type="range"
                                     min="1" max="10"
-                                    class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider"
+                                    class="range range-secondary"
                                     prop:value=stamina
                                     on:input=move |ev| set_stamina.set(event_target_value(&ev).parse().unwrap_or(5))
                                 />
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">
-                                    "Charisma: " <span class="text-purple-400">{charisma}</span>
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">"Charisma: " <span class="text-secondary">{charisma}</span></span>
                                 </label>
                                 <input
                                     type="range"
                                     min="1" max="10"
-                                    class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider"
+                                    class="range range-secondary"
                                     prop:value=charisma
                                     on:input=move |ev| set_charisma.set(event_target_value(&ev).parse().unwrap_or(5))
                                 />
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">
-                                    "Technique: " <span class="text-purple-400">{technique}</span>
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">"Technique: " <span class="text-secondary">{technique}</span></span>
                                 </label>
                                 <input
                                     type="range"
                                     min="1" max="10"
-                                    class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider"
+                                    class="range range-secondary"
                                     prop:value=technique
                                     on:input=move |ev| set_technique.set(event_target_value(&ev).parse().unwrap_or(5))
                                 />
@@ -352,31 +359,31 @@ pub fn CreateWrestler(
 
                     // Biography & Trivia
                     <div class="mt-8">
-                        <h3 class="text-xl font-semibold text-white mb-6">"Biography & Trivia"</h3>
+                        <h3 class="text-xl font-semibold text-base-content mb-6">"Biography & Trivia"</h3>
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">
-                                    "Biography"
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">"Biography"</span>
                                 </label>
                                 <textarea
                                     rows="6"
-                                    class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-vertical"
+                                    class="textarea textarea-bordered w-full"
                                     placeholder="Tell the wrestler's story..."
                                     prop:value=biography
                                     on:input=move |ev| set_biography.set(event_target_value(&ev))
-                                />
+                                ></textarea>
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">
-                                    "Trivia"
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">"Trivia"</span>
                                 </label>
                                 <textarea
                                     rows="6"
-                                    class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-vertical"
+                                    class="textarea textarea-bordered w-full"
                                     placeholder="Fun facts and trivia..."
                                     prop:value=trivia
                                     on:input=move |ev| set_trivia.set(event_target_value(&ev))
-                                />
+                                ></textarea>
                             </div>
                         </div>
                     </div>
@@ -385,23 +392,24 @@ pub fn CreateWrestler(
                     <div class="mt-8 flex justify-end space-x-4">
                         <button
                             type="button"
-                            class="px-6 py-3 bg-slate-600 hover:bg-slate-500 border border-slate-500 text-white rounded-lg transition-colors"
+                            class="btn btn-ghost"
                             on:click=move |_| set_current_page.set("wrestlers".to_string())
                         >
                             "Cancel"
                         </button>
                         <button
                             type="submit"
-                            class="px-6 py-3 bg-purple-600 hover:bg-purple-700 border border-purple-500 text-white rounded-lg font-semibold transition-colors flex items-center space-x-2"
+                            class="btn btn-secondary"
                             disabled=move || loading.get()
                         >
                             <Show when=move || loading.get()>
-                                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                <span class="loading loading-spinner loading-sm"></span>
                             </Show>
                             <span>{move || if loading.get() { "Creating..." } else { "Create Wrestler" }}</span>
                         </button>
                     </div>
                 </form>
+                </div>
             </div>
         </div>
     }

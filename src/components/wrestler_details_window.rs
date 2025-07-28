@@ -323,19 +323,22 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
     });
 
     view! {
-        <div class="h-full p-4 overflow-auto">
+        <div class="container mx-auto p-6 bg-base-100 min-h-screen">
             <div class="max-w-4xl mx-auto">
                 <Show when=move || loading.get()>
                     <div class="flex justify-center items-center py-20">
-                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
-                        <span class="ml-3 text-slate-400">"Loading wrestler details..."</span>
+                        <span class="loading loading-spinner loading-lg"></span>
+                        <span class="ml-3 text-base-content/70">"Loading wrestler details..."</span>
                     </div>
                 </Show>
                 
                 <Show when=move || error.get().is_some()>
-                    <div class="bg-red-900/50 border border-red-600 rounded-lg p-8 text-center">
-                        <h3 class="text-red-400 text-lg font-semibold mb-2">"Error"</h3>
-                        <p class="text-red-300">{move || error.get().unwrap_or_default()}</p>
+                    <div class="alert alert-error">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <div>
+                            <h3 class="font-bold">"Error"</h3>
+                            <div class="text-xs">{move || error.get().unwrap_or_default()}</div>
+                        </div>
                     </div>
                 </Show>
                 
@@ -343,7 +346,8 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
                     {move || {
                         wrestler.get().map(|w| {
                             view! {
-                                <div class="card-modern rounded-xl relative overflow-hidden">
+                                <div class="card bg-base-200 border border-base-100 rounded-xl relative overflow-hidden">
+                                    <div class="card-body p-0">
                                     // Header with sleek styling
                                     <HeaderSection wrestler=wrestler />
 
@@ -374,22 +378,23 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
                                             />
 
                                             // Power ratings (only show if any exist)
-                                            <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-4">
+                                            <div class="card bg-base-200 border border-base-100">
+                                                <div class="card-body">
                                                 <Show
                                                     when=move || w.strength.is_some() || w.speed.is_some() || w.agility.is_some() || 
                                                         w.stamina.is_some() || w.charisma.is_some() || w.technique.is_some()
                                                     fallback=move || view! {
-                                                        <div class="text-center text-slate-400 text-sm">
+                                                        <div class="text-center text-base-content/60 text-sm">
                                                             "No power ratings available"
                                                         </div>
                                                     }
                                                 >
-                                                    <div class="flex items-center justify-between mb-4 border-b border-slate-700 pb-2">
-                                                        <h4 class="text-slate-100 font-bold text-lg">
+                                                    <div class="flex items-center justify-between mb-4 border-b border-base-content/20 pb-2">
+                                                        <h4 class="text-base-content font-bold text-lg">
                                                             "Power Ratings"
                                                         </h4>
                                                         <button
-                                                            class="text-slate-400 hover:text-slate-200 text-sm font-medium flex items-center space-x-1"
+                                                            class="btn btn-ghost btn-sm gap-1"
                                                             on:click=move |_| {
                                                                 if let Some(w) = wrestler.get() {
                                                                     // Initialize temp values with current wrestler stats
@@ -413,16 +418,16 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
                                                         when=move || !editing_power_ratings.get()
                                                         fallback=move || view! {
                                                             <div class="space-y-3">
-                                                                <PowerBarEdit label="STRENGTH" value=temp_strength set_value=set_temp_strength _color="bg-red-500" />
-                                                                <PowerBarEdit label="SPEED" value=temp_speed set_value=set_temp_speed _color="bg-blue-500" />
-                                                                <PowerBarEdit label="AGILITY" value=temp_agility set_value=set_temp_agility _color="bg-green-500" />
-                                                                <PowerBarEdit label="STAMINA" value=temp_stamina set_value=set_temp_stamina _color="bg-purple-500" />
-                                                                <PowerBarEdit label="CHARISMA" value=temp_charisma set_value=set_temp_charisma _color="bg-indigo-500" />
-                                                                <PowerBarEdit label="TECHNIQUE" value=temp_technique set_value=set_temp_technique _color="bg-cyan-500" />
+                                                                <PowerBarEdit label="STRENGTH" value=temp_strength set_value=set_temp_strength _color="bg-error" />
+                                                                <PowerBarEdit label="SPEED" value=temp_speed set_value=set_temp_speed _color="bg-info" />
+                                                                <PowerBarEdit label="AGILITY" value=temp_agility set_value=set_temp_agility _color="bg-success" />
+                                                                <PowerBarEdit label="STAMINA" value=temp_stamina set_value=set_temp_stamina _color="bg-secondary" />
+                                                                <PowerBarEdit label="CHARISMA" value=temp_charisma set_value=set_temp_charisma _color="bg-primary" />
+                                                                <PowerBarEdit label="TECHNIQUE" value=temp_technique set_value=set_temp_technique _color="bg-accent" />
                                                             </div>
                                                             <div class="flex space-x-2 mt-4">
                                                                 <button
-                                                                    class="flex-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium"
+                                                                    class="btn btn-success btn-sm flex-1"
                                                                     on:click=move |_| {
                                                                         if let Some(w) = wrestler.get() {
                                                                             spawn_local(async move {
@@ -457,7 +462,7 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
                                                                     "Save"
                                                                 </button>
                                                                 <button
-                                                                    class="flex-1 bg-slate-600 hover:bg-slate-700 text-white px-3 py-2 rounded text-sm font-medium"
+                                                                    class="btn btn-ghost btn-sm flex-1"
                                                                     on:click=move |_| {
                                                                         set_editing_power_ratings.set(false);
                                                                     }
@@ -468,15 +473,16 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
                                                         }
                                                     >
                                                         <div class="space-y-3">
-                                                            {w.strength.map(|val| view! { <PowerBar label="STRENGTH" value=val color="bg-red-500" /> })}
-                                                            {w.speed.map(|val| view! { <PowerBar label="SPEED" value=val color="bg-blue-500" /> })}
-                                                            {w.agility.map(|val| view! { <PowerBar label="AGILITY" value=val color="bg-green-500" /> })}
-                                                            {w.stamina.map(|val| view! { <PowerBar label="STAMINA" value=val color="bg-purple-500" /> })}
-                                                            {w.charisma.map(|val| view! { <PowerBar label="CHARISMA" value=val color="bg-indigo-500" /> })}
-                                                            {w.technique.map(|val| view! { <PowerBar label="TECHNIQUE" value=val color="bg-cyan-500" /> })}
+                                                            {w.strength.map(|val| view! { <PowerBar label="STRENGTH" value=val color="bg-error" /> })}
+                                                            {w.speed.map(|val| view! { <PowerBar label="SPEED" value=val color="bg-info" /> })}
+                                                            {w.agility.map(|val| view! { <PowerBar label="AGILITY" value=val color="bg-success" /> })}
+                                                            {w.stamina.map(|val| view! { <PowerBar label="STAMINA" value=val color="bg-secondary" /> })}
+                                                            {w.charisma.map(|val| view! { <PowerBar label="CHARISMA" value=val color="bg-primary" /> })}
+                                                            {w.technique.map(|val| view! { <PowerBar label="TECHNIQUE" value=val color="bg-accent" /> })}
                                                         </div>
                                                     </Show>
                                                 </Show>
+                                                </div>
                                             </div>
 
                                             // Promotion Section (separate component)
@@ -500,6 +506,7 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
                                         </div>
                                     </div>
 
+                                    </div>
                                 </div>
                             }
                         })
@@ -520,8 +527,8 @@ fn PowerBar(
     
     view! {
         <div class="flex items-center space-x-3">
-            <span class="text-slate-300 font-medium text-sm w-20 text-right">{label}</span>
-            <div class="flex-1 bg-slate-700/50 rounded-full h-3 border border-slate-600">
+            <span class="text-base-content/80 font-medium text-sm w-20 text-right">{label}</span>
+            <div class="flex-1 bg-base-300 rounded-full h-3 border border-base-content/20">
                 <div 
                     class=format!("h-full rounded-full {} flex items-center justify-end pr-1", color)
                     style=format!("width: {}%", percentage)
@@ -542,13 +549,13 @@ fn PowerBarEdit(
 ) -> impl IntoView {
     view! {
         <div class="flex items-center space-x-3">
-            <span class="text-slate-300 font-medium text-sm w-20 text-right">{label}</span>
+            <span class="text-base-content/80 font-medium text-sm w-20 text-right">{label}</span>
             <div class="flex-1 flex items-center space-x-2">
                 <input
                     type="range"
                     min="0"
                     max="10"
-                    class="flex-1 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider"
+                    class="range range-secondary flex-1"
                     prop:value=move || value.get().to_string()
                     on:input:target=move |ev| {
                         if let Ok(val) = ev.target().value().parse::<i32>() {
@@ -561,7 +568,7 @@ fn PowerBarEdit(
                         type="number"
                         min="0"
                         max="10"
-                        class="w-full bg-slate-700/50 border border-slate-600 rounded px-2 py-1 text-slate-100 text-sm text-center"
+                        class="input input-bordered input-sm w-full text-center"
                         prop:value=move || value.get().to_string()
                         on:input:target=move |ev| {
                             if let Ok(val) = ev.target().value().parse::<i32>() {
@@ -585,27 +592,28 @@ where
     F: Fn(String) + 'static + Copy + Send + Sync,
 {
     view! {
-        <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-4 mb-4">
+        <div class="card bg-base-200 border border-base-100 mb-4">
+            <div class="card-body">
             <div class="grid grid-cols-2 gap-4 text-sm">
                 // Promotion section
                 <div>
-                    <span class="text-slate-400 font-medium">"Promotion: "</span>
+                    <span class="text-base-content/70 font-medium">"Promotion: "</span>
                 </div>
                 <div>
                     {move || {
                         if let Some(current_wrestler) = wrestler.get() {
                             if let Some(promotion) = current_wrestler.promotion {
                                 view! {
-                                    <span class="text-slate-100">{promotion}</span>
+                                    <span class="text-base-content">{promotion}</span>
                                 }
                             } else {
                                 view! {
-                                    <span class="text-slate-400 italic">{"No promotion assigned".to_string()}</span>
+                                    <span class="text-base-content/60 italic">{"No promotion assigned".to_string()}</span>
                                 }
                             }
                         } else {
                             view! {
-                                <span class="text-slate-400 italic">{"Loading...".to_string()}</span>
+                                <span class="text-base-content/60 italic">{"Loading...".to_string()}</span>
                             }
                         }
                     }}
@@ -613,7 +621,7 @@ where
                 // Promotion dropdown
                 <div class="col-span-2">
                     <select 
-                        class="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-2 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                        class="select select-bordered w-full select-sm"
                         prop:value=move || {
                             wrestler.get().and_then(|w| w.promotion).unwrap_or_default()
                         }
@@ -621,12 +629,11 @@ where
                             on_promotion_change(ev.target().value());
                         }
                     >
-                        <option value="" class="bg-slate-800">"Select a promotion..."</option>
+                        <option value="">"Select a promotion..."</option>
                         {move || shows.get().into_iter().map(|show| {
                             view! {
                                 <option 
                                     value=show.name.clone()
-                                    class="bg-slate-800"
                                 >
                                     {show.name.clone()}
                                 </option>
@@ -634,6 +641,7 @@ where
                         }).collect::<Vec<_>>()}
                     </select>
                 </div>
+            </div>
             </div>
         </div>
     }
@@ -655,14 +663,14 @@ where
     let (temp_losses, set_temp_losses) = signal(0i32);
 
     view! {
-        <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-4">
-            <div class="flex items-center justify-between mb-4 border-b border-slate-700 pb-2">
-                <h4 class="text-slate-100 font-bold text-lg">
+        <div class="bg-base-200 border border-base-100 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-4 border-b border-base-100 pb-2">
+                <h4 class="text-base-content font-bold text-lg">
                     "Basic Stats"
                 </h4>
                 <Show when=move || wrestler.get().and_then(|w| w.is_user_created).unwrap_or(false)>
                     <button
-                        class="text-slate-400 hover:text-slate-200 text-sm font-medium flex items-center space-x-1"
+                        class="btn btn-ghost btn-sm gap-1"
                         on:click=move |_| {
                             if let Some(w) = wrestler.get() {
                                 set_temp_height.set(w.height.unwrap_or_default());
@@ -686,11 +694,13 @@ where
                 fallback=move || view! {
                     <div class="space-y-3">
                         <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-slate-400 font-medium text-sm mb-1">"Height"</label>
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">"Height"</span>
+                                </label>
                                 <input
                                     type="text"
-                                    class="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-slate-100 text-sm"
+                                    class="input input-bordered input-sm w-full"
                                     placeholder="e.g., 6'5\""
                                     prop:value=move || temp_height.get()
                                     on:input:target=move |ev| {
@@ -698,11 +708,13 @@ where
                                     }
                                 />
                             </div>
-                            <div>
-                                <label class="block text-slate-400 font-medium text-sm mb-1">"Weight"</label>
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">"Weight"</span>
+                                </label>
                                 <input
                                     type="text"
-                                    class="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-slate-100 text-sm"
+                                    class="input input-bordered input-sm w-full"
                                     placeholder="e.g., 250 lbs"
                                     prop:value=move || temp_weight.get()
                                     on:input:target=move |ev| {
@@ -710,11 +722,13 @@ where
                                     }
                                 />
                             </div>
-                            <div>
-                                <label class="block text-slate-400 font-medium text-sm mb-1">"Debut Year"</label>
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">"Debut Year"</span>
+                                </label>
                                 <input
                                     type="number"
-                                    class="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-slate-100 text-sm"
+                                    class="input input-bordered input-sm w-full"
                                     placeholder="e.g., 2010"
                                     prop:value=move || temp_debut_year.get()
                                     on:input:target=move |ev| {
@@ -722,18 +736,22 @@ where
                                     }
                                 />
                             </div>
-                            <div>
-                                <label class="block text-slate-400 font-medium text-sm mb-1">"Gender"</label>
-                                <div class="bg-slate-700/30 border border-slate-600 rounded px-3 py-2 text-slate-300 text-sm">
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">"Gender"</span>
+                                </label>
+                                <div class="input input-bordered input-sm text-base-content/70">
                                     {move || wrestler.get().map(|w| w.gender).unwrap_or_default()}
                                 </div>
                             </div>
-                            <div>
-                                <label class="block text-slate-400 font-medium text-sm mb-1">"Wins"</label>
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">"Wins"</span>
+                                </label>
                                 <input
                                     type="number"
                                     min="0"
-                                    class="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-slate-100 text-sm"
+                                    class="input input-bordered input-sm w-full"
                                     prop:value=move || temp_wins.get().to_string()
                                     on:input:target=move |ev| {
                                         if let Ok(val) = ev.target().value().parse::<i32>() {
@@ -742,12 +760,14 @@ where
                                     }
                                 />
                             </div>
-                            <div>
-                                <label class="block text-slate-400 font-medium text-sm mb-1">"Losses"</label>
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">"Losses"</span>
+                                </label>
                                 <input
                                     type="number"
                                     min="0"
-                                    class="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-slate-100 text-sm"
+                                    class="input input-bordered input-sm w-full"
                                     prop:value=move || temp_losses.get().to_string()
                                     on:input:target=move |ev| {
                                         if let Ok(val) = ev.target().value().parse::<i32>() {
@@ -760,7 +780,7 @@ where
                     </div>
                     <div class="flex space-x-2 mt-4">
                         <button
-                            class="flex-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium"
+                            class="btn btn-success btn-sm flex-1"
                             on:click=move |_| {
                                 let height = if temp_height.get().is_empty() { None } else { Some(temp_height.get()) };
                                 let weight = if temp_weight.get().is_empty() { None } else { Some(temp_weight.get()) };
@@ -777,7 +797,7 @@ where
                             "Save"
                         </button>
                         <button
-                            class="flex-1 bg-slate-600 hover:bg-slate-700 text-white px-3 py-2 rounded text-sm font-medium"
+                            class="btn btn-ghost btn-sm flex-1"
                             on:click=move |_| {
                                 set_editing.set(false);
                             }
@@ -791,25 +811,25 @@ where
                     {move || wrestler.get().map(|w| view! {
                         {w.height.as_ref().map(|height| view! {
                             <div>
-                                <span class="text-slate-400 font-medium">"Height: "</span>
-                                <span class="text-slate-100">{height.clone()}</span>
+                                <span class="text-base-content/70 font-medium">"Height: "</span>
+                                <span class="text-base-content">{height.clone()}</span>
                             </div>
                         })}
                         {w.weight.as_ref().map(|weight| view! {
                             <div>
-                                <span class="text-slate-400 font-medium">"Weight: "</span>
-                                <span class="text-slate-100">{weight.clone()}</span>
+                                <span class="text-base-content/70 font-medium">"Weight: "</span>
+                                <span class="text-base-content">{weight.clone()}</span>
                             </div>
                         })}
                         {w.debut_year.map(|year| view! {
                             <div>
-                                <span class="text-slate-400 font-medium">"Debut: "</span>
-                                <span class="text-slate-100">{year.to_string()}</span>
+                                <span class="text-base-content/70 font-medium">"Debut: "</span>
+                                <span class="text-base-content">{year.to_string()}</span>
                             </div>
                         })}
                         <div>
-                            <span class="text-slate-400 font-medium">"Gender: "</span>
-                            <span class="text-slate-100">{w.gender.clone()}</span>
+                            <span class="text-base-content/70 font-medium">"Gender: "</span>
+                            <span class="text-base-content">{w.gender.clone()}</span>
                         </div>
                     })}
                 </div>
@@ -823,17 +843,17 @@ fn HeaderSection(
     wrestler: ReadSignal<Option<Wrestler>>,
 ) -> impl IntoView {
     view! {
-        <div class="bg-slate-800/80 backdrop-blur-sm border-b border-slate-700 p-6 text-center relative">
-            <div class="absolute top-4 left-6 text-xs font-medium text-slate-400 bg-slate-700/50 px-2 py-1 rounded">
+        <div class="bg-base-300 border-b border-base-content/20 p-6 text-center relative">
+            <div class="badge badge-neutral absolute top-4 left-6">
                 "WRESTLER"
             </div>
-            <div class="absolute top-4 right-6 text-xs font-medium text-slate-400 bg-slate-700/50 px-2 py-1 rounded">
+            <div class="badge badge-neutral absolute top-4 right-6">
                 {move || wrestler.get().map(|w| format!("#{:03}", w.id)).unwrap_or_default()}
             </div>
-            <h2 class="text-2xl font-bold text-slate-100">
+            <h2 class="text-2xl font-bold text-base-content">
                 "Wrestler Profile"
             </h2>
-            <p class="text-slate-400 text-sm mt-1">
+            <p class="text-base-content/70 text-sm mt-1">
                 "Character Details & Statistics"
             </p>
         </div>
@@ -843,9 +863,9 @@ fn HeaderSection(
 #[component]
 fn PhotoSection() -> impl IntoView {
     view! {
-        <div class="bg-slate-800/60 border border-slate-700 rounded-lg aspect-[3/4] flex items-center justify-center relative overflow-hidden">
-            <div class="absolute inset-4 bg-slate-700/50 backdrop-blur-sm rounded border border-slate-600 flex items-center justify-center">
-                <div class="text-center text-slate-400">
+        <div class="card bg-base-200 border border-base-100 aspect-[3/4] flex items-center justify-center relative overflow-hidden">
+            <div class="card-body items-center justify-center">
+                <div class="text-center text-base-content/60">
                     <svg class="w-16 h-16 mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                     </svg>
@@ -869,12 +889,12 @@ where
     let (temp_nickname, set_temp_nickname) = signal(String::new());
 
     view! {
-        <div class="bg-slate-800/80 backdrop-blur-sm border border-slate-700 p-4 rounded-lg">
+        <div class="bg-base-200 border border-base-100 p-4 rounded-lg">
             <div class="flex items-center justify-between mb-2">
                 <div class="flex-1"></div>
                 <Show when=move || wrestler.get().and_then(|w| w.is_user_created).unwrap_or(false)>
                     <button
-                        class="text-slate-400 hover:text-slate-200 text-xs font-medium flex items-center space-x-1"
+                        class="btn btn-ghost btn-xs gap-1"
                         on:click=move |_| {
                             if let Some(w) = wrestler.get() {
                                 set_temp_name.set(w.name);
@@ -894,22 +914,26 @@ where
                 when=move || !editing.get()
                 fallback=move || view! {
                     <div class="space-y-3">
-                        <div>
-                            <label class="block text-slate-400 font-medium text-sm mb-1">"Name"</label>
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">"Name"</span>
+                            </label>
                             <input
                                 type="text"
-                                class="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-slate-100 text-lg font-bold text-center"
+                                class="input input-bordered text-lg font-bold text-center"
                                 prop:value=move || temp_name.get()
                                 on:input:target=move |ev| {
                                     set_temp_name.set(ev.target().value());
                                 }
                             />
                         </div>
-                        <div>
-                            <label class="block text-slate-400 font-medium text-sm mb-1">"Nickname"</label>
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">"Nickname"</span>
+                            </label>
                             <input
                                 type="text"
-                                class="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-slate-100 text-sm text-center"
+                                class="input input-bordered input-sm text-center"
                                 placeholder="Optional nickname"
                                 prop:value=move || temp_nickname.get()
                                 on:input:target=move |ev| {
@@ -920,7 +944,7 @@ where
                     </div>
                     <div class="flex space-x-2 mt-4">
                         <button
-                            class="flex-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium"
+                            class="btn btn-success btn-sm flex-1"
                             on:click=move |_| {
                                 let nickname = if temp_nickname.get().is_empty() { None } else { Some(temp_nickname.get()) };
                                 on_name_change(temp_name.get(), nickname);
@@ -930,7 +954,7 @@ where
                             "Save"
                         </button>
                         <button
-                            class="flex-1 bg-slate-600 hover:bg-slate-700 text-white px-3 py-2 rounded text-sm font-medium"
+                            class="btn btn-ghost btn-sm flex-1"
                             on:click=move |_| {
                                 set_editing.set(false);
                             }
@@ -941,11 +965,11 @@ where
                 }
             >
                 {move || wrestler.get().map(|w| view! {
-                    <h3 class="text-3xl font-bold text-slate-100 text-center">
+                    <h3 class="text-3xl font-bold text-base-content text-center">
                         {w.name}
                     </h3>
                     {w.nickname.as_ref().map(|nickname| view! {
-                        <p class="text-center text-slate-400 text-sm mt-1">{nickname.clone()}</p>
+                        <p class="text-center text-base-content/70 text-sm mt-1">{nickname.clone()}</p>
                     })}
                 })}
             </Show>
@@ -966,14 +990,15 @@ where
 
     view! {
         <Show when=move || wrestler.get().and_then(|w| w.real_name.clone()).is_some() || editing.get()>
-            <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-4">
-                <div class="flex items-center justify-between mb-2 border-b border-slate-700 pb-2">
-                    <div class="text-indigo-400 text-sm font-medium">
-                        "Real Name"
-                    </div>
+            <div class="card bg-base-200 border border-base-100">
+                <div class="card-body">
+                    <div class="flex items-center justify-between mb-2 border-b border-base-content/20 pb-2">
+                        <div class="text-primary text-sm font-medium">
+                            "Real Name"
+                        </div>
                     <Show when=move || wrestler.get().and_then(|w| w.is_user_created).unwrap_or(false)>
                         <button
-                            class="text-slate-400 hover:text-slate-200 text-xs font-medium flex items-center space-x-1"
+                            class="btn btn-ghost btn-xs gap-1"
                             on:click=move |_| {
                                 if let Some(w) = wrestler.get() {
                                     set_temp_real_name.set(w.real_name.unwrap_or_default());
@@ -994,7 +1019,7 @@ where
                         <div class="space-y-3">
                             <input
                                 type="text"
-                                class="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-slate-100 text-lg"
+                                class="input input-bordered text-lg"
                                 placeholder="Enter real name"
                                 prop:value=move || temp_real_name.get()
                                 on:input:target=move |ev| {
@@ -1004,7 +1029,7 @@ where
                         </div>
                         <div class="flex space-x-2 mt-4">
                             <button
-                                class="flex-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium"
+                                class="btn btn-success btn-sm flex-1"
                                 on:click=move |_| {
                                     let real_name = if temp_real_name.get().is_empty() { None } else { Some(temp_real_name.get()) };
                                     on_real_name_change(real_name);
@@ -1014,7 +1039,7 @@ where
                                 "Save"
                             </button>
                             <button
-                                class="flex-1 bg-slate-600 hover:bg-slate-700 text-white px-3 py-2 rounded text-sm font-medium"
+                                class="btn btn-ghost btn-sm flex-1"
                                 on:click=move |_| {
                                     set_editing.set(false);
                                 }
@@ -1025,9 +1050,10 @@ where
                     }
                 >
                     {move || wrestler.get().and_then(|w| w.real_name).map(|real_name| view! {
-                        <p class="text-slate-100 font-semibold text-lg">{real_name}</p>
+                        <p class="text-base-content font-semibold text-lg">{real_name}</p>
                     })}
                 </Show>
+                </div>
             </div>
         </Show>
     }
@@ -1046,12 +1072,13 @@ where
 
     view! {
         <Show when=move || wrestler.get().and_then(|w| w.biography.clone()).is_some() || editing.get()>
-            <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-4">
-                <div class="flex items-center justify-between mb-3 border-b border-slate-700 pb-2">
-                    <h4 class="text-slate-100 font-semibold text-lg">"Biography"</h4>
+            <div class="card bg-base-200 border border-base-100">
+                <div class="card-body">
+                    <div class="flex items-center justify-between mb-3 border-b border-base-content/20 pb-2">
+                        <h4 class="text-base-content font-semibold text-lg">"Biography"</h4>
                     <Show when=move || wrestler.get().and_then(|w| w.is_user_created).unwrap_or(false)>
                         <button
-                            class="text-slate-400 hover:text-slate-200 text-sm font-medium flex items-center space-x-1"
+                            class="btn btn-ghost btn-sm gap-1"
                             on:click=move |_| {
                                 if let Some(w) = wrestler.get() {
                                     set_temp_biography.set(w.biography.unwrap_or_default());
@@ -1071,7 +1098,7 @@ where
                     fallback=move || view! {
                         <div class="space-y-3">
                             <textarea
-                                class="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-slate-100 text-sm resize-none"
+                                class="textarea textarea-bordered resize-none"
                                 rows="4"
                                 placeholder="Enter biography..."
                                 prop:value=move || temp_biography.get()
@@ -1082,7 +1109,7 @@ where
                         </div>
                         <div class="flex space-x-2 mt-4">
                             <button
-                                class="flex-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium"
+                                class="btn btn-success btn-sm flex-1"
                                 on:click=move |_| {
                                     let biography = if temp_biography.get().is_empty() { None } else { Some(temp_biography.get()) };
                                     on_biography_change(biography);
@@ -1092,7 +1119,7 @@ where
                                 "Save"
                             </button>
                             <button
-                                class="flex-1 bg-slate-600 hover:bg-slate-700 text-white px-3 py-2 rounded text-sm font-medium"
+                                class="btn btn-ghost btn-sm flex-1"
                                 on:click=move |_| {
                                     set_editing.set(false);
                                 }
@@ -1103,11 +1130,12 @@ where
                     }
                 >
                     {move || wrestler.get().and_then(|w| w.biography).map(|bio| view! {
-                        <p class="text-slate-300 text-sm leading-relaxed">
+                        <p class="text-base-content/80 text-sm leading-relaxed">
                             {bio}
                         </p>
                     })}
                 </Show>
+                </div>
             </div>
         </Show>
     }
@@ -1119,67 +1147,69 @@ fn ChampionshipTeamSection(
     wrestler: ReadSignal<Option<Wrestler>>,
 ) -> impl IntoView {
     view! {
-        <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-4">
-            <h4 class="text-slate-100 font-bold text-lg mb-4 border-b border-slate-700 pb-2">
-                "Championship & Team Status"
-            </h4>
+        <div class="card bg-base-200 border border-base-100">
+            <div class="card-body">
+                <h4 class="text-base-content font-bold text-lg mb-4 border-b border-base-content/20 pb-2">
+                    "Championship & Team Status"
+                </h4>
             
             <div class="space-y-4">
                 // Record section
                 <div class="flex items-center justify-between">
-                    <span class="text-slate-400 font-medium text-sm">"Record:"</span>
-                    <span class="text-slate-100 font-semibold">
+                    <span class="text-base-content/70 font-medium text-sm">"Record:"</span>
+                    <span class="text-base-content font-semibold">
                         {move || wrestler.get().map(|w| format!("{}-{}", w.wins, w.losses)).unwrap_or_default()}
                     </span>
                 </div>
                 
                 // Current Belt section
                 <div class="space-y-2">
-                    <span class="text-slate-400 font-medium text-sm">"Current Belt:"</span>
-                    <div class="bg-slate-700/50 border border-slate-600 rounded-lg p-3 flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-yellow-600/20 border border-yellow-600/50 rounded-lg flex items-center justify-center">
+                    <span class="text-base-content/70 font-medium text-sm">"Current Belt:"</span>
+                    <div class="bg-base-300 border border-base-content/20 rounded-lg p-3 flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-warning/20 border border-warning/50 rounded-lg flex items-center justify-center">
                             // Championship belt icon
-                            <svg class="w-6 h-6 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-6 h-6 text-warning" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M5 16L3 14l5.5-5.5L10 10l4-4 4 4 1.5-1.5L15 3l-4 4L7 3 2.5 8.5 5 11v5zm2.5 2.5L9 17l1.5 1.5L12 17l1.5 1.5L15 17l1.5 1.5L18 17v-2l-1.5-1.5L15 15l-1.5-1.5L12 15l-1.5-1.5L9 15l-1.5 1.5L6 17v2l1.5-1.5z"/>
                             </svg>
                         </div>
                         <div class="flex-1">
-                            <p class="text-slate-300 text-sm italic">"No championship held"</p>
-                            <p class="text-slate-500 text-xs">"Belt management coming soon"</p>
+                            <p class="text-base-content/80 text-sm italic">"No championship held"</p>
+                            <p class="text-base-content/50 text-xs">"Belt management coming soon"</p>
                         </div>
                     </div>
                 </div>
                 
                 // Tag Team section
                 <div class="space-y-2">
-                    <span class="text-slate-400 font-medium text-sm">"Tag Team:"</span>
-                    <div class="bg-slate-700/50 border border-slate-600 rounded-lg p-3">
+                    <span class="text-base-content/70 font-medium text-sm">"Tag Team:"</span>
+                    <div class="bg-base-300 border border-base-content/20 rounded-lg p-3">
                         <div class="flex items-center space-x-2 mb-2">
                             // Partner placeholders
                             <div class="flex space-x-2">
-                                <div class="w-8 h-8 bg-slate-600/50 border border-slate-500 rounded-full flex items-center justify-center">
-                                    <svg class="w-4 h-4 text-slate-400" fill="currentColor" viewBox="0 0 24 24">
+                                <div class="w-8 h-8 bg-base-content/20 border border-base-content/30 rounded-full flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-base-content/60" fill="currentColor" viewBox="0 0 24 24">
                                         <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                                     </svg>
                                 </div>
-                                <div class="w-8 h-8 bg-slate-600/50 border border-slate-500 rounded-full flex items-center justify-center">
-                                    <svg class="w-4 h-4 text-slate-400" fill="currentColor" viewBox="0 0 24 24">
+                                <div class="w-8 h-8 bg-base-content/20 border border-base-content/30 rounded-full flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-base-content/60" fill="currentColor" viewBox="0 0 24 24">
                                         <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                                     </svg>
                                 </div>
-                                <div class="w-8 h-8 bg-slate-600/30 border border-slate-500/50 rounded-full flex items-center justify-center">
-                                    <svg class="w-4 h-4 text-slate-500" fill="currentColor" viewBox="0 0 24 24">
+                                <div class="w-8 h-8 bg-base-content/10 border border-base-content/20 rounded-full flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-base-content/40" fill="currentColor" viewBox="0 0 24 24">
                                         <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                                     </svg>
                                 </div>
                             </div>
                         </div>
                         <div>
-                            <p class="text-slate-300 text-sm italic">"No tag team partners"</p>
-                            <p class="text-slate-500 text-xs">"Tag team management coming soon"</p>
+                            <p class="text-base-content/80 text-sm italic">"No tag team partners"</p>
+                            <p class="text-base-content/50 text-xs">"Tag team management coming soon"</p>
                         </div>
                     </div>
                 </div>
+            </div>
             </div>
         </div>
     }

@@ -6,7 +6,7 @@ fn main() {
     
     mount_to_body(|| {
         view! {
-            <div class="h-full bg-slate-900">
+            <div class="h-full bg-base-100">
                 <WrestlerWindow />
             </div>
         }

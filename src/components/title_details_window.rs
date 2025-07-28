@@ -160,10 +160,10 @@ pub fn TitleDetailsWindow() -> impl IntoView {
 
     let get_prestige_info = move |tier: i32| {
         match tier {
-            1 => ("World Championship", "text-yellow-400", "border-yellow-500", "bg-yellow-600/20"),
-            2 => ("Secondary Championship", "text-slate-300", "border-slate-400", "bg-slate-600/20"),
-            3 => ("Tag Team Championship", "text-orange-400", "border-orange-500", "bg-orange-600/20"),
-            _ => ("Specialty Championship", "text-purple-400", "border-purple-500", "bg-purple-600/20"),
+            1 => ("World Championship", "text-warning", "border-warning", "bg-warning/20"),
+            2 => ("Secondary Championship", "text-base-content/70", "border-base-300", "bg-base-200"),
+            3 => ("Tag Team Championship", "text-accent", "border-accent", "bg-accent/20"),
+            _ => ("Specialty Championship", "text-secondary", "border-secondary", "bg-secondary/20"),
         }
     };
 
@@ -259,18 +259,21 @@ pub fn TitleDetailsWindow() -> impl IntoView {
     };
 
     view! {
-        <div class="container mx-auto p-6 bg-slate-900 min-h-screen">
+        <div class="container mx-auto p-6 bg-base-100 min-h-screen">
             <Show when=move || loading.get()>
                 <div class="flex justify-center items-center py-12">
-                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600"></div>
-                    <span class="ml-3 text-slate-400">"Loading title details..."</span>
+                    <span class="loading loading-spinner loading-lg text-accent"></span>
+                    <span class="ml-3 text-base-content/70">"Loading title details..."</span>
                 </div>
             </Show>
 
             <Show when=move || error.get().is_some()>
-                <div class="bg-red-900/50 border border-red-600 rounded-lg p-6 text-center">
-                    <h3 class="text-red-400 text-lg font-semibold mb-2">"Error"</h3>
-                    <p class="text-red-300">{move || error.get().unwrap_or_default()}</p>
+                <div class="alert alert-error">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <div>
+                        <h3 class="font-bold">"Error"</h3>
+                        <div class="text-xs">{move || error.get().unwrap_or_default()}</div>
+                    </div>
                 </div>
             </Show>
 
@@ -307,109 +310,115 @@ pub fn TitleDetailsWindow() -> impl IntoView {
                         view! {
                             <div class="space-y-8">
                                 // Title Header
-                                <div class={format!("border-2 {} {} rounded-xl p-8", border_color, bg_color)}>
-                                    <div class="flex items-start justify-between mb-6">
-                                        <div>
-                                            <h1 class="text-4xl font-bold text-white mb-2">
-                                                {title.name.clone()}
-                                            </h1>
-                                            <div class="flex items-center space-x-4 text-sm">
-                                                <span class={format!("font-semibold {}", prestige_color)}>
-                                                    {prestige_name}
-                                                </span>
-                                                <span class="text-slate-400">"•"</span>
-                                                <span class="text-slate-300">
-                                                    {title.division.clone()}
-                                                </span>
-                                                <span class="text-slate-400">"•"</span>
-                                                <span class="text-slate-300">
-                                                    {title.title_type.clone()}
-                                                </span>
-                                                <span class="text-slate-400">"•"</span>
-                                                <span class="text-slate-300">
-                                                    {title.gender.clone()}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div class="text-right">
-                                            <div class="text-2xl font-bold text-slate-100">
-                                                "Tier " {title.prestige_tier}
-                                            </div>
-                                            <div class="text-sm text-slate-400">
-                                                "Prestige Level"
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    // Current Champion Info
-                                    <div class="bg-slate-800/50 rounded-lg p-6">
-                                        <h3 class="text-xl font-semibold text-white mb-4">
-                                            "Current Champion"
-                                        </h3>
-                                        <div class="flex items-center justify-between">
+                                <div class={format!("card border {} {}", border_color, bg_color)}>
+                                    <div class="card-body">
+                                        <div class="flex items-start justify-between mb-6">
                                             <div>
-                                                <div class="text-2xl font-bold text-white mb-1">
-                                                    {holders_display}
-                                                </div>
-                                                <div class="text-slate-400">
-                                                    {if current_holders.is_empty() {
-                                                        "Title is currently vacant".to_string()
-                                                    } else {
-                                                        format!("Held for {}", days_display)
-                                                    }}
+                                                <h1 class="text-4xl font-bold text-base-content mb-2">
+                                                    {title.name.clone()}
+                                                </h1>
+                                                <div class="flex items-center space-x-4 text-sm">
+                                                    <span class={format!("font-semibold {}", prestige_color)}>
+                                                        {prestige_name}
+                                                    </span>
+                                                    <span class="text-base-content/40">"•"</span>
+                                                    <span class="text-base-content/80">
+                                                        {title.division.clone()}
+                                                    </span>
+                                                    <span class="text-base-content/40">"•"</span>
+                                                    <span class="text-base-content/80">
+                                                        {title.title_type.clone()}
+                                                    </span>
+                                                    <span class="text-base-content/40">"•"</span>
+                                                    <span class="text-base-content/80">
+                                                        {title.gender.clone()}
+                                                    </span>
                                                 </div>
                                             </div>
-                                            <Show when=move || !current_holders.is_empty()>
-                                                <div class="text-right">
-                                                    <div class="text-lg font-semibold text-cyan-400">
-                                                        {days_display.clone()}
-                                                    </div>
-                                                    <div class="text-sm text-slate-400">
-                                                        "Championship Reign"
-                                                    </div>
+                                            <div class="text-right">
+                                                <div class="text-2xl font-bold text-base-content">
+                                                    "Tier " {title.prestige_tier}
                                                 </div>
-                                            </Show>
+                                                <div class="text-sm text-base-content/60">
+                                                    "Prestige Level"
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        // Current Champion Info
+                                        <div class="card bg-base-200">
+                                            <div class="card-body">
+                                                <h3 class="card-title text-xl mb-4">
+                                                    "Current Champion"
+                                                </h3>
+                                                <div class="flex items-center justify-between">
+                                                    <div>
+                                                        <div class="text-2xl font-bold text-base-content mb-1">
+                                                            {holders_display}
+                                                        </div>
+                                                        <div class="text-base-content/60">
+                                                            {if current_holders.is_empty() {
+                                                                "Title is currently vacant".to_string()
+                                                            } else {
+                                                                format!("Held for {}", days_display)
+                                                            }}
+                                                        </div>
+                                                    </div>
+                                                    <Show when=move || !current_holders.is_empty()>
+                                                        <div class="text-right">
+                                                            <div class="text-lg font-semibold text-accent">
+                                                                {days_display.clone()}
+                                                            </div>
+                                                            <div class="text-sm text-base-content/60">
+                                                                "Championship Reign"
+                                                            </div>
+                                                        </div>
+                                                    </Show>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
                                 // Championship History Placeholder
-                                <div class="bg-slate-800 border border-slate-600 rounded-lg p-8">
-                                    <h3 class="text-xl font-semibold text-white mb-4">
-                                        "Championship History"
-                                    </h3>
-                                    <div class="text-center py-8">
-                                        <div class="text-slate-400 mb-2">
-                                            "Championship history tracking coming soon"
-                                        </div>
-                                        <div class="text-sm text-slate-500">
-                                            "This will show all previous champions and reign details"
+                                <div class="card bg-base-200 border border-base-300">
+                                    <div class="card-body">
+                                        <h3 class="card-title text-xl mb-4">
+                                            "Championship History"
+                                        </h3>
+                                        <div class="text-center py-8">
+                                            <div class="text-base-content/60 mb-2">
+                                                "Championship history tracking coming soon"
+                                            </div>
+                                            <div class="text-sm text-base-content/50">
+                                                "This will show all previous champions and reign details"
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
                                 // Change Champion Form
-                                <div class="bg-slate-800 border border-slate-600 rounded-lg p-8">
-                                    <h3 class="text-xl font-semibold text-white mb-6">
-                                        "Change Champion"
-                                    </h3>
+                                <div class="card bg-base-200 border border-base-300">
+                                    <div class="card-body">
+                                        <h3 class="card-title text-xl mb-6">
+                                            "Change Champion"
+                                        </h3>
                                     
-                                    <Show when=move || update_success.get().is_some()>
-                                        <div class="bg-green-900/50 border border-green-600 rounded-lg p-4 mb-6">
-                                            <p class="text-green-300">
-                                                {move || update_success.get().unwrap_or_default()}
-                                            </p>
-                                        </div>
-                                    </Show>
+                                        <Show when=move || update_success.get().is_some()>
+                                            <div class="alert alert-success mb-6">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                <span>{move || update_success.get().unwrap_or_default()}</span>
+                                            </div>
+                                        </Show>
 
                                     <form on:submit=handle_holder_change>
                                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                            <div>
-                                                <label class="block text-sm font-medium text-slate-300 mb-2">
-                                                    "New Champion" <span class="text-red-400">"*"</span>
+                                            <div class="form-control">
+                                                <label class="label">
+                                                    <span class="label-text">"New Champion" <span class="text-error">"*"</span></span>
                                                 </label>
                                                 <select
-                                                    class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                                                    class="select select-bordered w-full"
                                                     on:change=move |ev| {
                                                         let value = event_target_value(&ev);
                                                         if value.is_empty() || value == "none" {
@@ -433,19 +442,22 @@ pub fn TitleDetailsWindow() -> impl IntoView {
                                                         }
                                                     />
                                                 </select>
-                                                <p class="text-xs text-slate-500 mt-1">
-                                                    {format!("Showing {} division wrestlers", title.gender)}
-                                                    <br/>
-                                                    <span class="text-yellow-500">"TODO: Filter by selected show in the future"</span>
-                                                </p>
+                                                <div class="label">
+                                                    <span class="label-text-alt text-base-content/60">
+                                                        {format!("Showing {} division wrestlers", title.gender)}
+                                                    </span>
+                                                </div>
+                                                <div class="label">
+                                                    <span class="label-text-alt text-warning">"TODO: Filter by selected show in the future"</span>
+                                                </div>
                                             </div>
 
-                                            <div>
-                                                <label class="block text-sm font-medium text-slate-300 mb-2">
-                                                    "Change Method"
+                                            <div class="form-control">
+                                                <label class="label">
+                                                    <span class="label-text">"Change Method"</span>
                                                 </label>
                                                 <select
-                                                    class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                                                    class="select select-bordered w-full"
                                                     prop:value=change_method
                                                     on:change=move |ev| set_change_method.set(event_target_value(&ev))
                                                 >
@@ -456,26 +468,26 @@ pub fn TitleDetailsWindow() -> impl IntoView {
                                                 </select>
                                             </div>
 
-                                            <div>
-                                                <label class="block text-sm font-medium text-slate-300 mb-2">
-                                                    "Event/Show Name"
+                                            <div class="form-control">
+                                                <label class="label">
+                                                    <span class="label-text">"Event/Show Name"</span>
                                                 </label>
                                                 <input
                                                     type="text"
-                                                    class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                                                    class="input input-bordered w-full"
                                                     placeholder="e.g., WrestleMania, Monday Night RAW"
                                                     prop:value=event_name
                                                     on:input=move |ev| set_event_name.set(event_target_value(&ev))
                                                 />
                                             </div>
 
-                                            <div>
-                                                <label class="block text-sm font-medium text-slate-300 mb-2">
-                                                    "Event Location"
+                                            <div class="form-control">
+                                                <label class="label">
+                                                    <span class="label-text">"Event Location"</span>
                                                 </label>
                                                 <input
                                                     type="text"
-                                                    class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                                                    class="input input-bordered w-full"
                                                     placeholder="e.g., Madison Square Garden"
                                                     prop:value=event_location
                                                     on:input=move |ev| set_event_location.set(event_target_value(&ev))
@@ -483,19 +495,20 @@ pub fn TitleDetailsWindow() -> impl IntoView {
                                             </div>
                                         </div>
 
-                                        <div class="mt-6 flex justify-end">
+                                        <div class="card-actions justify-end mt-6">
                                             <button
                                                 type="submit"
-                                                class="px-6 py-3 bg-cyan-600 hover:bg-cyan-700 border border-cyan-500 text-white rounded-lg font-semibold transition-colors flex items-center space-x-2"
+                                                class="btn btn-accent gap-2"
                                                 disabled=move || updating.get() || selected_wrestler_id.get().is_none()
                                             >
                                                 <Show when=move || updating.get()>
-                                                    <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                                    <span class="loading loading-spinner loading-sm"></span>
                                                 </Show>
-                                                <span>{move || if updating.get() { "Updating..." } else { "Change Champion" }}</span>
+                                                {move || if updating.get() { "Updating..." } else { "Change Champion" }}
                                             </button>
                                         </div>
                                     </form>
+                                    </div>
                                 </div>
                             </div>
                         }
