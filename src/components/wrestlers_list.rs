@@ -55,6 +55,8 @@ pub fn WrestlersList(
     let (wrestlers, set_wrestlers) = signal(Vec::<Wrestler>::new());
     let (loading, set_loading) = signal(true);
     let (error, set_error) = signal(None::<String>);
+    let (search_term, set_search_term) = signal(String::new());
+    let (debounced_search_term, set_debounced_search_term) = signal(String::new());
 
     // Load wrestlers on component mount
     Effect::new(move |_| {
@@ -72,6 +74,33 @@ pub fn WrestlersList(
             set_loading.set(false);
         });
     });
+
+    // Debounce search term (300ms delay)
+    Effect::new(move |_| {
+        let current_term = search_term.get();
+        spawn_local(async move {
+            gloo_timers::future::TimeoutFuture::new(300).await;
+            if search_term.get() == current_term {
+                set_debounced_search_term.set(current_term);
+            }
+        });
+    });
+
+    // Filtered wrestlers based on debounced search term
+    let filtered_wrestlers = move || {
+        let term = debounced_search_term.get().to_lowercase();
+        if term.is_empty() {
+            wrestlers.get()
+        } else {
+            wrestlers.get().into_iter()
+                .filter(|w| {
+                    w.name.to_lowercase().contains(&term) || 
+                    w.nickname.as_ref().map_or(false, |n| n.to_lowercase().contains(&term)) ||
+                    w.real_name.as_ref().map_or(false, |r| r.to_lowercase().contains(&term))
+                })
+                .collect()
+        }
+    };
 
     let handle_wrestler_click = move |wrestler_id: i32| {
         spawn_local(async move {
@@ -112,6 +141,47 @@ pub fn WrestlersList(
                 </p>
             </div>
 
+            // Search Input
+            <Show when=move || !loading.get() && error.get().is_none() && !wrestlers.get().is_empty()>
+                <div class="mb-6">
+                    <div class="form-control">
+                        <div class="input-group">
+                            <input 
+                                type="text"
+                                placeholder="Search wrestlers by name, nickname, or real name..."
+                                class="input input-bordered w-full"
+                                prop:value=move || search_term.get()
+                                on:input=move |ev| {
+                                    let value = event_target_value(&ev);
+                                    set_search_term.set(value);
+                                }
+                            />
+                            <Show when=move || !search_term.get().is_empty()>
+                                <button 
+                                    class="btn btn-ghost"
+                                    on:click=move |_| set_search_term.set(String::new())
+                                >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </Show>
+                        </div>
+                    </div>
+                    <div class="text-sm text-base-content/60 mt-2">
+                        {move || {
+                            let count = filtered_wrestlers().len();
+                            let search_value = search_term.get();
+                            if search_value.is_empty() {
+                                format!("{} wrestlers total", count)
+                            } else {
+                                format!("{} wrestlers found", count)
+                            }
+                        }}
+                    </div>
+                </div>
+            </Show>
+
             <Show when=move || loading.get()>
                 <div class="flex justify-center items-center py-12">
                     <span class="loading loading-spinner loading-lg"></span>
@@ -139,17 +209,28 @@ pub fn WrestlersList(
                 </div>
             </Show>
 
-            <Show when=move || !loading.get() && error.get().is_none() && !wrestlers.get().is_empty()>
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+            // Empty search results
+            <Show when=move || !loading.get() && error.get().is_none() && !wrestlers.get().is_empty() && filtered_wrestlers().is_empty()>
+                <div class="alert alert-warning">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+                    <div>
+                        <h3 class="font-bold">"No Wrestlers Match Your Search"</h3>
+                        <div class="text-xs">{format!("No wrestlers found matching \"{}\"", search_term.get())}</div>
+                    </div>
+                </div>
+            </Show>
+
+            <Show when=move || !loading.get() && error.get().is_none() && !filtered_wrestlers().is_empty()>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7 2xl:grid-cols-8 gap-3">
                     <For
-                        each=move || wrestlers.get()
+                        each=move || filtered_wrestlers()
                         key=|wrestler| wrestler.id
                         children=move |wrestler| {
                             let wrestler_id = wrestler.id;
                             let is_user_created = wrestler.is_user_created.unwrap_or(false);
 
                             view! {
-                                <div class="card bg-base-200 hover:bg-base-300 border border-base-300 hover:border-secondary transition-all duration-200 cursor-pointer group h-32 relative"
+                                <div class="card bg-base-200 hover:bg-base-300 border border-base-300 hover:border-secondary transition-all duration-200 cursor-pointer group h-20 relative"
                                      on:click=move |_| handle_wrestler_click(wrestler_id)>
                                     <div class="card-body p-4 flex flex-col justify-center">
                                         // System wrestler indicator
@@ -180,15 +261,12 @@ pub fn WrestlersList(
                                             <h3 class="text-lg font-bold text-base-content group-hover:text-secondary transition-colors mb-2">
                                                 {wrestler.name.clone()}
                                             </h3>
-                                            <div class="h-4 mb-2">
+                                            <div class="h-4">
                                                 {wrestler.nickname.as_ref().map(|nickname| view! {
                                                     <p class="text-base-content/60 text-xs italic">
                                                         {format!("\"{}\"", nickname)}
                                                     </p>
                                                 })}
-                                            </div>
-                                            <div class="text-xs text-base-content/50 group-hover:text-base-content/70 transition-colors">
-                                                "Click for details"
                                             </div>
                                         </div>
                                     </div>

@@ -57,6 +57,8 @@ pub fn TitlesList(
     let (titles, set_titles) = signal(Vec::<TitleWithHolders>::new());
     let (loading, set_loading) = signal(true);
     let (error, set_error) = signal(None::<String>);
+    let (search_term, set_search_term) = signal(String::new());
+    let (debounced_search_term, set_debounced_search_term) = signal(String::new());
 
     // Load titles on component mount
     Effect::new(move |_| {
@@ -74,6 +76,34 @@ pub fn TitlesList(
             set_loading.set(false);
         });
     });
+
+    // Debounce search term (300ms delay)
+    Effect::new(move |_| {
+        let current_term = search_term.get();
+        spawn_local(async move {
+            gloo_timers::future::TimeoutFuture::new(300).await;
+            if search_term.get() == current_term {
+                set_debounced_search_term.set(current_term);
+            }
+        });
+    });
+
+    // Helper function to filter titles by search term
+    let filter_titles_by_search = move |titles: Vec<TitleWithHolders>| -> Vec<TitleWithHolders> {
+        let term = debounced_search_term.get().to_lowercase();
+        if term.is_empty() {
+            titles
+        } else {
+            titles.into_iter()
+                .filter(|title| {
+                    title.title.name.to_lowercase().contains(&term) ||
+                    title.title.division.to_lowercase().contains(&term) ||
+                    title.current_holders.iter().any(|holder| 
+                        holder.wrestler_name.to_lowercase().contains(&term))
+                })
+                .collect()
+        }
+    };
 
     let handle_title_click = move |title_id: i32| {
         spawn_local(async move {
@@ -112,6 +142,12 @@ pub fn TitlesList(
         set_tier_4_titles.set(tier_4);
     });
 
+    // Filtered tier signals based on search term
+    let filtered_tier_1_titles = move || filter_titles_by_search(tier_1_titles.get());
+    let filtered_tier_2_titles = move || filter_titles_by_search(tier_2_titles.get());
+    let filtered_tier_3_titles = move || filter_titles_by_search(tier_3_titles.get());
+    let filtered_tier_4_titles = move || filter_titles_by_search(tier_4_titles.get());
+
     view! {
         <div class="container mx-auto p-6 bg-base-100 min-h-screen">
             <div class="mb-8">
@@ -143,6 +179,48 @@ pub fn TitlesList(
                 </p>
             </div>
 
+            // Search Input
+            <Show when=move || !loading.get() && error.get().is_none() && !titles.get().is_empty()>
+                <div class="mb-6">
+                    <div class="form-control">
+                        <div class="input-group">
+                            <input 
+                                type="text"
+                                placeholder="Search titles by name, division, or champion..."
+                                class="input input-bordered w-full"
+                                prop:value=move || search_term.get()
+                                on:input=move |ev| {
+                                    let value = event_target_value(&ev);
+                                    set_search_term.set(value);
+                                }
+                            />
+                            <Show when=move || !search_term.get().is_empty()>
+                                <button 
+                                    class="btn btn-ghost"
+                                    on:click=move |_| set_search_term.set(String::new())
+                                >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </Show>
+                        </div>
+                    </div>
+                    <div class="text-sm text-base-content/60 mt-2">
+                        {move || {
+                            let all_titles = titles.get();
+                            let filtered_count = filter_titles_by_search(all_titles).len();
+                            let search_value = search_term.get();
+                            if search_value.is_empty() {
+                                format!("{} titles total", filtered_count)
+                            } else {
+                                format!("{} titles found", filtered_count)
+                            }
+                        }}
+                    </div>
+                </div>
+            </Show>
+
             <Show when=move || loading.get()>
                 <div class="flex justify-center items-center py-12">
                     <span class="loading loading-spinner loading-lg text-accent"></span>
@@ -170,11 +248,28 @@ pub fn TitlesList(
                 </div>
             </Show>
 
+            // Empty search results
+            <Show when=move || !loading.get() && error.get().is_none() && !titles.get().is_empty() && {
+                let filtered_1 = filtered_tier_1_titles();
+                let filtered_2 = filtered_tier_2_titles();
+                let filtered_3 = filtered_tier_3_titles();
+                let filtered_4 = filtered_tier_4_titles();
+                filtered_1.is_empty() && filtered_2.is_empty() && filtered_3.is_empty() && filtered_4.is_empty()
+            }>
+                <div class="alert alert-warning">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+                    <div>
+                        <h3 class="font-bold">"No Titles Match Your Search"</h3>
+                        <div class="text-xs">{format!("No titles found matching \"{}\"", search_term.get())}</div>
+                    </div>
+                </div>
+            </Show>
+
             <Show when=move || !loading.get() && error.get().is_none() && !titles.get().is_empty()>
                 <div class="space-y-12">
                     // Tier 1 - World Championships (1 per row, gold styling)
                     <div>
-                        <Show when=move || !tier_1_titles.get().is_empty()>
+                        <Show when=move || !filtered_tier_1_titles().is_empty()>
                             <div class="mb-8">
                                 <h2 class="text-2xl font-bold text-warning mb-6 flex items-center">
                                     <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -184,7 +279,7 @@ pub fn TitlesList(
                                 </h2>
                                 <div class="space-y-4">
                                     <For
-                                        each=move || tier_1_titles.get()
+                                        each=move || filtered_tier_1_titles()
                                         key=|title| title.title.id
                                         children=move |title| {
                                                     let title_id = title.title.id;
@@ -242,7 +337,7 @@ pub fn TitlesList(
                                 </Show>
 
                                 // Tier 2 - Secondary Championships (2 per row, silver styling)
-                        <Show when=move || !tier_2_titles.get().is_empty()>
+                        <Show when=move || !filtered_tier_2_titles().is_empty()>
                             <div class="mb-8">
                                 <h2 class="text-2xl font-bold text-base-content/70 mb-6 flex items-center">
                                     <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -252,7 +347,7 @@ pub fn TitlesList(
                                 </h2>
                                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                     <For
-                                        each=move || tier_2_titles.get()
+                                        each=move || filtered_tier_2_titles()
                                         key=|title| title.title.id
                                                 children=move |title| {
                                                     let title_id = title.title.id;
@@ -294,7 +389,7 @@ pub fn TitlesList(
                                 </Show>
 
                         // Tier 3 - Tag Team Championships (3 per row, bronze styling)
-                        <Show when=move || !tier_3_titles.get().is_empty()>
+                        <Show when=move || !filtered_tier_3_titles().is_empty()>
                             <div class="mb-8">
                                 <h2 class="text-2xl font-bold text-accent mb-6 flex items-center">
                                     <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -304,7 +399,7 @@ pub fn TitlesList(
                                 </h2>
                                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     <For
-                                        each=move || tier_3_titles.get()
+                                        each=move || filtered_tier_3_titles()
                                         key=|title| title.title.id
                                                 children=move |title| {
                                                     let title_id = title.title.id;
@@ -350,7 +445,7 @@ pub fn TitlesList(
                                 </Show>
 
                         // Tier 4 - Specialty Championships (4 per row, themed colors)
-                        <Show when=move || !tier_4_titles.get().is_empty()>
+                        <Show when=move || !filtered_tier_4_titles().is_empty()>
                             <div class="mb-8">
                                 <h2 class="text-xl font-bold text-secondary mb-6 flex items-center">
                                     <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -360,7 +455,7 @@ pub fn TitlesList(
                                 </h2>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                                     <For
-                                        each=move || tier_4_titles.get()
+                                        each=move || filtered_tier_4_titles()
                                         key=|title| title.title.id
                                                 children=move |title| {
                                                     let title_id = title.title.id;
