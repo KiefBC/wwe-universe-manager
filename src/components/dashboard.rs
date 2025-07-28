@@ -81,7 +81,7 @@ pub fn PromotionDashboard(
             </div>
 
 
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
                 <button
                     class="btn btn-primary gap-2"
                     on:click=move |_| set_current_page.set("create-show".to_string())
@@ -93,12 +93,21 @@ pub fn PromotionDashboard(
                 </button>
                 <button 
                     class="btn btn-secondary gap-2"
-                    on:click=navigate_to_wrestlers
+                    on:click=move |_| set_current_page.set("show-roster".to_string())
                 >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
-                    "Manage Roster"
+                    "Show Rosters"
+                </button>
+                <button 
+                    class="btn btn-secondary/80 gap-2"
+                    on:click=navigate_to_wrestlers
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    "Wrestlers"
                 </button>
                 <button 
                     class="btn btn-accent gap-2"
@@ -107,7 +116,7 @@ pub fn PromotionDashboard(
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                     </svg>
-                    "Title Management"
+                    "Titles"
                 </button>
                 <button 
                     class="btn btn-info gap-2"
@@ -125,7 +134,7 @@ pub fn PromotionDashboard(
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
                     </svg>
-                    "Populate Roster"
+                    "Test Data"
                 </button>
             </div>
 

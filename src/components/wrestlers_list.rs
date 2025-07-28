@@ -116,7 +116,7 @@ pub fn WrestlersList(
                 <div class="flex items-center justify-between mb-4">
                     <button
                         class="btn btn-ghost gap-2"
-                        on:click=move |_| set_current_page.set("home".to_string())
+                        on:click=move |_| set_current_page.set("promotion-dashboard".to_string())
                     >
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />

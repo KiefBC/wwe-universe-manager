@@ -1,4 +1,4 @@
-use crate::components::{CeoDashboard, CreatePromotion, CreateShow, CreateTitle, CreateWrestler, PromotionDashboard, TitleDetailsWindow, TitlesList, WrestlerDetailsWindow, WrestlersList};
+use crate::components::{BookerDashboard, CeoDashboard, CreatePromotion, CreateShow, CreateTitle, CreateWrestler, PromotionDashboard, ShowRosterManagement, TitleDetailsWindow, TitlesList, WrestlerDetailsWindow, WrestlersList};
 use crate::types::Promotion;
 use leptos::prelude::*;
 use web_sys::window;
@@ -63,10 +63,28 @@ pub fn App() -> impl IntoView {
                                                                                                 fallback=move || {
                                                                                                     view! {
                                                                                                         <Show
-                                                                                                            when=move || current_page.get() == "promotion-dashboard"
-                                                                                                            fallback=move || view! { <CeoDashboard set_current_page set_selected_promotion /> }
+                                                                                                            when=move || current_page.get() == "booker"
+                                                                                                            fallback=move || {
+                                                                                                                view! {
+                                                                                                                    <Show
+                                                                                                                        when=move || current_page.get() == "show-roster"
+                                                                                                                        fallback=move || {
+                                                                                                                            view! {
+                                                                                                                                <Show
+                                                                                                                                    when=move || current_page.get() == "promotion-dashboard"
+                                                                                                                                    fallback=move || view! { <CeoDashboard set_current_page set_selected_promotion /> }
+                                                                                                                                >
+                                                                                                                                    <PromotionDashboard set_current_page refresh_trigger selected_promotion />
+                                                                                                                                </Show>
+                                                                                                                            }
+                                                                                                                        }
+                                                                                                                    >
+                                                                                                                        <ShowRosterManagement set_current_page selected_promotion />
+                                                                                                                    </Show>
+                                                                                                                }
+                                                                                                            }
                                                                                                         >
-                                                                                                            <PromotionDashboard set_current_page refresh_trigger selected_promotion />
+                                                                                                            <BookerDashboard set_current_page selected_promotion />
                                                                                                         </Show>
                                                                                                     }
                                                                                                 }
