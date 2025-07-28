@@ -174,7 +174,10 @@ pub fn Dashboard(
                         </svg>
                         <span>"Wrestlers"</span>
                     </button>
-                    <button class="btn bg-cyan-600 hover:bg-cyan-700 border-cyan-600 text-white px-6 py-3 rounded-lg flex items-center justify-center space-x-2">
+                    <button 
+                        class="btn bg-cyan-600 hover:bg-cyan-700 border-cyan-600 text-white px-6 py-3 rounded-lg flex items-center justify-center space-x-2"
+                        on:click=move |_| set_current_page.set("titles".to_string())
+                    >
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>

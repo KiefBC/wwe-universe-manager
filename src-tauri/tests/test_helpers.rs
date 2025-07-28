@@ -148,6 +148,12 @@ pub fn create_test_title() -> NewTitle {
     NewTitle {
         name: "Test Title".to_string(),
         current_holder_id: None,
+        title_type: "Singles".to_string(),
+        division: "World".to_string(),
+        prestige_tier: 1,
+        gender: "Mixed".to_string(),
+        show_id: None,
+        is_active: true,
     }
 }
 

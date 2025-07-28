@@ -39,12 +39,15 @@ pub fn run() {
             db::create_wrestler,
             db::create_user_wrestler,
             db::create_belt,
+            db::get_titles,
+            db::update_title_holder,
             db::create_test_data,
             // Authentication operations
             auth::verify_credentials,
             auth::register_user,
             // Window operations
             open_wrestler_window,
+            open_title_window,
         ])
         .run(tauri::generate_context!())
         .expect("Failed to run Tauri application");
@@ -74,6 +77,39 @@ async fn open_wrestler_window(app: AppHandle, wrestler_id: Option<String>) -> Re
         tauri::WebviewUrl::App(url.into()),
     )
     .title("Wrestler Details")
+    .inner_size(885.0, 860.0)
+    .min_inner_size(600.0, 500.0)
+    .center()
+    .build()
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+/// Opens a title details window (only one allowed at a time)
+#[tauri::command]
+async fn open_title_window(app: AppHandle, title_id: Option<String>) -> Result<(), String> {
+    let title_id = title_id.unwrap_or_else(|| "default".to_string());
+    let window_label = "title-details"; // Use consistent label for all title windows
+    
+    // Check if window already exists
+    if let Some(existing_window) = app.get_webview_window(window_label) {
+        // If window exists, update the URL hash to load the new title
+        let js_code = format!("window.location.hash = '#title?id={}';", title_id);
+        existing_window.eval(&js_code)
+            .map_err(|e| e.to_string())?;
+        existing_window.set_focus().map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+
+    // Create new window with title ID in the URL hash
+    let url = format!("index.html#title?id={}", title_id);
+    let _window = tauri::WebviewWindowBuilder::new(
+        &app,
+        window_label,
+        tauri::WebviewUrl::App(url.into()),
+    )
+    .title("Title Details")
     .inner_size(885.0, 860.0)
     .min_inner_size(600.0, 500.0)
     .center()

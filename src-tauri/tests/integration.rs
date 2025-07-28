@@ -40,7 +40,15 @@ fn test_complete_wrestling_scenario() {
         .expect("Failed to create wrestler 2");
 
     // 3. Create a title without holder initially
-    let title = internal_create_belt(&mut conn, title_name, None).expect("Failed to create title");
+    let title = internal_create_belt(
+        &mut conn, 
+        title_name, 
+        "Singles",
+        "World",
+        "Mixed",
+        None,
+        None
+    ).expect("Failed to create title");
 
     // 4. Create a user
     let user = internal_create_user(&mut conn, user_name, "secure_password")
@@ -55,8 +63,15 @@ fn test_complete_wrestling_scenario() {
 
     // 6. Create another title with wrestler1 as champion
     test_data.cleanup_titles("Secondary Title");
-    let title_with_holder = internal_create_belt(&mut conn, "Secondary Title", Some(wrestler1.id))
-        .expect("Failed to create title with holder");
+    let title_with_holder = internal_create_belt(
+        &mut conn, 
+        "Secondary Title", 
+        "Singles",
+        "Intercontinental",
+        "Mixed",
+        None,
+        Some(wrestler1.id)
+    ).expect("Failed to create title with holder");
 
     assert_eq!(title_with_holder.current_holder_id, Some(wrestler1.id));
 
@@ -88,8 +103,15 @@ fn test_title_holder_cascade_behavior() {
         .expect("Failed to create wrestler");
 
     // Create title with wrestler as holder
-    let title = internal_create_belt(&mut conn, title_name, Some(wrestler.id))
-        .expect("Failed to create title with holder");
+    let title = internal_create_belt(
+        &mut conn, 
+        title_name, 
+        "Singles",
+        "World",
+        "Mixed",
+        None,
+        Some(wrestler.id)
+    ).expect("Failed to create title with holder");
 
     assert_eq!(title.current_holder_id, Some(wrestler.id));
 
@@ -130,11 +152,25 @@ fn test_multiple_titles_same_holder() {
         .expect("Failed to create wrestler");
 
     // Create multiple titles with same holder
-    let title1 = internal_create_belt(&mut conn, title1_name, Some(wrestler.id))
-        .expect("Failed to create title 1");
+    let title1 = internal_create_belt(
+        &mut conn, 
+        title1_name, 
+        "Singles",
+        "World",
+        "Mixed",
+        None,
+        Some(wrestler.id)
+    ).expect("Failed to create title 1");
 
-    let title2 = internal_create_belt(&mut conn, title2_name, Some(wrestler.id))
-        .expect("Failed to create title 2");
+    let title2 = internal_create_belt(
+        &mut conn, 
+        title2_name, 
+        "Singles",
+        "Intercontinental",
+        "Mixed",
+        None,
+        Some(wrestler.id)
+    ).expect("Failed to create title 2");
 
     assert_eq!(title1.current_holder_id, Some(wrestler.id));
     assert_eq!(title2.current_holder_id, Some(wrestler.id));
@@ -174,8 +210,15 @@ fn test_stress_create_many_entities() {
         let wrestler = internal_create_wrestler(&mut conn, &wrestler_name, "Male", i, 0)
             .expect("Failed to create stress wrestler");
 
-        let title = internal_create_belt(&mut conn, &title_name, Some(wrestler.id))
-            .expect("Failed to create stress title");
+        let title = internal_create_belt(
+            &mut conn, 
+            &title_name, 
+            "Singles",
+            "World",
+            "Mixed",
+            None,
+            Some(wrestler.id)
+        ).expect("Failed to create stress title");
 
         let show = internal_create_show(&mut conn, &show_name, &format!("Stress show {}", i))
             .expect("Failed to create stress show");
@@ -192,4 +235,46 @@ fn test_stress_create_many_entities() {
         test_data.cleanup_titles(&title_name);
         test_data.cleanup_shows(&show_name);
     }
+}
+
+#[test]
+#[serial]
+fn test_create_test_data_basic() {
+    let test_data = TestData::new();
+    let mut conn = test_data.get_connection();
+
+    // Clear any existing test data first
+    test_data.cleanup_shows("Monday Night RAW");
+    test_data.cleanup_shows("Friday Night SmackDown");
+    test_data.cleanup_wrestlers("The Rock");
+    test_data.cleanup_wrestlers("Stone Cold Steve Austin");
+
+    // Test creating titles using the internal function directly
+    let result = internal_create_belt(
+        &mut conn, 
+        "Test World Championship", 
+        "Singles",
+        "World",
+        "Mixed",
+        None,
+        None
+    );
+
+    match result {
+        Ok(title) => {
+            assert_eq!(title.name, "Test World Championship");
+            assert_eq!(title.title_type, "Singles");
+            assert_eq!(title.division, "World");
+            assert_eq!(title.gender, "Mixed");
+            assert_eq!(title.prestige_tier, 1); // World division should be tier 1
+            assert_eq!(title.is_active, true);
+            println!("✓ Title creation test passed: {:?}", title);
+        }
+        Err(e) => {
+            panic!("Failed to create test title: {}", e);
+        }
+    }
+
+    // Clean up
+    test_data.cleanup_titles("Test World Championship");
 }

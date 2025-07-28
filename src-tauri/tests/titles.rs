@@ -15,8 +15,15 @@ fn test_create_title_without_holder() {
     test_data.cleanup_titles(&new_title.name);
 
     let mut conn = test_data.get_connection();
-    let title = internal_create_belt(&mut conn, &new_title.name, new_title.current_holder_id)
-        .expect("Failed to create title");
+    let title = internal_create_belt(
+        &mut conn, 
+        &new_title.name, 
+        &new_title.title_type,
+        &new_title.division,
+        &new_title.gender,
+        new_title.show_id,
+        new_title.current_holder_id
+    ).expect("Failed to create title");
 
     assert_eq!(title.name, new_title.name);
     assert_eq!(title.current_holder_id, None);
@@ -44,8 +51,15 @@ fn test_create_title_with_holder() {
         .expect("Failed to create wrestler");
 
     // Create title with the wrestler as holder
-    let title = internal_create_belt(&mut conn, title_name, Some(wrestler.id))
-        .expect("Failed to create title");
+    let title = internal_create_belt(
+        &mut conn, 
+        title_name, 
+        "Singles",
+        "World",
+        "Mixed",
+        None,
+        Some(wrestler.id)
+    ).expect("Failed to create title");
 
     assert_eq!(title.name, title_name);
     assert_eq!(title.current_holder_id, Some(wrestler.id));
@@ -68,11 +82,25 @@ fn test_create_multiple_titles() {
 
     let mut conn = test_data.get_connection();
 
-    let title1 =
-        internal_create_belt(&mut conn, title1_name, None).expect("Failed to create title 1");
+    let title1 = internal_create_belt(
+        &mut conn, 
+        title1_name, 
+        "Singles",
+        "World",
+        "Mixed",
+        None,
+        None
+    ).expect("Failed to create title 1");
 
-    let title2 =
-        internal_create_belt(&mut conn, title2_name, None).expect("Failed to create title 2");
+    let title2 = internal_create_belt(
+        &mut conn, 
+        title2_name, 
+        "Singles",
+        "Intercontinental",
+        "Mixed",
+        None,
+        None
+    ).expect("Failed to create title 2");
 
     assert_ne!(title1.id, title2.id);
     assert_eq!(title1.name, title1_name);
@@ -95,7 +123,15 @@ fn test_create_title_with_invalid_holder_id() {
     let mut conn = test_data.get_connection();
 
     // Try to create title with non-existent wrestler ID
-    let result = internal_create_belt(&mut conn, title_name, Some(99999));
+    let result = internal_create_belt(
+        &mut conn, 
+        title_name, 
+        "Singles",
+        "World",
+        "Mixed",
+        None,
+        Some(99999)
+    );
 
     // Note: This test assumes foreign key constraints are enforced
     // If foreign keys are not enforced in your SQLite setup, this will pass
@@ -134,7 +170,15 @@ fn test_title_holder_relationship() {
         .expect("Failed to create wrestler");
 
     // Create title without holder
-    let title = internal_create_belt(&mut conn, title_name, None).expect("Failed to create title");
+    let title = internal_create_belt(
+        &mut conn, 
+        title_name, 
+        "Singles",
+        "World",
+        "Mixed",
+        None,
+        None
+    ).expect("Failed to create title");
 
     assert_eq!(title.current_holder_id, None);
 
@@ -142,8 +186,15 @@ fn test_title_holder_relationship() {
     // For now, we'll create a new title with the holder
     test_data.cleanup_titles(title_name);
 
-    let title_with_holder = internal_create_belt(&mut conn, title_name, Some(wrestler.id))
-        .expect("Failed to create title with holder");
+    let title_with_holder = internal_create_belt(
+        &mut conn, 
+        title_name, 
+        "Singles",
+        "World",
+        "Mixed",
+        None,
+        Some(wrestler.id)
+    ).expect("Failed to create title with holder");
 
     assert_eq!(title_with_holder.current_holder_id, Some(wrestler.id));
 

@@ -1,5 +1,5 @@
 use crate::models::{
-    NewShow, NewSignatureMove, NewTitle, NewUser, NewWrestler, NewEnhancedWrestler, Show, ShowData, SignatureMove, Title, TitleData, User, UserData,
+    NewShow, NewSignatureMove, NewTitle, NewTitleHolder, NewUser, NewWrestler, NewEnhancedWrestler, Show, ShowData, SignatureMove, Title, TitleData, TitleHolder, TitleWithHolders, TitleHolderInfo, User, UserData,
     Wrestler, WrestlerData, EnhancedWrestlerData,
 };
 use diesel::prelude::*;
@@ -9,6 +9,7 @@ use dotenvy::dotenv;
 use log::{error, info};
 use std::env;
 use tauri::State;
+use chrono::Utc;
 
 pub type Pool = r2d2::Pool<ConnectionManager<SqliteConnection>>;
 pub type DbConnection = diesel::r2d2::PooledConnection<ConnectionManager<SqliteConnection>>;
@@ -564,11 +565,29 @@ pub fn update_wrestler_biography(
 pub fn internal_create_belt(
     conn: &mut SqliteConnection,
     name: &str,
+    title_type: &str,
+    division: &str,
+    gender: &str,
+    show_id: Option<i32>,
     current_holder_id: Option<i32>,
 ) -> Result<Title, DieselError> {
+    // Calculate prestige tier based on division
+    let prestige_tier = match division {
+        "World" | "WWE Championship" | "Women's World" | "WWE Women's Championship" => 1,
+        "Intercontinental" | "United States" | "Women's Intercontinental" | "Women's United States" => 2,
+        "World Tag Team" | "WWE Tag Team" | "Women's Tag Team" => 3,
+        _ => 4, // Specialty titles
+    };
+
     let new_title = NewTitle {
         name: name.to_string(),
         current_holder_id,
+        title_type: title_type.to_string(),
+        division: division.to_string(),
+        prestige_tier,
+        gender: gender.to_string(),
+        show_id,
+        is_active: true,
     };
 
     diesel::insert_into(crate::schema::titles::dsl::titles)
@@ -581,14 +600,147 @@ pub fn internal_create_belt(
 pub fn create_belt(state: State<'_, DbState>, title_data: TitleData) -> Result<Title, String> {
     let mut conn = get_connection(&state)?;
 
-    internal_create_belt(&mut conn, &title_data.name, title_data.current_holder_id)
-        .inspect(|title| {
-            info!("Title '{}' created successfully", title.name);
-        })
+    internal_create_belt(
+        &mut conn,
+        &title_data.name,
+        &title_data.title_type,
+        &title_data.division,
+        &title_data.gender,
+        title_data.show_id,
+        title_data.current_holder_id,
+    )
+    .inspect(|title| {
+        info!("Title '{}' created successfully", title.name);
+    })
+    .map_err(|e| {
+        error!("Error creating title: {}", e);
+        format!("Failed to create title: {}", e)
+    })
+}
+
+/// Gets all titles with their current holders
+pub fn internal_get_titles(conn: &mut SqliteConnection) -> Result<Vec<TitleWithHolders>, DieselError> {
+    use crate::schema::{titles, title_holders, wrestlers};
+    
+    // Get all active titles
+    let all_titles = titles::table
+        .filter(titles::is_active.eq(true))
+        .order(titles::prestige_tier.asc())
+        .then_order_by(titles::name.asc())
+        .load::<Title>(conn)?;
+
+    let mut titles_with_holders = Vec::new();
+
+    for title in all_titles {
+        // Get current holders for this title
+        let current_holders_data = title_holders::table
+            .inner_join(wrestlers::table.on(title_holders::wrestler_id.eq(wrestlers::id)))
+            .filter(title_holders::title_id.eq(title.id))
+            .filter(title_holders::held_until.is_null())
+            .select((TitleHolder::as_select(), wrestlers::name, wrestlers::gender))
+            .load::<(TitleHolder, String, String)>(conn)?;
+
+        let current_holders: Vec<TitleHolderInfo> = current_holders_data
+            .into_iter()
+            .map(|(holder, wrestler_name, wrestler_gender)| TitleHolderInfo {
+                holder,
+                wrestler_name,
+                wrestler_gender,
+            })
+            .collect();
+
+        // Calculate days held for the first holder (for single titles)
+        let days_held = if let Some(first_holder) = current_holders.first() {
+            let now = Utc::now().naive_utc();
+            let duration = now - first_holder.holder.held_since;
+            Some(duration.num_days() as i32)
+        } else {
+            None
+        };
+
+        titles_with_holders.push(TitleWithHolders {
+            title,
+            current_holders,
+            days_held,
+        });
+    }
+
+    Ok(titles_with_holders)
+}
+
+#[tauri::command]
+pub fn get_titles(state: State<'_, DbState>) -> Result<Vec<TitleWithHolders>, String> {
+    let mut conn = get_connection(&state)?;
+    
+    internal_get_titles(&mut conn)
         .map_err(|e| {
-            error!("Error creating title: {}", e);
-            format!("Failed to create title: {}", e)
+            error!("Error fetching titles: {}", e);
+            format!("Failed to fetch titles: {}", e)
         })
+}
+
+/// Updates title holder (ends current reign and starts new one)
+pub fn internal_update_title_holder(
+    conn: &mut SqliteConnection,
+    title_id: i32,
+    new_wrestler_id: i32,
+    event_name: Option<&str>,
+    event_location: Option<&str>,
+    change_method: Option<&str>,
+) -> Result<(), DieselError> {
+    use crate::schema::title_holders;
+
+    let now = Utc::now().naive_utc();
+
+    // End current title reigns for this title
+    diesel::update(title_holders::table)
+        .filter(title_holders::title_id.eq(title_id))
+        .filter(title_holders::held_until.is_null())
+        .set(title_holders::held_until.eq(now))
+        .execute(conn)?;
+
+    // Create new title holder record
+    let new_holder = NewTitleHolder {
+        title_id,
+        wrestler_id: new_wrestler_id,
+        held_since: now,
+        event_name: event_name.map(|s| s.to_string()),
+        event_location: event_location.map(|s| s.to_string()),
+        change_method: change_method.map(|s| s.to_string()),
+    };
+
+    diesel::insert_into(title_holders::table)
+        .values(&new_holder)
+        .execute(conn)?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn update_title_holder(
+    state: State<'_, DbState>,
+    title_id: i32,
+    new_wrestler_id: i32,
+    event_name: Option<String>,
+    event_location: Option<String>,
+    change_method: Option<String>,
+) -> Result<String, String> {
+    let mut conn = get_connection(&state)?;
+
+    internal_update_title_holder(
+        &mut conn,
+        title_id,
+        new_wrestler_id,
+        event_name.as_deref(),
+        event_location.as_deref(),
+        change_method.as_deref(),
+    )
+    .map_err(|e| {
+        error!("Error updating title holder: {}", e);
+        format!("Failed to update title holder: {}", e)
+    })?;
+
+    Ok("Title holder updated successfully".to_string())
 }
 
 /// Creates test data if it doesn't already exist
@@ -701,6 +853,46 @@ pub fn create_test_data(state: State<'_, DbState>) -> Result<String, String> {
         }
     }
     
+    // Create test titles
+    let raw_show = internal_get_shows(&mut conn).map_err(|e| format!("Error getting shows: {}", e))?
+        .into_iter()
+        .find(|show| show.name == "Monday Night RAW");
+    let smackdown_show = internal_get_shows(&mut conn).map_err(|e| format!("Error getting shows: {}", e))?
+        .into_iter()
+        .find(|show| show.name == "Friday Night SmackDown");
+
+    let test_titles = vec![
+        // Tier 1 - World Championships
+        ("World Heavyweight Championship", "Singles", "World", "Male", raw_show.as_ref().map(|s| s.id)),
+        ("WWE Championship", "Singles", "WWE Championship", "Male", smackdown_show.as_ref().map(|s| s.id)),
+        ("Women's World Championship", "Singles", "Women's World", "Female", raw_show.as_ref().map(|s| s.id)),
+        ("WWE Women's Championship", "Singles", "WWE Women's Championship", "Female", smackdown_show.as_ref().map(|s| s.id)),
+        
+        // Tier 2 - Secondary Championships
+        ("Intercontinental Championship", "Singles", "Intercontinental", "Male", raw_show.as_ref().map(|s| s.id)),
+        ("United States Championship", "Singles", "United States", "Male", smackdown_show.as_ref().map(|s| s.id)),
+        ("Women's Intercontinental Championship", "Singles", "Women's Intercontinental", "Female", raw_show.as_ref().map(|s| s.id)),
+        ("Women's United States Championship", "Singles", "Women's United States", "Female", smackdown_show.as_ref().map(|s| s.id)),
+        
+        // Tier 3 - Tag Team Championships
+        ("World Tag Team Championship", "Tag Team", "World Tag Team", "Male", raw_show.as_ref().map(|s| s.id)),
+        ("WWE Tag Team Championship", "Tag Team", "WWE Tag Team", "Male", smackdown_show.as_ref().map(|s| s.id)),
+        ("Women's Tag Team Championship", "Tag Team", "Women's Tag Team", "Female", None), // Cross-brand
+        
+        // Tier 4 - Specialty Championships
+        ("Money in the Bank", "Singles", "Money in the Bank", "Mixed", None),
+        ("Hardcore Championship", "Singles", "Hardcore", "Mixed", None),
+        ("Speed Championship", "Singles", "Speed", "Mixed", None),
+        ("24/7 Championship", "Singles", "24/7", "Mixed", None),
+    ];
+
+    let mut title_count = 0;
+    for (name, title_type, division, gender, show_id) in test_titles {
+        internal_create_belt(&mut conn, name, title_type, division, gender, show_id, None)
+            .map_err(|e| format!("Failed to create title '{}': {}", name, e))?;
+        title_count += 1;
+    }
+    
     info!("Test data created successfully");
-    Ok("Test data created: 2 shows and 5 wrestlers".to_string())
+    Ok(format!("Test data created: 2 shows, 5 wrestlers, and {} titles", title_count))
 }

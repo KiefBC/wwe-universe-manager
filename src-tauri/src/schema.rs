@@ -22,12 +22,33 @@ diesel::table! {
 }
 
 diesel::table! {
+    title_holders (id) {
+        id -> Integer,
+        title_id -> Integer,
+        wrestler_id -> Integer,
+        held_since -> Timestamp,
+        held_until -> Nullable<Timestamp>,
+        event_name -> Nullable<Text>,
+        event_location -> Nullable<Text>,
+        change_method -> Nullable<Text>,
+        created_at -> Nullable<Timestamp>,
+        updated_at -> Nullable<Timestamp>,
+    }
+}
+
+diesel::table! {
     titles (id) {
         id -> Integer,
         name -> Text,
         current_holder_id -> Nullable<Integer>,
         created_at -> Nullable<Timestamp>,
         updated_at -> Nullable<Timestamp>,
+        title_type -> Text,
+        division -> Text,
+        prestige_tier -> Integer,
+        gender -> Text,
+        show_id -> Nullable<Integer>,
+        is_active -> Bool,
     }
 }
 
@@ -68,11 +89,14 @@ diesel::table! {
 }
 
 diesel::joinable!(signature_moves -> wrestlers (wrestler_id));
+diesel::joinable!(title_holders -> titles (title_id));
+diesel::joinable!(title_holders -> wrestlers (wrestler_id));
 diesel::joinable!(titles -> wrestlers (current_holder_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     shows,
     signature_moves,
+    title_holders,
     titles,
     users,
     wrestlers,

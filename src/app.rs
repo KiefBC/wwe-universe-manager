@@ -1,4 +1,4 @@
-use crate::components::{CreateShow, CreateWrestler, Dashboard, WrestlerDetailsWindow, WrestlersList};
+use crate::components::{CreateShow, CreateTitle, CreateWrestler, Dashboard, TitleDetailsWindow, TitlesList, WrestlerDetailsWindow, WrestlersList};
 use leptos::prelude::*;
 use web_sys::window;
 
@@ -15,11 +15,23 @@ pub fn App() -> impl IntoView {
             .unwrap_or(false)
     };
 
+    // Check if this is a title window based on URL hash
+    let is_title_window = move || {
+        window()
+            .and_then(|w| w.location().hash().ok())
+            .map(|hash| hash.starts_with("#title"))
+            .unwrap_or(false)
+    };
+
     view! {
         <div data-theme="modern-dark" class="min-h-screen bg-slate-950 text-slate-100">
             <Show
                 when=is_wrestler_window
-                fallback=move || view! {
+                fallback=move || {
+                    view! {
+                        <Show
+                            when=is_title_window
+                            fallback=move || view! {
                     <div class="flex flex-col h-screen">
                         <Header />
                         <main class="flex-1 container mx-auto px-6 py-8 overflow-auto">
@@ -34,7 +46,25 @@ pub fn App() -> impl IntoView {
                                                     view! {
                                                         <Show
                                                             when=move || current_page.get() == "wrestlers"
-                                                            fallback=move || view! { <Dashboard set_current_page refresh_trigger /> }
+                                                            fallback=move || {
+                                                                view! {
+                                                                    <Show
+                                                                        when=move || current_page.get() == "titles"
+                                                                        fallback=move || {
+                                                                            view! {
+                                                                                <Show
+                                                                                    when=move || current_page.get() == "create-title"
+                                                                                    fallback=move || view! { <Dashboard set_current_page refresh_trigger /> }
+                                                                                >
+                                                                                    <CreateTitle set_current_page />
+                                                                                </Show>
+                                                                            }
+                                                                        }
+                                                                    >
+                                                                        <TitlesList set_current_page />
+                                                                    </Show>
+                                                                }
+                                                            }
                                                         >
                                                             <WrestlersList set_current_page />
                                                         </Show>
@@ -52,6 +82,11 @@ pub fn App() -> impl IntoView {
                         </main>
                         <Footer />
                     </div>
+                            }
+                        >
+                            <TitleDetailsWindow />
+                        </Show>
+                    }
                 }
             >
                 <WrestlerDetailsWindow />
