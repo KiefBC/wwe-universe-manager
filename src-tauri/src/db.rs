@@ -838,6 +838,37 @@ pub fn internal_update_title_holder(
     change_method: Option<&str>,
 ) -> Result<(), DieselError> {
     use crate::schema::title_holders;
+    use diesel::result::{DatabaseErrorKind, Error as DieselError};
+
+    // Input validation to prevent abuse
+    const MAX_STRING_LENGTH: usize = 255;
+    
+    if let Some(name) = event_name {
+        if name.len() > MAX_STRING_LENGTH {
+            return Err(DieselError::DatabaseError(
+                DatabaseErrorKind::Unknown,
+                Box::new("Event name too long".to_string())
+            ));
+        }
+    }
+    
+    if let Some(location) = event_location {
+        if location.len() > MAX_STRING_LENGTH {
+            return Err(DieselError::DatabaseError(
+                DatabaseErrorKind::Unknown,
+                Box::new("Event location too long".to_string())
+            ));
+        }
+    }
+    
+    if let Some(method) = change_method {
+        if method.len() > MAX_STRING_LENGTH {
+            return Err(DieselError::DatabaseError(
+                DatabaseErrorKind::Unknown,
+                Box::new("Change method too long".to_string())
+            ));
+        }
+    }
 
     let now = Utc::now().naive_utc();
 
@@ -1688,4 +1719,87 @@ pub fn set_match_winner(
             error!("Error setting match winner: {}", e);
             format!("Failed to set match winner: {}", e)
         })
+}
+
+/// Vacates a title by ending the current title reign
+pub fn internal_vacate_title(
+    conn: &mut SqliteConnection,
+    title_id: i32,
+    event_name: Option<&str>,
+    event_location: Option<&str>,
+    change_method: Option<&str>,
+) -> Result<(), DieselError> {
+    use crate::schema::title_holders;
+    use diesel::result::{DatabaseErrorKind, Error as DieselError};
+    
+    // Input validation to prevent abuse
+    const MAX_STRING_LENGTH: usize = 255;
+    
+    if let Some(name) = event_name {
+        if name.len() > MAX_STRING_LENGTH {
+            return Err(DieselError::DatabaseError(
+                DatabaseErrorKind::Unknown,
+                Box::new("Event name too long".to_string())
+            ));
+        }
+    }
+    
+    if let Some(location) = event_location {
+        if location.len() > MAX_STRING_LENGTH {
+            return Err(DieselError::DatabaseError(
+                DatabaseErrorKind::Unknown,
+                Box::new("Event location too long".to_string())
+            ));
+        }
+    }
+    
+    if let Some(method) = change_method {
+        if method.len() > MAX_STRING_LENGTH {
+            return Err(DieselError::DatabaseError(
+                DatabaseErrorKind::Unknown,
+                Box::new("Change method too long".to_string())
+            ));
+        }
+    }
+    
+    let now = Utc::now().naive_utc();
+    
+    // End current title reigns for this title
+    diesel::update(title_holders::table)
+        .filter(title_holders::title_id.eq(title_id))
+        .filter(title_holders::held_until.is_null())
+        .set((
+            title_holders::held_until.eq(now),
+            title_holders::event_name.eq(event_name.map(|s| s.to_string())),
+            title_holders::event_location.eq(event_location.map(|s| s.to_string())),
+            title_holders::change_method.eq(change_method.map(|s| s.to_string())),
+        ))
+        .execute(conn)?;
+    
+    Ok(())
+}
+
+#[tauri::command]
+pub fn vacate_title(
+    state: State<'_, DbState>,
+    title_id: i32,
+    event_name: Option<String>,
+    event_location: Option<String>,
+    change_method: Option<String>,
+) -> Result<String, String> {
+    let mut conn = get_connection(&state)?;
+    
+    internal_vacate_title(
+        &mut conn,
+        title_id,
+        event_name.as_deref(),
+        event_location.as_deref(),
+        change_method.as_deref(),
+    )
+    .map_err(|e| {
+        error!("Error vacating title: {}", e);
+        format!("Failed to vacate title: {}", e)
+    })?;
+    
+    Ok("Title vacated successfully".to_string())
 }

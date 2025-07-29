@@ -3,9 +3,12 @@ pub mod create_show;
 pub mod create_title;
 pub mod create_wrestler;
 pub mod dashboard;
+pub mod show;
 pub mod show_roster_management;
+pub mod title;
 pub mod title_details_window;
 pub mod titles_list;
+pub mod wrestler;
 pub mod wrestler_details_window;
 pub mod wrestlers_list;
 

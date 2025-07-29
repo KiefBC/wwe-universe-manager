@@ -1,3 +1,5 @@
+use crate::components::show::roster_section::RosterSection;
+use crate::components::show::wrestler_assignment_section::WrestlerAssignmentSection;
 use crate::types::{assign_wrestler_to_show, fetch_shows, fetch_wrestlers, fetch_wrestlers_for_show, remove_wrestler_from_show, Show, Wrestler};
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
@@ -24,6 +26,10 @@ pub fn ShowRosterManagement(
     let (shows_loading, set_shows_loading) = signal(true);
     let (status_message, set_status_message) = signal(None::<String>);
     let (error_message, set_error_message) = signal(None::<String>);
+    
+    // Communication signals for sub-components
+    let (assign_wrestler_trigger, set_assign_wrestler_trigger) = signal(None::<i32>);
+    let (remove_wrestler_trigger, set_remove_wrestler_trigger) = signal(None::<i32>);
     
     // Load shows on component mount using Effect like working components
     Effect::new(move |_| {
@@ -93,49 +99,56 @@ pub fn ShowRosterManagement(
         }
     };
     
-    // Assign wrestler to show
-    let assign_wrestler = move |wrestler_id: i32| {
-        if let Some(show) = selected_show.get() {
-            set_loading.set(true);
-            set_status_message.set(None);
-            set_error_message.set(None);
-            
-            spawn_local(async move {
-                match assign_wrestler_to_show(show.id, wrestler_id).await {
-                    Ok(_) => {
-                        set_status_message.set(Some("Wrestler assigned successfully!".to_string()));
-                        load_roster_data(show.id); // Reload data
-                    },
-                    Err(e) => {
-                        set_error_message.set(Some(format!("Failed to assign wrestler: {}", e)));
-                        set_loading.set(false);
-                    }
-                }
-            });
-        }
-    };
     
-    // Remove wrestler from show
-    let remove_wrestler = move |wrestler_id: i32| {
-        if let Some(show) = selected_show.get() {
-            set_loading.set(true);
-            set_status_message.set(None);
-            set_error_message.set(None);
-            
-            spawn_local(async move {
-                match remove_wrestler_from_show(show.id, wrestler_id).await {
-                    Ok(_) => {
-                        set_status_message.set(Some("Wrestler removed successfully!".to_string()));
-                        load_roster_data(show.id); // Reload data
-                    },
-                    Err(e) => {
-                        set_error_message.set(Some(format!("Failed to remove wrestler: {}", e)));
-                        set_loading.set(false);
+    // Handle wrestler assignment trigger
+    Effect::new(move |_| {
+        if let Some(wrestler_id) = assign_wrestler_trigger.get() {
+            if let Some(show) = selected_show.get() {
+                set_loading.set(true);
+                set_status_message.set(None);
+                set_error_message.set(None);
+                
+                spawn_local(async move {
+                    match assign_wrestler_to_show(show.id, wrestler_id).await {
+                        Ok(_) => {
+                            set_status_message.set(Some("Wrestler assigned successfully!".to_string()));
+                            load_roster_data(show.id); // Reload data
+                        },
+                        Err(e) => {
+                            set_error_message.set(Some(format!("Failed to assign wrestler: {}", e)));
+                            set_loading.set(false);
+                        }
                     }
-                }
-            });
+                });
+            }
+            set_assign_wrestler_trigger.set(None); // Reset trigger
         }
-    };
+    });
+
+    // Handle wrestler removal trigger
+    Effect::new(move |_| {
+        if let Some(wrestler_id) = remove_wrestler_trigger.get() {
+            if let Some(show) = selected_show.get() {
+                set_loading.set(true);
+                set_status_message.set(None);
+                set_error_message.set(None);
+                
+                spawn_local(async move {
+                    match remove_wrestler_from_show(show.id, wrestler_id).await {
+                        Ok(_) => {
+                            set_status_message.set(Some("Wrestler removed successfully!".to_string()));
+                            load_roster_data(show.id); // Reload data
+                        },
+                        Err(e) => {
+                            set_error_message.set(Some(format!("Failed to remove wrestler: {}", e)));
+                            set_loading.set(false);
+                        }
+                    }
+                });
+            }
+            set_remove_wrestler_trigger.set(None); // Reset trigger
+        }
+    });
     
     view! {
         <div class="space-y-8">
@@ -234,103 +247,16 @@ pub fn ShowRosterManagement(
             // Roster Management (only show when a show is selected)
             <Show when=move || selected_show.get().is_some()>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    // Current Roster
-                    <div class="card bg-base-200 shadow-xl">
-                        <div class="card-body">
-                            <h3 class="card-title text-xl mb-4">
-                                "Current Roster"
-                                <div class="badge badge-primary">{move || current_roster.get().len()}</div>
-                            </h3>
-                            <div class="space-y-2 max-h-96 overflow-y-auto">
-                                <For
-                                    each=move || current_roster.get()
-                                    key=|wrestler| wrestler.id
-                                    children=move |wrestler: Wrestler| {
-                                        let wrestler_id = wrestler.id;
-                                        view! {
-                                            <div class="flex items-center justify-between p-3 bg-base-100 rounded-lg">
-                                                <div class="flex items-center space-x-3">
-                                                    <div class="avatar placeholder">
-                                                        <div class="bg-neutral text-neutral-content rounded-full w-10">
-                                                            <span class="text-sm">{wrestler.name.chars().next().unwrap_or('?').to_string()}</span>
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <p class="font-medium">{wrestler.name}</p>
-                                                        <p class="text-sm text-base-content/70">
-                                                            {format!("{} • {}-{}", wrestler.gender, wrestler.wins, wrestler.losses)}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    class="btn btn-sm btn-error"
-                                                    on:click=move |_| remove_wrestler(wrestler_id)
-                                                    disabled=move || loading.get()
-                                                >
-                                                    "Remove"
-                                                </button>
-                                            </div>
-                                        }
-                                    }
-                                />
-                                <Show when=move || current_roster.get().is_empty() && !loading.get()>
-                                    <div class="text-center py-8 text-base-content/50">
-                                        <p>"No wrestlers assigned to this show"</p>
-                                        <p class="text-sm">"Add wrestlers from the available pool"</p>
-                                    </div>
-                                </Show>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    // Available Wrestlers
-                    <div class="card bg-base-200 shadow-xl">
-                        <div class="card-body">
-                            <h3 class="card-title text-xl mb-4">
-                                "Available Wrestlers"
-                                <div class="badge badge-secondary">{move || available_wrestlers.get().len()}</div>
-                            </h3>
-                            <div class="space-y-2 max-h-96 overflow-y-auto">
-                                <For
-                                    each=move || available_wrestlers.get()
-                                    key=|wrestler| wrestler.id
-                                    children=move |wrestler: Wrestler| {
-                                        let wrestler_id = wrestler.id;
-                                        view! {
-                                            <div class="flex items-center justify-between p-3 bg-base-100 rounded-lg">
-                                                <div class="flex items-center space-x-3">
-                                                    <div class="avatar placeholder">
-                                                        <div class="bg-neutral text-neutral-content rounded-full w-10">
-                                                            <span class="text-sm">{wrestler.name.chars().next().unwrap_or('?').to_string()}</span>
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <p class="font-medium">{wrestler.name}</p>
-                                                        <p class="text-sm text-base-content/70">
-                                                            {format!("{} • {}-{}", wrestler.gender, wrestler.wins, wrestler.losses)}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    class="btn btn-sm btn-success"
-                                                    on:click=move |_| assign_wrestler(wrestler_id)
-                                                    disabled=move || loading.get()
-                                                >
-                                                    "Assign"
-                                                </button>
-                                            </div>
-                                        }
-                                    }
-                                />
-                                <Show when=move || available_wrestlers.get().is_empty() && !loading.get()>
-                                    <div class="text-center py-8 text-base-content/50">
-                                        <p>"All wrestlers are assigned to this show"</p>
-                                        <p class="text-sm">"Great job building your roster!"</p>
-                                    </div>
-                                </Show>
-                            </div>
-                        </div>
-                    </div>
+                    <RosterSection 
+                        current_roster=current_roster.into()
+                        loading=loading.into()
+                        on_remove_wrestler=set_remove_wrestler_trigger
+                    />
+                    <WrestlerAssignmentSection 
+                        available_wrestlers=available_wrestlers.into()
+                        loading=loading.into()
+                        on_assign_wrestler=set_assign_wrestler_trigger
+                    />
                 </div>
             </Show>
         </div>

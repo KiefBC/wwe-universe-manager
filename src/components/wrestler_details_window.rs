@@ -1,266 +1,16 @@
+use crate::components::wrestler::championship_section::ChampionshipSection;
+use crate::components::wrestler::power_ratings_section::PowerRatingsSection;
+use crate::services::wrestler_api::*;
+use crate::types::{Show, fetch_shows};
+use crate::utils::url_watcher::use_url_watcher;
 use leptos::prelude::*;
-use serde::{Deserialize, Serialize};
-use wasm_bindgen::prelude::*;
+// wasm_bindgen imports removed - no longer needed
 use wasm_bindgen_futures::spawn_local;
-use crate::types::{Show, fetch_shows, Title};
 
-// Enhanced Wrestler struct with additional fields for detailed wrestler management
-// TODO: This should be unified with the shared Wrestler type in src/types.rs
-// The shared type needs to be extended to include these additional fields
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WrestlerDetails {
-    pub id: i32,
-    pub name: String,
-    pub gender: String,
-    pub wins: i32,
-    pub losses: i32,
-    pub real_name: Option<String>,
-    pub nickname: Option<String>,
-    pub height: Option<String>,
-    pub weight: Option<String>,
-    pub debut_year: Option<i32>,
-    pub promotion: Option<String>,
-    pub strength: Option<i32>,
-    pub speed: Option<i32>,
-    pub agility: Option<i32>,
-    pub stamina: Option<i32>,
-    pub charisma: Option<i32>,
-    pub technique: Option<i32>,
-    pub biography: Option<String>,
-    pub is_user_created: Option<bool>,
-}
+// WrestlerDetails, TitleWithHolders, and other types are now imported from wrestler_api service
 
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"])]
-    async fn invoke(cmd: &str, args: JsValue) -> JsValue;
-}
-
-async fn get_wrestler_by_id(wrestler_id: i32) -> Result<Option<WrestlerDetails>, String> {
-    let args = serde_wasm_bindgen::to_value(&serde_json::json!({
-        "wrestlerId": wrestler_id
-    }))
-    .map_err(|e| e.to_string())?;
-
-    let result = invoke("get_wrestler_by_id", args).await;
-    serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
-}
-
-async fn update_wrestler_promotion(wrestler_id: i32, promotion: String) -> Result<WrestlerDetails, String> {
-    let args = serde_wasm_bindgen::to_value(&serde_json::json!({
-        "wrestlerId": wrestler_id,
-        "promotion": promotion
-    }))
-    .map_err(|e| e.to_string())?;
-
-    let result = invoke("update_wrestler_promotion", args).await;
-    serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
-}
-
-async fn update_wrestler_power_ratings(
-    wrestler_id: i32,
-    strength: Option<i32>,
-    speed: Option<i32>,
-    agility: Option<i32>,
-    stamina: Option<i32>,
-    charisma: Option<i32>,
-    technique: Option<i32>,
-) -> Result<WrestlerDetails, String> {
-    let args = serde_wasm_bindgen::to_value(&serde_json::json!({
-        "wrestlerId": wrestler_id,
-        "strength": strength,
-        "speed": speed,
-        "agility": agility,
-        "stamina": stamina,
-        "charisma": charisma,
-        "technique": technique
-    }))
-    .map_err(|e| e.to_string())?;
-
-    let result = invoke("update_wrestler_power_ratings", args).await;
-    serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
-}
-
-async fn update_wrestler_basic_stats(
-    wrestler_id: i32,
-    height: Option<String>,
-    weight: Option<String>,
-    debut_year: Option<i32>,
-    wins: i32,
-    losses: i32,
-) -> Result<WrestlerDetails, String> {
-    let args = serde_wasm_bindgen::to_value(&serde_json::json!({
-        "wrestlerId": wrestler_id,
-        "height": height,
-        "weight": weight,
-        "debutYear": debut_year,
-        "wins": wins,
-        "losses": losses
-    }))
-    .map_err(|e| e.to_string())?;
-
-    let result = invoke("update_wrestler_basic_stats", args).await;
-    serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
-}
-
-async fn update_wrestler_name(
-    wrestler_id: i32,
-    name: String,
-    nickname: Option<String>,
-) -> Result<WrestlerDetails, String> {
-    let args = serde_wasm_bindgen::to_value(&serde_json::json!({
-        "wrestlerId": wrestler_id,
-        "name": name,
-        "nickname": nickname
-    }))
-    .map_err(|e| e.to_string())?;
-
-    let result = invoke("update_wrestler_name", args).await;
-    serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
-}
-
-async fn update_wrestler_real_name(
-    wrestler_id: i32,
-    real_name: Option<String>,
-) -> Result<WrestlerDetails, String> {
-    let args = serde_wasm_bindgen::to_value(&serde_json::json!({
-        "wrestlerId": wrestler_id,
-        "realName": real_name
-    }))
-    .map_err(|e| e.to_string())?;
-
-    let result = invoke("update_wrestler_real_name", args).await;
-    serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
-}
-
-async fn update_wrestler_biography(
-    wrestler_id: i32,
-    biography: Option<String>,
-) -> Result<WrestlerDetails, String> {
-    let args = serde_wasm_bindgen::to_value(&serde_json::json!({
-        "wrestlerId": wrestler_id,
-        "biography": biography
-    }))
-    .map_err(|e| e.to_string())?;
-
-    let result = invoke("update_wrestler_biography", args).await;
-    serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
-}
-
-async fn delete_wrestler(wrestler_id: i32) -> Result<String, String> {
-    let args = serde_wasm_bindgen::to_value(&serde_json::json!({
-        "wrestlerId": wrestler_id
-    }))
-    .map_err(|e| e.to_string())?;
-
-    let result = invoke("delete_wrestler", args).await;
-    serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
-}
-
-// Import TitleWithHolders struct  
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TitleWithHolders {
-    pub title: Title,
-    pub current_holders: Vec<TitleHolderInfo>,
-    pub days_held: Option<i32>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TitleHolder {
-    pub id: i32,
-    pub title_id: i32,
-    pub wrestler_id: i32,
-    pub held_since: String, // Using String for simplicity in frontend
-    pub held_until: Option<String>,
-    pub event_name: Option<String>,
-    pub event_location: Option<String>,
-    pub change_method: Option<String>,
-    pub created_at: Option<String>,
-    pub updated_at: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TitleHolderInfo {
-    pub holder: TitleHolder,
-    pub wrestler_name: String,
-    pub wrestler_gender: String,
-}
-
-async fn get_titles_for_wrestler(wrestler_gender: String) -> Result<Vec<Title>, String> {
-    let args = serde_wasm_bindgen::to_value(&serde_json::json!({
-        "wrestlerGender": wrestler_gender
-    }))
-    .map_err(|e| e.to_string())?;
-
-    let result = invoke("get_titles_for_wrestler", args).await;
-    let titles_with_holders: Vec<TitleWithHolders> = serde_wasm_bindgen::from_value(result)
-        .map_err(|e| e.to_string())?;
-    
-    // Extract just the Title objects from TitleWithHolders
-    Ok(titles_with_holders.into_iter().map(|twh| twh.title).collect())
-}
-
-async fn get_current_titles_for_wrestler(wrestler_id: i32) -> Result<Vec<TitleWithHolders>, String> {
-    let args = serde_wasm_bindgen::to_value(&serde_json::json!({
-        "wrestlerId": wrestler_id
-    }))
-    .map_err(|e| e.to_string())?;
-
-    let result = invoke("get_titles", args).await;
-    let all_titles: Vec<TitleWithHolders> = serde_wasm_bindgen::from_value(result)
-        .map_err(|e| e.to_string())?;
-    
-    // Filter titles where the wrestler is the current holder
-    Ok(all_titles.into_iter()
-        .filter(|title_with_holders| {
-            title_with_holders.current_holders.iter()
-                .any(|holder| holder.holder.wrestler_id == wrestler_id)
-        })
-        .collect())
-}
-
-async fn vacate_title(title_id: i32) -> Result<String, String> {
-    let args = serde_wasm_bindgen::to_value(&serde_json::json!({
-        "titleId": title_id
-    }))
-    .map_err(|e| e.to_string())?;
-
-    // Note: This would require a backend function to set current_holder_id to NULL
-    // For now, this is a placeholder that would call a future backend endpoint
-    let result = invoke("vacate_title", args).await;
-    serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
-}
-
-async fn assign_title_to_wrestler(
-    title_id: i32, 
-    wrestler_id: i32,
-    event_name: Option<String>,
-    event_location: Option<String>,
-    change_method: Option<String>
-) -> Result<String, String> {
-    let args = serde_wasm_bindgen::to_value(&serde_json::json!({
-        "titleId": title_id,
-        "newWrestlerId": wrestler_id,
-        "eventName": event_name,
-        "eventLocation": event_location,
-        "changeMethod": change_method
-    }))
-    .map_err(|e| e.to_string())?;
-
-    let result = invoke("update_title_holder", args).await;
-    serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
-}
-
-
-fn extract_wrestler_id_from_url() -> Option<i32> {
-    web_sys::window()?
-        .location()
-        .hash()
-        .ok()?
-        .strip_prefix("#wrestler?id=")?
-        .parse()
-        .ok()
-}
+// All API functions are now imported from the wrestler_api service
+// URL parsing functions are now imported from utils::url_parser
 
 #[component]
 pub fn WrestlerDetailsWindow() -> impl IntoView {
@@ -268,18 +18,8 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
     let (shows, set_shows) = signal(Vec::<Show>::new());
     let (loading, set_loading) = signal(true);
     let (error, set_error) = signal(None::<String>);
-    let (editing_power_ratings, set_editing_power_ratings) = signal(false);
-    
-    // Signal to track current wrestler ID from URL
-    let (current_wrestler_id, set_current_wrestler_id) = signal(extract_wrestler_id_from_url());
-    
-    // Temporary state for editing power ratings
-    let (temp_strength, set_temp_strength) = signal(0i32);
-    let (temp_speed, set_temp_speed) = signal(0i32);
-    let (temp_agility, set_temp_agility) = signal(0i32);
-    let (temp_stamina, set_temp_stamina) = signal(0i32);
-    let (temp_charisma, set_temp_charisma) = signal(0i32);
-    let (temp_technique, set_temp_technique) = signal(0i32);
+    // Use URL watcher hook to track current wrestler ID from URL without polling
+    let current_wrestler_id = use_url_watcher();
     
     // Handler for promotion dropdown change
     let handle_promotion_change = move |new_promotion: String| {
@@ -362,40 +102,7 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
     };
 
 
-    // Check for URL changes using proper cleanup mechanism
-    Effect::new(move |_| {
-        use wasm_bindgen::JsCast;
-        
-        let check_url_change = {
-            let set_wrestler_id_clone = set_current_wrestler_id;
-            let current_wrestler_id_clone = current_wrestler_id;
-            
-            Closure::wrap(Box::new(move || {
-                let current_id = extract_wrestler_id_from_url();
-                if current_id != current_wrestler_id_clone.get_untracked() {
-                    set_wrestler_id_clone.set(current_id);
-                }
-            }) as Box<dyn Fn()>)
-        };
-        
-        // Set up recurring check every 500ms
-        let check_function = check_url_change.as_ref().unchecked_ref();
-        let interval_id = if let Some(window) = web_sys::window() {
-            window.set_interval_with_callback_and_timeout_and_arguments_0(check_function, 500).unwrap_or(-1)
-        } else {
-            -1
-        };
-        
-        // Return cleanup function - Leptos will call this when the effect is disposed
-        move || {
-            if interval_id != -1 {
-                if let Some(window) = web_sys::window() {
-                    window.clear_interval_with_handle(interval_id);
-                }
-            }
-            // Closure will be properly dropped here
-        }
-    });
+    // URL watching is now handled by the use_url_watcher hook - no more polling!
 
     // Load shows data once on mount
     Effect::new(move |_| {
@@ -410,6 +117,7 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
             }
         });
     });
+
 
     // Load wrestler data when wrestler ID changes
     Effect::new(move |_| {
@@ -438,6 +146,7 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
         });
     });
 
+
     view! {
         <div class="container mx-auto p-6 bg-base-100 min-h-screen">
             <div class="max-w-4xl mx-auto">
@@ -460,7 +169,7 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
                 
                 <Show when=move || !loading.get() && error.get().is_none() && wrestler.get().is_some()>
                     {move || {
-                        wrestler.get().map(|w| {
+                        wrestler.get().map(|_w| {
                             view! {
                                 <div class="card bg-base-200 border border-base-100 rounded-xl relative overflow-hidden">
                                     <div class="card-body p-0">
@@ -497,113 +206,12 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
                                                 on_real_name_change=handle_real_name_change
                                             />
 
-                                            // Power ratings (only show if any exist)
-                                            <div class="card bg-base-200 border border-base-100">
-                                                <div class="card-body">
-                                                <Show
-                                                    when=move || w.strength.is_some() || w.speed.is_some() || w.agility.is_some() || 
-                                                        w.stamina.is_some() || w.charisma.is_some() || w.technique.is_some()
-                                                    fallback=move || view! {
-                                                        <div class="text-center text-base-content/60 text-sm">
-                                                            "No power ratings available"
-                                                        </div>
-                                                    }
-                                                >
-                                                    <div class="flex items-center justify-between mb-4 border-b border-base-content/20 pb-2">
-                                                        <h4 class="text-base-content font-bold text-lg">
-                                                            "Power Ratings"
-                                                        </h4>
-                                                        <button
-                                                            class="btn btn-ghost btn-sm gap-1"
-                                                            on:click=move |_| {
-                                                                if let Some(w) = wrestler.get() {
-                                                                    // Initialize temp values with current wrestler stats
-                                                                    set_temp_strength.set(w.strength.unwrap_or(0));
-                                                                    set_temp_speed.set(w.speed.unwrap_or(0));
-                                                                    set_temp_agility.set(w.agility.unwrap_or(0));
-                                                                    set_temp_stamina.set(w.stamina.unwrap_or(0));
-                                                                    set_temp_charisma.set(w.charisma.unwrap_or(0));
-                                                                    set_temp_technique.set(w.technique.unwrap_or(0));
-                                                                    set_editing_power_ratings.set(true);
-                                                                }
-                                                            }
-                                                        >
-                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                            </svg>
-                                                            <span>"Edit"</span>
-                                                        </button>
-                                                    </div>
-                                                    <Show 
-                                                        when=move || !editing_power_ratings.get()
-                                                        fallback=move || view! {
-                                                            <div class="space-y-3">
-                                                                <PowerBarEdit label="STRENGTH" value=temp_strength set_value=set_temp_strength _color="bg-error" />
-                                                                <PowerBarEdit label="SPEED" value=temp_speed set_value=set_temp_speed _color="bg-info" />
-                                                                <PowerBarEdit label="AGILITY" value=temp_agility set_value=set_temp_agility _color="bg-success" />
-                                                                <PowerBarEdit label="STAMINA" value=temp_stamina set_value=set_temp_stamina _color="bg-secondary" />
-                                                                <PowerBarEdit label="CHARISMA" value=temp_charisma set_value=set_temp_charisma _color="bg-primary" />
-                                                                <PowerBarEdit label="TECHNIQUE" value=temp_technique set_value=set_temp_technique _color="bg-accent" />
-                                                            </div>
-                                                            <div class="flex space-x-2 mt-4">
-                                                                <button
-                                                                    class="btn btn-success btn-sm flex-1"
-                                                                    on:click=move |_| {
-                                                                        if let Some(w) = wrestler.get() {
-                                                                            spawn_local(async move {
-                                                                                let strength = if temp_strength.get() > 0 { Some(temp_strength.get()) } else { None };
-                                                                                let speed = if temp_speed.get() > 0 { Some(temp_speed.get()) } else { None };
-                                                                                let agility = if temp_agility.get() > 0 { Some(temp_agility.get()) } else { None };
-                                                                                let stamina = if temp_stamina.get() > 0 { Some(temp_stamina.get()) } else { None };
-                                                                                let charisma = if temp_charisma.get() > 0 { Some(temp_charisma.get()) } else { None };
-                                                                                let technique = if temp_technique.get() > 0 { Some(temp_technique.get()) } else { None };
-                                                                                
-                                                                                match update_wrestler_power_ratings(
-                                                                                    w.id,
-                                                                                    strength,
-                                                                                    speed,
-                                                                                    agility,
-                                                                                    stamina,
-                                                                                    charisma,
-                                                                                    technique
-                                                                                ).await {
-                                                                                    Ok(updated_wrestler) => {
-                                                                                        set_wrestler.set(Some(updated_wrestler));
-                                                                                        set_editing_power_ratings.set(false);
-                                                                                    }
-                                                                                    Err(e) => {
-                                                                                        set_error.set(Some(format!("Failed to update power ratings: {}", e)));
-                                                                                    }
-                                                                                }
-                                                                            });
-                                                                        }
-                                                                    }
-                                                                >
-                                                                    "Save"
-                                                                </button>
-                                                                <button
-                                                                    class="btn btn-ghost btn-sm flex-1"
-                                                                    on:click=move |_| {
-                                                                        set_editing_power_ratings.set(false);
-                                                                    }
-                                                                >
-                                                                    "Cancel"
-                                                                </button>
-                                                            </div>
-                                                        }
-                                                    >
-                                                        <div class="space-y-3">
-                                                            {w.strength.map(|val| view! { <PowerBar label="STRENGTH" value=val color="bg-error" /> })}
-                                                            {w.speed.map(|val| view! { <PowerBar label="SPEED" value=val color="bg-info" /> })}
-                                                            {w.agility.map(|val| view! { <PowerBar label="AGILITY" value=val color="bg-success" /> })}
-                                                            {w.stamina.map(|val| view! { <PowerBar label="STAMINA" value=val color="bg-secondary" /> })}
-                                                            {w.charisma.map(|val| view! { <PowerBar label="CHARISMA" value=val color="bg-primary" /> })}
-                                                            {w.technique.map(|val| view! { <PowerBar label="TECHNIQUE" value=val color="bg-accent" /> })}
-                                                        </div>
-                                                    </Show>
-                                                </Show>
-                                                </div>
-                                            </div>
+                                            // Power ratings section
+                                            <PowerRatingsSection 
+                                                wrestler=wrestler
+                                                on_wrestler_updated=set_wrestler
+                                                on_error=set_error
+                                            />
 
                                             // Promotion Section (separate component)
                                             <PromotionSection 
@@ -637,70 +245,7 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
     }
 }
 
-#[component]
-fn PowerBar(
-    #[prop(into)] label: String,
-    #[prop(into)] value: i32,
-    #[prop(into)] color: String,
-) -> impl IntoView {
-    let percentage = (value as f32 / 10.0 * 100.0) as i32;
-    
-    view! {
-        <div class="flex items-center space-x-3">
-            <span class="text-base-content/80 font-medium text-sm w-20 text-right">{label}</span>
-            <div class="flex-1 bg-base-300 rounded-full h-3 border border-base-content/20">
-                <div 
-                    class=format!("h-full rounded-full {} flex items-center justify-end pr-1", color)
-                    style=format!("width: {}%", percentage)
-                >
-                    <span class="text-xs font-medium text-white">{value}</span>
-                </div>
-            </div>
-        </div>
-    }
-}
-
-#[component]
-fn PowerBarEdit(
-    #[prop(into)] label: String,
-    value: ReadSignal<i32>,
-    set_value: WriteSignal<i32>,
-    #[prop(into)] _color: String,
-) -> impl IntoView {
-    view! {
-        <div class="flex items-center space-x-3">
-            <span class="text-base-content/80 font-medium text-sm w-20 text-right">{label}</span>
-            <div class="flex-1 flex items-center space-x-2">
-                <input
-                    type="range"
-                    min="0"
-                    max="10"
-                    class="range range-secondary flex-1"
-                    prop:value=move || value.get().to_string()
-                    on:input:target=move |ev| {
-                        if let Ok(val) = ev.target().value().parse::<i32>() {
-                            set_value.set(val.clamp(0, 10));
-                        }
-                    }
-                />
-                <div class="w-12 text-center">
-                    <input
-                        type="number"
-                        min="0"
-                        max="10"
-                        class="input input-bordered input-sm w-full text-center"
-                        prop:value=move || value.get().to_string()
-                        on:input:target=move |ev| {
-                            if let Ok(val) = ev.target().value().parse::<i32>() {
-                                set_value.set(val.clamp(0, 10));
-                            }
-                        }
-                    />
-                </div>
-            </div>
-        </div>
-    }
-}
+// PowerBar and PowerBarEdit components moved to power_ratings_section.rs
 
 #[component]
 fn PromotionSection<F>(
@@ -1282,11 +827,10 @@ fn ChampionshipTeamSection(
                     </span>
                 </div>
                 
-                // Current Title section
-                <div class="space-y-2">
-                    <span class="text-base-content/70 font-medium text-sm">"Current Title:"</span>
-                    <TitleComponent wrestler=wrestler />
-                </div>
+                // Championship section
+                <ChampionshipSection 
+                    wrestler=wrestler 
+                />
                 
                 // Tag Team section
                 <div class="space-y-2">
@@ -1455,124 +999,4 @@ fn DeleteWrestlerComponent(
 }
 
 
-#[component]
-fn TitleComponent(
-    wrestler: ReadSignal<Option<WrestlerDetails>>,
-) -> impl IntoView {
-    let (current_titles, set_current_titles) = signal(Vec::<TitleWithHolders>::new());
-    let (loading, set_loading) = signal(false);
-
-    // Load current titles when wrestler changes
-    Effect::new(move |_| {
-        if let Some(w) = wrestler.get() {
-            spawn_local(async move {
-                set_loading.set(true);
-                
-                match get_current_titles_for_wrestler(w.id).await {
-                    Ok(titles) => {
-                        set_current_titles.set(titles);
-                    }
-                    Err(_) => {
-                        set_current_titles.set(Vec::new());
-                    }
-                }
-                
-                set_loading.set(false);
-            });
-        }
-    });
-
-    // Helper function to get prestige styling based on title division
-    let get_prestige_styling = |division: &str| -> (&str, &str, &str) {
-        match division {
-            // Tier 1 - World Championships (Gold)
-            "World" | "WWE Championship" | "Women's World" | "WWE Women's Championship" => {
-                ("bg-yellow-500/20 border-yellow-500/50", "bg-yellow-500/30 border-yellow-500", "text-yellow-600")
-            },
-            // Tier 2 - Secondary Championships (Silver) 
-            "Intercontinental" | "United States" | "Women's Intercontinental" | "Women's United States" => {
-                ("bg-slate-400/20 border-slate-400/50", "bg-slate-400/30 border-slate-400", "text-slate-600")
-            },
-            // Tier 3 - Tag Team Championships (Bronze)
-            "World Tag Team" | "WWE Tag Team" | "Women's Tag Team" => {
-                ("bg-orange-600/20 border-orange-600/50", "bg-orange-600/30 border-orange-600", "text-orange-700")
-            },
-            // Tier 4 - Specialty Championships (Purple)
-            _ => {
-                ("bg-purple-500/20 border-purple-500/50", "bg-purple-500/30 border-purple-500", "text-purple-600")
-            }
-        }
-    };
-
-    view! {
-        <Show when=move || loading.get()>
-            <div class="bg-base-300 border border-base-content/20 rounded-lg p-4 flex items-center justify-center">
-                <span class="loading loading-spinner loading-sm"></span>
-                <span class="ml-2 text-base-content/70">"Loading titles..."</span>
-            </div>
-        </Show>
-
-        <Show when=move || !loading.get() && current_titles.get().is_empty()>
-            <div class="bg-base-300 border border-base-content/20 rounded-lg p-4 text-center">
-                <div class="w-12 h-12 bg-base-content/10 border border-base-content/20 rounded-lg flex items-center justify-center mx-auto mb-3">
-                    <svg class="w-8 h-8 text-base-content/40" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M5 16L3 14l5.5-5.5L10 10l4-4 4 4 1.5-1.5L15 3l-4 4L7 3 2.5 8.5 5 11v5zm2.5 2.5L9 17l1.5 1.5L12 17l1.5 1.5L15 17l1.5 1.5L18 17v-2l-1.5-1.5L15 15l-1.5-1.5L12 15l-1.5-1.5L9 15l-1.5 1.5L6 17v2l1.5-1.5z"/>
-                    </svg>
-                </div>
-                <p class="text-base-content/70 text-sm italic">"No championship held"</p>
-            </div>
-        </Show>
-
-        <Show when=move || !loading.get() && !current_titles.get().is_empty()>
-            <div class="space-y-3">
-                <For
-                    each=move || current_titles.get()
-                    key=|title_with_holders| title_with_holders.title.id
-                    children=move |title_with_holders| {
-                        let title = title_with_holders.title.clone();
-                        let (bg_class, icon_class, text_class) = get_prestige_styling(&title.division);
-                        
-                        view! {
-                            <div class=format!("rounded-lg p-4 border {}", bg_class)>
-                                // Title header with prestige-colored icon
-                                <div class="flex items-center space-x-3 mb-3">
-                                    <div class=format!("w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 {}", icon_class)>
-                                        <svg class=format!("w-6 h-6 {}", text_class) fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M5 16L3 14l5.5-5.5L10 10l4-4 4 4 1.5-1.5L15 3l-4 4L7 3 2.5 8.5 5 11v5zm2.5 2.5L9 17l1.5 1.5L12 17l1.5 1.5L15 17l1.5 1.5L18 17v-2l-1.5-1.5L15 15l-1.5-1.5L12 15l-1.5-1.5L9 15l-1.5 1.5L6 17v2l1.5-1.5z"/>
-                                        </svg>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <h3 class="text-base-content font-bold text-lg truncate">{title.name.clone()}</h3>
-                                        <p class="text-base-content/70 text-sm">{format!("{} {}", title.division, title.title_type)}</p>
-                                    </div>
-                                </div>
-                                
-                                // Weeks held info
-                                <div class="text-base-content/60 text-sm">
-                                    {move || {
-                                        if let Some(days) = title_with_holders.days_held {
-                                            let weeks = if days >= 7 { days / 7 } else { 0 };
-                                            let remaining_days = days % 7;
-                                            
-                                            if weeks > 0 {
-                                                if remaining_days > 0 {
-                                                    format!("{} weeks, {} days", weeks, remaining_days)
-                                                } else {
-                                                    format!("{} weeks", weeks)
-                                                }
-                                            } else {
-                                                format!("{} days", days)
-                                            }
-                                        } else {
-                                            "New champion".to_string()
-                                        }
-                                    }}
-                                </div>
-                            </div>
-                        }
-                    }
-                />
-            </div>
-        </Show>
-    }
-}
+// TitleComponent has been moved to championship_section.rs

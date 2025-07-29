@@ -45,6 +45,7 @@ pub fn run() {
             db::get_titles_for_wrestler,
             db::get_unassigned_titles,
             db::update_title_holder,
+            db::vacate_title,
             db::delete_title,
             db::create_test_data,
             // Show roster operations

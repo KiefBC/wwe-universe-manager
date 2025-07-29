@@ -3,6 +3,8 @@
 /// This module contains all magic numbers and configuration values
 /// used throughout the application to improve maintainability.
 
+pub mod ui_constants;
+
 /// URL checking and polling constants
 pub const URL_CHECK_INTERVAL_MS: i32 = 500;
 

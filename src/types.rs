@@ -55,7 +55,7 @@ pub struct ShowData {
     pub description: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Title {
     pub id: i32,
     pub name: String,
@@ -74,7 +74,7 @@ pub struct Title {
 pub struct Wrestler {
     pub id: i32,
     pub name: String,
-    pub gender: Gender,
+    pub gender: String,
     pub wins: i32,
     pub losses: i32,
 }

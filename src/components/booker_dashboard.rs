@@ -1,3 +1,5 @@
+use crate::components::show::match_creation_form::MatchCreationForm;
+use crate::components::show::match_list_section::MatchListSection;
 use crate::types::{
     add_wrestler_to_match, create_match, fetch_matches_for_show,
     fetch_shows, fetch_wrestlers_for_show, Match, MatchData,
@@ -35,6 +37,10 @@ pub fn BookerDashboard(
     let (match_name, set_match_name) = signal(String::new());
     let (match_type, set_match_type) = signal("Singles".to_string());
     let (match_stipulation, set_match_stipulation) = signal("Standard".to_string());
+    
+    // Communication signals for sub-components
+    let (create_match_trigger, set_create_match_trigger) = signal(false);
+    let (add_wrestler_to_match_trigger, set_add_wrestler_to_match_trigger) = signal(None::<(i32, i32)>);
     
     // Load shows on component mount using Effect like working components
     Effect::new(move |_| {
@@ -96,64 +102,70 @@ pub fn BookerDashboard(
         }
     };
     
-    // Create new match
-    let create_new_match = move || {
-        if let Some(show) = selected_show.get() {
+    // Handle create match trigger
+    Effect::new(move |_| {
+        if create_match_trigger.get() {
+            if let Some(show) = selected_show.get() {
+                set_loading.set(true);
+                set_status_message.set(None);
+                set_error_message.set(None);
+                
+                let match_data = MatchData {
+                    show_id: show.id,
+                    match_name: if match_name.get().trim().is_empty() { None } else { Some(match_name.get().trim().to_string()) },
+                    match_type: match_type.get(),
+                    match_stipulation: if match_stipulation.get() == "Standard" { None } else { Some(match_stipulation.get()) },
+                    scheduled_date: None,
+                    match_order: Some((matches.get().len() + 1) as i32),
+                    is_title_match: false,
+                    title_id: None,
+                };
+                
+                spawn_local(async move {
+                    match create_match(match_data).await {
+                        Ok(_) => {
+                            set_status_message.set(Some("Match created successfully!".to_string()));
+                            set_match_name.set(String::new());
+                            set_match_type.set("Singles".to_string());
+                            set_match_stipulation.set("Standard".to_string());
+                            set_show_create_form.set(false);
+                            load_show_data(show.id); // Reload data
+                        },
+                        Err(e) => {
+                            set_error_message.set(Some(format!("Failed to create match: {}", e)));
+                            set_loading.set(false);
+                        }
+                    }
+                });
+            }
+            set_create_match_trigger.set(false); // Reset trigger
+        }
+    });
+    
+    // Handle add wrestler to match trigger
+    Effect::new(move |_| {
+        if let Some((match_id, wrestler_id)) = add_wrestler_to_match_trigger.get() {
             set_loading.set(true);
             set_status_message.set(None);
             set_error_message.set(None);
             
-            let match_data = MatchData {
-                show_id: show.id,
-                match_name: if match_name.get().trim().is_empty() { None } else { Some(match_name.get().trim().to_string()) },
-                match_type: match_type.get(),
-                match_stipulation: if match_stipulation.get() == "Standard" { None } else { Some(match_stipulation.get()) },
-                scheduled_date: None,
-                match_order: Some((matches.get().len() + 1) as i32),
-                is_title_match: false,
-                title_id: None,
-            };
-            
             spawn_local(async move {
-                match create_match(match_data).await {
+                match add_wrestler_to_match(match_id, wrestler_id, None, None).await {
                     Ok(_) => {
-                        set_status_message.set(Some("Match created successfully!".to_string()));
-                        set_match_name.set(String::new());
-                        set_match_type.set("Singles".to_string());
-                        set_match_stipulation.set("Standard".to_string());
-                        set_show_create_form.set(false);
-                        load_show_data(show.id); // Reload data
+                        set_status_message.set(Some("Wrestler added to match!".to_string()));
+                        if let Some(show) = selected_show.get() {
+                            load_show_data(show.id); // Reload data
+                        }
                     },
                     Err(e) => {
-                        set_error_message.set(Some(format!("Failed to create match: {}", e)));
+                        set_error_message.set(Some(format!("Failed to add wrestler: {}", e)));
                         set_loading.set(false);
                     }
                 }
             });
+            set_add_wrestler_to_match_trigger.set(None); // Reset trigger
         }
-    };
-    
-    // Add wrestler to match
-    let add_wrestler_to_match_handler = move |match_id: i32, wrestler_id: i32| {
-        set_loading.set(true);
-        set_status_message.set(None);
-        set_error_message.set(None);
-        
-        spawn_local(async move {
-            match add_wrestler_to_match(match_id, wrestler_id, None, None).await {
-                Ok(_) => {
-                    set_status_message.set(Some("Wrestler added to match!".to_string()));
-                    if let Some(show) = selected_show.get() {
-                        load_show_data(show.id); // Reload data
-                    }
-                },
-                Err(e) => {
-                    set_error_message.set(Some(format!("Failed to add wrestler: {}", e)));
-                    set_loading.set(false);
-                }
-            }
-        });
-    };
+    });
     
     view! {
         <div class="space-y-8">
@@ -271,149 +283,25 @@ pub fn BookerDashboard(
                                 </button>
                             </div>
                             
-                            // Create Match Form
-                            <Show when=move || show_create_form.get()>
-                                <div class="bg-base-100 p-4 rounded-lg mb-6">
-                                    <h4 class="text-lg font-semibold mb-4">"Create New Match"</h4>
-                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div class="form-control">
-                                            <label class="label">
-                                                <span class="label-text">"Match Name (Optional)"</span>
-                                            </label>
-                                            <input
-                                                type="text"
-                                                placeholder="e.g., Main Event"
-                                                class="input input-bordered"
-                                                prop:value=match_name
-                                                on:input=move |ev| set_match_name.set(event_target_value(&ev))
-                                            />
-                                        </div>
-                                        
-                                        <div class="form-control">
-                                            <label class="label">
-                                                <span class="label-text">"Match Type"</span>
-                                            </label>
-                                            <select 
-                                                class="select select-bordered"
-                                                prop:value=match_type
-                                                on:change=move |ev| set_match_type.set(event_target_value(&ev))
-                                            >
-                                                <option value="Singles">"Singles"</option>
-                                                <option value="Tag Team">"Tag Team"</option>
-                                                <option value="Triple Threat">"Triple Threat"</option>
-                                                <option value="Fatal 4-Way">"Fatal 4-Way"</option>
-                                                <option value="Battle Royal">"Battle Royal"</option>
-                                                <option value="Ladder Match">"Ladder Match"</option>
-                                                <option value="Steel Cage">"Steel Cage"</option>
-                                            </select>
-                                        </div>
-                                        
-                                        <div class="form-control">
-                                            <label class="label">
-                                                <span class="label-text">"Stipulation"</span>
-                                            </label>
-                                            <select 
-                                                class="select select-bordered"
-                                                prop:value=match_stipulation
-                                                on:change=move |ev| set_match_stipulation.set(event_target_value(&ev))
-                                            >
-                                                <option value="Standard">"Standard"</option>
-                                                <option value="No DQ">"No Disqualification"</option>
-                                                <option value="No Holds Barred">"No Holds Barred"</option>
-                                                <option value="Last Man Standing">"Last Man Standing"</option>
-                                                <option value="Submission Match">"Submission Match"</option>
-                                                <option value="Hardcore">"Hardcore"</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="flex justify-end space-x-2 mt-4">
-                                        <button
-                                            class="btn btn-ghost"
-                                            on:click=move |_| set_show_create_form.set(false)
-                                        >
-                                            "Cancel"
-                                        </button>
-                                        <button
-                                            class="btn btn-primary"
-                                            on:click=move |_| create_new_match()
-                                            disabled=move || loading.get()
-                                        >
-                                            "Create Match"
-                                        </button>
-                                    </div>
-                                </div>
-                            </Show>
+                            <MatchCreationForm 
+                                show_form=show_create_form.into()
+                                set_show_form=set_show_create_form
+                                match_name=match_name.into()
+                                set_match_name=set_match_name
+                                match_type=match_type.into()
+                                set_match_type=set_match_type
+                                match_stipulation=match_stipulation.into()
+                                set_match_stipulation=set_match_stipulation
+                                loading=loading.into()
+                                on_create_match=set_create_match_trigger
+                            />
                             
-                            // Existing Matches List
-                            <div class="space-y-4">
-                                <For
-                                    each=move || matches.get()
-                                    key=|match_item| match_item.id
-                                    children=move |match_item: Match| {
-                                        let match_id = match_item.id;
-                                        let match_name_display = match_item.match_name.clone()
-                                            .unwrap_or_else(|| format!("{} Match", match_item.match_type));
-                                        
-                                        view! {
-                                            <div class="card bg-base-100 border border-base-300">
-                                                <div class="card-body">
-                                                    <div class="flex items-center justify-between">
-                                                        <div>
-                                                            <h4 class="text-lg font-semibold">{match_name_display}</h4>
-                                                            <p class="text-base-content/70">
-                                                                {match_item.match_type.clone()}
-                                                                {match_item.match_stipulation.as_ref().map(|s| format!(" - {}", s)).unwrap_or_default()}
-                                                            </p>
-                                                            <Show when=move || match_item.winner_id.is_some()>
-                                                                <div class="badge badge-success gap-2 mt-2">
-                                                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                                                                    </svg>
-                                                                    "Match Complete"
-                                                                </div>
-                                                            </Show>
-                                                        </div>
-                                                        <div class="flex space-x-2">
-                                                            <div class="dropdown dropdown-end">
-                                                                <div tabindex="0" role="button" class="btn btn-sm btn-outline">
-                                                                    "Add Wrestler"
-                                                                </div>
-                                                                <ul tabindex="0" class="dropdown-content menu bg-base-200 rounded-box z-[1] w-52 p-2 shadow max-h-48 overflow-y-auto">
-                                                                    <For
-                                                                        each=move || show_wrestlers.get()
-                                                                        key=|wrestler| wrestler.id
-                                                                        children=move |wrestler: Wrestler| {
-                                                                            let wrestler_id = wrestler.id;
-                                                                            view! {
-                                                                                <li>
-                                                                                    <a on:click=move |_| add_wrestler_to_match_handler(match_id, wrestler_id)>
-                                                                                        {wrestler.name}
-                                                                                    </a>
-                                                                                </li>
-                                                                            }
-                                                                        }
-                                                                    />
-                                                                </ul>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        }
-                                    }
-                                />
-                                
-                                <Show when=move || matches.get().is_empty() && !loading.get()>
-                                    <div class="text-center py-8 text-base-content/50">
-                                        <svg class="w-16 h-16 mx-auto mb-4 text-base-content/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 0V3a2 2 0 00-2-2V1a2 2 0 00-2 2v2H9z" />
-                                        </svg>
-                                        <p class="text-lg mb-2">"No matches scheduled"</p>
-                                        <p class="text-sm">"Create your first match to start building the card"</p>
-                                    </div>
-                                </Show>
-                            </div>
+                            <MatchListSection 
+                                matches=matches.into()
+                                show_wrestlers=show_wrestlers.into()
+                                loading=loading.into()
+                                on_add_wrestler_to_match=set_add_wrestler_to_match_trigger
+                            />
                         </div>
                     </div>
                 </div>
