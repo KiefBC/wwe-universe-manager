@@ -2,12 +2,13 @@ use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
+use crate::types::Gender;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Wrestler {
     pub id: i32,
     pub name: String,
-    pub gender: String,
+    pub gender: Gender,
     pub wins: i32,
     pub losses: i32,
     pub real_name: Option<String>,
@@ -23,7 +24,6 @@ pub struct Wrestler {
     pub charisma: Option<i32>,
     pub technique: Option<i32>,
     pub biography: Option<String>,
-    pub trivia: Option<String>,
     pub is_user_created: Option<bool>,
 }
 
