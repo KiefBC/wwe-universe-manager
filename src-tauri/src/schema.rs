@@ -28,16 +28,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    promotions (id) {
-        id -> Integer,
-        name -> Text,
-        description -> Text,
-        created_at -> Nullable<Timestamp>,
-        updated_at -> Nullable<Timestamp>,
-    }
-}
-
-diesel::table! {
     show_rosters (id) {
         id -> Integer,
         show_id -> Integer,
@@ -54,7 +44,6 @@ diesel::table! {
         description -> Text,
         created_at -> Nullable<Timestamp>,
         updated_at -> Nullable<Timestamp>,
-        promotion_id -> Integer,
     }
 }
 
@@ -151,7 +140,6 @@ diesel::joinable!(titles -> wrestlers (current_holder_id));
 diesel::allow_tables_to_appear_in_same_query!(
     match_participants,
     matches,
-    promotions,
     show_rosters,
     shows,
     signature_moves,

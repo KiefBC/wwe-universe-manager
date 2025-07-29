@@ -1,0 +1,1 @@
+ALTER TABLE shows ADD COLUMN promotion_id INTEGER NOT NULL DEFAULT 1 REFERENCES promotions(id);

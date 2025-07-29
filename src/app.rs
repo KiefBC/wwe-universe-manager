@@ -1,4 +1,4 @@
-use crate::components::{BookerDashboard, CreatePromotion, CreateShow, CreateTitle, CreateWrestler, PromotionDashboard, ShowRosterManagement, TitleDetailsWindow, TitlesList, WrestlerDetailsWindow, WrestlersList};
+use crate::components::{BookerDashboard, CreateShow, CreateTitle, CreateWrestler, PromotionDashboard, ShowRosterManagement, TitleDetailsWindow, TitlesList, WrestlerDetailsWindow, WrestlersList};
 use leptos::prelude::*;
 use web_sys::window;
 
@@ -53,7 +53,7 @@ pub fn App() -> impl IntoView {
                                                                         fallback=move || {
                                                                             view! {
                                                                                 <Show
-                                                                                    when=move || current_page.get() == "create-promotion"
+                                                                                    when=move || current_page.get() == "create-show"
                                                                                     fallback=move || {
                                                                                         view! {
                                                                                             <Show
@@ -70,7 +70,7 @@ pub fn App() -> impl IntoView {
                                                                                                                             view! {
                                                                                                                                 <Show
                                                                                                                                     when=move || current_page.get() == "promotion-dashboard"
-                                                                                                                                    fallback=move || view! { <CreatePromotion set_current_page set_refresh_trigger /> }
+                                                                                                                                    fallback=move || view! { <CreateShow set_current_page set_refresh_trigger /> }
                                                                                                                                 >
                                                                                                                                     <PromotionDashboard set_current_page refresh_trigger />
                                                                                                                                 </Show>
@@ -92,7 +92,7 @@ pub fn App() -> impl IntoView {
                                                                                         }
                                                                                     }
                                                                                 >
-                                                                                    <CreatePromotion set_current_page set_refresh_trigger />
+                                                                                    <CreateShow set_current_page set_refresh_trigger />
                                                                                 </Show>
                                                                             }
                                                                         }

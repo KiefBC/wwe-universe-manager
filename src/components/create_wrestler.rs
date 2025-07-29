@@ -1,4 +1,4 @@
-use crate::types::{Wrestler, Gender, Promotion};
+use crate::types::{Wrestler, Gender, Show};
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
@@ -274,9 +274,9 @@ fn default_unknown_or_value(input: &str) -> Cow<str> {
     }
 }
 
-/// Fetches promotions from the backend via Tauri
-async fn fetch_promotions() -> Result<Vec<Promotion>, String> {
-    let result = invoke("get_promotions", JsValue::NULL).await;
+/// Fetches shows from the backend via Tauri
+async fn fetch_shows() -> Result<Vec<Show>, String> {
+    let result = invoke("get_shows", JsValue::NULL).await;
     serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
 }
 
@@ -301,7 +301,7 @@ pub fn CreateWrestler(
     let (height, set_height) = signal(String::new());
     let (weight, set_weight) = signal(String::new());
     let (debut_year, set_debut_year) = signal(String::new());
-    let (promotion, set_promotion) = signal("Free Agent".to_string());
+    let (show, set_show) = signal("Free Agent".to_string());
     let (strength, set_strength) = signal(5);
     let (speed, set_speed) = signal(5);
     let (agility, set_agility) = signal(5);
@@ -314,26 +314,26 @@ pub fn CreateWrestler(
     let (error, set_error) = signal(None::<String>);
     let (success, set_success) = signal(false);
     
-    // Promotion-related state
-    let (promotions, set_promotions) = signal(Vec::<Promotion>::new());
-    let (promotions_loading, set_promotions_loading) = signal(false);
-    let (promotions_error, set_promotions_error) = signal(None::<String>);
+    // Show-related state
+    let (shows, set_shows) = signal(Vec::<Show>::new());
+    let (shows_loading, set_shows_loading) = signal(false);
+    let (shows_error, set_shows_error) = signal(None::<String>);
 
-    // Load promotions on component mount
+    // Load shows on component mount
     Effect::new(move |_| {
         spawn_local(async move {
-            set_promotions_loading.set(true);
-            set_promotions_error.set(None);
+            set_shows_loading.set(true);
+            set_shows_error.set(None);
             
-            match fetch_promotions().await {
+            match fetch_shows().await {
                 Ok(data) => {
-                    set_promotions.set(data);
+                    set_shows.set(data);
                 }
                 Err(e) => {
-                    set_promotions_error.set(Some(e));
+                    set_shows_error.set(Some(e));
                 }
             }
-            set_promotions_loading.set(false);
+            set_shows_loading.set(false);
         });
     });
 
@@ -389,7 +389,7 @@ pub fn CreateWrestler(
             height: Some(validated_height),
             weight: Some(processed_weight),
             debut_year: validated_debut_year,
-            promotion: Some(default_unknown_or_value(&promotion.get()).into_owned()),
+            promotion: Some(default_unknown_or_value(&show.get()).into_owned()),
             strength: Some(strength.get()),
             speed: Some(speed.get()),
             agility: Some(agility.get()),
@@ -590,53 +590,53 @@ pub fn CreateWrestler(
                                 </div>
                                 <div class="form-control">
                                     <label class="label">
-                                        <span class="label-text">"Promotion"</span>
+                                        <span class="label-text">"Show"</span>
                                     </label>
                                     
-                                    <Show when=move || promotions_error.get().is_some()>
+                                    <Show when=move || shows_error.get().is_some()>
                                         <div class="alert alert-warning mb-2 text-xs">
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-4 h-4">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                                             </svg>
                                             <div>
-                                                <span class="font-bold">"Could not load promotions:"</span>
-                                                <span class="ml-1">{move || promotions_error.get().unwrap_or_default()}</span>
+                                                <span class="font-bold">"Could not load shows:"</span>
+                                                <span class="ml-1">{move || shows_error.get().unwrap_or_default()}</span>
                                             </div>
                                         </div>
                                     </Show>
                                     <select
                                         class="select select-bordered w-full"
-                                        prop:value=promotion
-                                        on:change=move |ev| set_promotion.set(event_target_value(&ev))
-                                        aria-label="Promotion selection - choose from available promotions or Free Agent"
-                                        aria-describedby="promotion-help"
-                                        disabled=move || promotions_loading.get()
+                                        prop:value=show
+                                        on:change=move |ev| set_show.set(event_target_value(&ev))
+                                        aria-label="Show selection - choose from available shows or Free Agent"
+                                        aria-describedby="show-help"
+                                        disabled=move || shows_loading.get()
                                     >
                                         <Show
-                                            when=move || promotions_loading.get()
+                                            when=move || shows_loading.get()
                                             fallback=move || view! {
                                                 <option value="Free Agent">"Free Agent"</option>
                                                 <Show
-                                                    when=move || promotions_error.get().is_none()
+                                                    when=move || shows_error.get().is_none()
                                                     fallback=|| {}
                                                 >
                                                     <For
-                                                        each=move || promotions.get()
-                                                        key=|promo| promo.id
-                                                        children=move |promo| {
+                                                        each=move || shows.get()
+                                                        key=|show| show.id
+                                                        children=move |show| {
                                                             view! {
-                                                                <option value={promo.name.clone()}>{promo.name.clone()}</option>
+                                                                <option value={show.name.clone()}>{show.name.clone()}</option>
                                                             }
                                                         }
                                                     />
                                                 </Show>
                                             }
                                         >
-                                            <option value="Free Agent">"Loading promotions..."</option>
+                                            <option value="Free Agent">"Loading shows..."</option>
                                         </Show>
                                     </select>
-                                    <div id="promotion-help" class="text-xs text-base-content/60 mt-1">
-                                        "Select from available promotions or choose Free Agent"
+                                    <div id="show-help" class="text-xs text-base-content/60 mt-1">
+                                        "Select from available shows or choose Free Agent"
                                     </div>
                                 </div>
                             </div>

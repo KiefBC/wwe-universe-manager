@@ -1,6 +1,6 @@
 use crate::models::{
     Match, MatchData, NewMatch, MatchParticipant, NewMatchParticipant,
-    NewPromotion, NewShowRoster, NewShow, NewSignatureMove, NewTitle, NewTitleHolder, NewUser, NewWrestler, NewEnhancedWrestler, Promotion, PromotionData, ShowRoster, Show, ShowData, SignatureMove, Title, TitleData, TitleHolder, TitleWithHolders, TitleHolderInfo, User, UserData,
+    NewShowRoster, NewShow, NewSignatureMove, NewTitle, NewTitleHolder, NewUser, NewWrestler, NewEnhancedWrestler, ShowRoster, Show, ShowData, SignatureMove, Title, TitleData, TitleHolder, TitleWithHolders, TitleHolderInfo, User, UserData,
     Wrestler, WrestlerData, EnhancedWrestlerData,
 };
 use diesel::prelude::*;
@@ -45,12 +45,10 @@ pub fn internal_create_show(
     conn: &mut SqliteConnection,
     name: &str,
     description: &str,
-    promotion_id: i32,
 ) -> Result<Show, DieselError> {
     let new_show = NewShow {
         name: name.to_string(),
         description: description.to_string(),
-        promotion_id,
     };
 
     diesel::insert_into(crate::schema::shows::dsl::shows)
@@ -59,11 +57,10 @@ pub fn internal_create_show(
         .get_result(conn)
 }
 
-/// Gets all shows for a promotion ordered by ID (used by tests and Tauri commands)
-pub fn internal_get_shows(conn: &mut SqliteConnection, promo_id: i32) -> Result<Vec<Show>, DieselError> {
+/// Gets all shows ordered by ID (used by tests and Tauri commands)
+pub fn internal_get_shows(conn: &mut SqliteConnection) -> Result<Vec<Show>, DieselError> {
     use crate::schema::shows::dsl::*;
     shows
-        .filter(promotion_id.eq(promo_id))
         .order(id.asc())
         .load::<Show>(conn)
 }
@@ -72,9 +69,7 @@ pub fn internal_get_shows(conn: &mut SqliteConnection, promo_id: i32) -> Result<
 pub fn create_show(state: State<'_, DbState>, show_data: ShowData) -> Result<Show, String> {
     let mut conn = get_connection(&state)?;
 
-    // TODO: Update to use actual promotion_id from frontend when CEO dashboard is implemented
-    let default_promotion_id = 1;
-    internal_create_show(&mut conn, &show_data.name, &show_data.description, default_promotion_id)
+    internal_create_show(&mut conn, &show_data.name, &show_data.description)
         .inspect(|show| {
             info!("Show '{}' created successfully", show.name);
         })
@@ -88,66 +83,12 @@ pub fn create_show(state: State<'_, DbState>, show_data: ShowData) -> Result<Sho
 pub fn get_shows(state: State<'_, DbState>) -> Result<Vec<Show>, String> {
     let mut conn = get_connection(&state)?;
 
-    // TODO: Update to use actual promotion_id from frontend when CEO dashboard is implemented
-    let default_promotion_id = 1;
-    internal_get_shows(&mut conn, default_promotion_id).map_err(|e| {
+    internal_get_shows(&mut conn).map_err(|e| {
         error!("Error loading shows: {}", e);
         format!("Failed to load shows: {}", e)
     })
 }
 
-// ===== Promotion Operations =====
-
-/// Creates a new promotion (used by tests and Tauri commands)
-pub fn internal_create_promotion(
-    conn: &mut SqliteConnection,
-    name: &str,
-    description: &str,
-) -> Result<Promotion, DieselError> {
-    let new_promotion = NewPromotion {
-        name: name.to_string(),
-        description: description.to_string(),
-    };
-
-    diesel::insert_into(crate::schema::promotions::dsl::promotions)
-        .values(&new_promotion)
-        .returning(Promotion::as_returning())
-        .get_result(conn)
-}
-
-/// Gets all promotions from the database (used by tests and Tauri commands)
-pub fn internal_get_promotions(conn: &mut SqliteConnection) -> Result<Vec<Promotion>, DieselError> {
-    use crate::schema::promotions::dsl::*;
-    
-    promotions
-        .order(name.asc())
-        .select(Promotion::as_select())
-        .load(conn)
-}
-
-#[tauri::command]
-pub fn create_promotion(
-    state: State<'_, DbState>,
-    promotion_data: PromotionData,
-) -> Result<Promotion, String> {
-    let mut conn = get_connection(&state)?;
-
-    internal_create_promotion(&mut conn, &promotion_data.name, &promotion_data.description)
-        .map_err(|e| {
-            error!("Error creating promotion: {}", e);
-            format!("Failed to create promotion: {}", e)
-        })
-}
-
-#[tauri::command]
-pub fn get_promotions(state: State<'_, DbState>) -> Result<Vec<Promotion>, String> {
-    let mut conn = get_connection(&state)?;
-
-    internal_get_promotions(&mut conn).map_err(|e| {
-        error!("Error loading promotions: {}", e);
-        format!("Failed to load promotions: {}", e)
-    })
-}
 
 // ===== User Operations =====
 
@@ -949,8 +890,7 @@ pub fn create_test_data(state: State<'_, DbState>) -> Result<String, String> {
     let mut conn = get_connection(&state)?;
     
     // Check if specific test data already exists
-    let default_promotion_id = 1;
-    let existing_shows = internal_get_shows(&mut conn, default_promotion_id).map_err(|e| format!("Error checking shows: {}", e))?;
+    let existing_shows = internal_get_shows(&mut conn).map_err(|e| format!("Error checking shows: {}", e))?;
     
     // Check for specific test shows instead of any shows
     let test_show_names = ["Monday Night RAW", "Friday Night SmackDown"];
@@ -969,7 +909,7 @@ pub fn create_test_data(state: State<'_, DbState>) -> Result<String, String> {
     ];
     
     for (name, description) in test_shows {
-        internal_create_show(&mut conn, name, description, default_promotion_id)
+        internal_create_show(&mut conn, name, description)
             .map_err(|e| format!("Failed to create show '{}': {}", name, e))?;
     }
     
@@ -1055,29 +995,28 @@ pub fn create_test_data(state: State<'_, DbState>) -> Result<String, String> {
     }
     
     // Create test titles
-    let raw_show = internal_get_shows(&mut conn, default_promotion_id).map_err(|e| format!("Error getting shows: {}", e))?
-        .into_iter()
+    let all_shows = internal_get_shows(&mut conn).map_err(|e| format!("Error getting shows: {}", e))?;
+    let raw_show = all_shows.iter()
         .find(|show| show.name == "Monday Night RAW");
-    let smackdown_show = internal_get_shows(&mut conn, default_promotion_id).map_err(|e| format!("Error getting shows: {}", e))?
-        .into_iter()
+    let smackdown_show = all_shows.iter()
         .find(|show| show.name == "Friday Night SmackDown");
 
     let test_titles = vec![
         // Tier 1 - World Championships
-        ("World Heavyweight Championship", "Singles", "World", "Male", raw_show.as_ref().map(|s| s.id)),
-        ("WWE Championship", "Singles", "WWE Championship", "Male", smackdown_show.as_ref().map(|s| s.id)),
-        ("Women's World Championship", "Singles", "Women's World", "Female", raw_show.as_ref().map(|s| s.id)),
-        ("WWE Women's Championship", "Singles", "WWE Women's Championship", "Female", smackdown_show.as_ref().map(|s| s.id)),
+        ("World Heavyweight Championship", "Singles", "World", "Male", raw_show.map(|s| s.id)),
+        ("WWE Championship", "Singles", "WWE Championship", "Male", smackdown_show.map(|s| s.id)),
+        ("Women's World Championship", "Singles", "Women's World", "Female", raw_show.map(|s| s.id)),
+        ("WWE Women's Championship", "Singles", "WWE Women's Championship", "Female", smackdown_show.map(|s| s.id)),
         
         // Tier 2 - Secondary Championships
-        ("Intercontinental Championship", "Singles", "Intercontinental", "Male", raw_show.as_ref().map(|s| s.id)),
-        ("United States Championship", "Singles", "United States", "Male", smackdown_show.as_ref().map(|s| s.id)),
-        ("Women's Intercontinental Championship", "Singles", "Women's Intercontinental", "Female", raw_show.as_ref().map(|s| s.id)),
-        ("Women's United States Championship", "Singles", "Women's United States", "Female", smackdown_show.as_ref().map(|s| s.id)),
+        ("Intercontinental Championship", "Singles", "Intercontinental", "Male", raw_show.map(|s| s.id)),
+        ("United States Championship", "Singles", "United States", "Male", smackdown_show.map(|s| s.id)),
+        ("Women's Intercontinental Championship", "Singles", "Women's Intercontinental", "Female", raw_show.map(|s| s.id)),
+        ("Women's United States Championship", "Singles", "Women's United States", "Female", smackdown_show.map(|s| s.id)),
         
         // Tier 3 - Tag Team Championships
-        ("World Tag Team Championship", "Tag Team", "World Tag Team", "Male", raw_show.as_ref().map(|s| s.id)),
-        ("WWE Tag Team Championship", "Tag Team", "WWE Tag Team", "Male", smackdown_show.as_ref().map(|s| s.id)),
+        ("World Tag Team Championship", "Tag Team", "World Tag Team", "Male", raw_show.map(|s| s.id)),
+        ("WWE Tag Team Championship", "Tag Team", "WWE Tag Team", "Male", smackdown_show.map(|s| s.id)),
         ("Women's Tag Team Championship", "Tag Team", "Women's Tag Team", "Female", None), // Cross-brand
         
         // Tier 4 - Specialty Championships
@@ -1096,8 +1035,8 @@ pub fn create_test_data(state: State<'_, DbState>) -> Result<String, String> {
     
     // Assign wrestlers to show rosters
     let all_wrestlers = internal_get_wrestlers(&mut conn).map_err(|e| format!("Error getting wrestlers: {}", e))?;
-    let raw_show_id = raw_show.as_ref().map(|s| s.id).ok_or("RAW show not found")?;
-    let smackdown_show_id = smackdown_show.as_ref().map(|s| s.id).ok_or("SmackDown show not found")?;
+    let raw_show_id = raw_show.map(|s| s.id).ok_or("RAW show not found")?;
+    let smackdown_show_id = smackdown_show.map(|s| s.id).ok_or("SmackDown show not found")?;
     
     // Assign all 5 wrestlers to RAW
     for wrestler in &all_wrestlers {

@@ -55,18 +55,6 @@ pub struct ShowData {
     pub description: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
-pub struct Promotion {
-    pub id: i32,
-    pub name: String,
-    pub description: String,
-}
-
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
-pub struct PromotionData {
-    pub name: String,
-    pub description: String,
-}
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct Wrestler {
@@ -120,16 +108,6 @@ pub async fn create_show(show_data: ShowData) -> Result<Show, String> {
     })
 }
 
-/// Fetches promotions from the backend via Tauri
-pub async fn fetch_promotions() -> Result<Vec<Promotion>, String> {
-    let result_js = invoke("get_promotions", JsValue::NULL).await;
-
-    serde_wasm_bindgen::from_value(result_js).map_err(|e| {
-        let error_msg = format!("Failed to deserialize promotions: {}", e);
-        console::log_1(&error_msg.clone().into());
-        error_msg
-    })
-}
 
 /// Fetches wrestlers from the backend via Tauri
 pub async fn fetch_wrestlers() -> Result<Vec<Wrestler>, String> {
@@ -142,31 +120,6 @@ pub async fn fetch_wrestlers() -> Result<Vec<Wrestler>, String> {
     })
 }
 
-/// Creates a new promotion via Tauri
-pub async fn create_promotion(promotion_data: PromotionData) -> Result<Promotion, String> {
-    console::log_1(&format!("create_promotion called with: {:?}", promotion_data).into());
-
-    // Tauri expects arguments to be wrapped in an object with parameter names as keys
-    let args = serde_json::json!({
-        "promotionData": promotion_data
-    });
-
-    let args_value = serde_wasm_bindgen::to_value(&args).map_err(|e| {
-        let error_msg = format!("Failed to serialize promotion data: {}", e);
-        console::log_1(&error_msg.clone().into());
-        error_msg
-    })?;
-
-    console::log_1(&"Invoking Tauri command 'create_promotion'...".into());
-    let result_js = invoke("create_promotion", args_value).await;
-    console::log_1(&format!("Tauri command returned: {:?}", result_js).into());
-
-    serde_wasm_bindgen::from_value(result_js).map_err(|e| {
-        let error_msg = format!("Failed to deserialize promotion result: {}", e);
-        console::log_1(&error_msg.clone().into());
-        error_msg
-    })
-}
 
 /// Fetches wrestlers assigned to a specific show
 pub async fn fetch_wrestlers_for_show(show_id: i32) -> Result<Vec<Wrestler>, String> {

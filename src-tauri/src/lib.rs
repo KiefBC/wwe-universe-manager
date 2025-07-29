@@ -25,8 +25,6 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             // Database operations
-            db::get_promotions,
-            db::create_promotion,
             db::get_shows,
             db::create_show,
             db::get_wrestlers,
