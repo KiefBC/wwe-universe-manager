@@ -1,5 +1,7 @@
 mod app;
 mod components;
+mod constants;
+mod errors;
 mod types;
 
 use app::*;

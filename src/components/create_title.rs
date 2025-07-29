@@ -1,21 +1,9 @@
+use crate::constants::*;
+use crate::types::{Show, Wrestler};
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Show {
-    pub id: i32,
-    pub name: String,
-    pub description: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Wrestler {
-    pub id: i32,
-    pub name: String,
-    pub gender: String,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)] 
 pub struct TitleData {
@@ -99,7 +87,7 @@ pub fn CreateTitle(
         let filtered = match selected_gender.as_str() {
             "Mixed" => all_wrestlers, // Show all wrestlers for mixed titles
             _ => all_wrestlers.into_iter()
-                .filter(|w| w.gender == selected_gender)
+                .filter(|w| w.gender.to_string() == selected_gender)
                 .collect()
         };
         
@@ -118,10 +106,10 @@ pub fn CreateTitle(
     // Auto-calculate prestige tier based on division
     let prestige_tier = move || {
         match division.get().as_str() {
-            "World" | "WWE Championship" | "Women's World" | "WWE Women's Championship" => 1,
-            "Intercontinental" | "United States" | "Women's Intercontinental" | "Women's United States" => 2,
-            "World Tag Team" | "WWE Tag Team" | "Women's Tag Team" => 3,
-            _ => 4, // Specialty titles
+            "World" | "WWE Championship" | "Women's World" | "WWE Women's Championship" => WORLD_CHAMPIONSHIP_TIER,
+            "Intercontinental" | "United States" | "Women's Intercontinental" | "Women's United States" => SECONDARY_CHAMPIONSHIP_TIER,
+            "World Tag Team" | "WWE Tag Team" | "Women's Tag Team" => TAG_TEAM_CHAMPIONSHIP_TIER,
+            _ => SPECIALTY_CHAMPIONSHIP_TIER, // Specialty titles
         }
     };
 
@@ -136,10 +124,10 @@ pub fn CreateTitle(
         // Validate tag team holder count
         let title_type_val = title_type.get();
         let expected_holders = match title_type_val.as_str() {
-            "Singles" => 1,
-            "Tag Team" => 2,
-            "Triple Tag Team" => 3,
-            _ => 1,
+            "Singles" => SINGLES_MATCH_HOLDERS,
+            "Tag Team" => TAG_TEAM_MATCH_HOLDERS,
+            "Triple Tag Team" => TRIPLE_TAG_TEAM_MATCH_HOLDERS,
+            _ => SINGLES_MATCH_HOLDERS,
         };
 
         // For now, we only validate that Singles titles don't conflict with tag team logic
@@ -159,7 +147,7 @@ pub fn CreateTitle(
             let selected_gender = gender.get();
             let holder_valid = filtered_wrestlers.get().iter()
                 .find(|w| w.id == holder_id)
-                .map(|w| selected_gender == "Mixed" || w.gender == selected_gender)
+                .map(|w| selected_gender == "Mixed" || w.gender.to_string() == selected_gender)
                 .unwrap_or(false);
                 
             if !holder_valid {
@@ -192,7 +180,7 @@ pub fn CreateTitle(
                         move || {
                             set_current_page.set("titles".to_string());
                         },
-                        std::time::Duration::from_millis(1500),
+                        std::time::Duration::from_millis(SUCCESS_REDIRECT_DELAY_MS),
                     );
                 }
                 Err(e) => {

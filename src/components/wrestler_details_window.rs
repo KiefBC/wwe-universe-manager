@@ -4,8 +4,11 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use crate::types::{Show, fetch_shows, Title};
 
+// Enhanced Wrestler struct with additional fields for detailed wrestler management
+// TODO: This should be unified with the shared Wrestler type in src/types.rs
+// The shared type needs to be extended to include these additional fields
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Wrestler {
+pub struct WrestlerDetails {
     pub id: i32,
     pub name: String,
     pub gender: String,
@@ -33,7 +36,7 @@ extern "C" {
     async fn invoke(cmd: &str, args: JsValue) -> JsValue;
 }
 
-async fn get_wrestler_by_id(wrestler_id: i32) -> Result<Option<Wrestler>, String> {
+async fn get_wrestler_by_id(wrestler_id: i32) -> Result<Option<WrestlerDetails>, String> {
     let args = serde_wasm_bindgen::to_value(&serde_json::json!({
         "wrestlerId": wrestler_id
     }))
@@ -43,7 +46,7 @@ async fn get_wrestler_by_id(wrestler_id: i32) -> Result<Option<Wrestler>, String
     serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
 }
 
-async fn update_wrestler_promotion(wrestler_id: i32, promotion: String) -> Result<Wrestler, String> {
+async fn update_wrestler_promotion(wrestler_id: i32, promotion: String) -> Result<WrestlerDetails, String> {
     let args = serde_wasm_bindgen::to_value(&serde_json::json!({
         "wrestlerId": wrestler_id,
         "promotion": promotion
@@ -62,7 +65,7 @@ async fn update_wrestler_power_ratings(
     stamina: Option<i32>,
     charisma: Option<i32>,
     technique: Option<i32>,
-) -> Result<Wrestler, String> {
+) -> Result<WrestlerDetails, String> {
     let args = serde_wasm_bindgen::to_value(&serde_json::json!({
         "wrestlerId": wrestler_id,
         "strength": strength,
@@ -85,7 +88,7 @@ async fn update_wrestler_basic_stats(
     debut_year: Option<i32>,
     wins: i32,
     losses: i32,
-) -> Result<Wrestler, String> {
+) -> Result<WrestlerDetails, String> {
     let args = serde_wasm_bindgen::to_value(&serde_json::json!({
         "wrestlerId": wrestler_id,
         "height": height,
@@ -104,7 +107,7 @@ async fn update_wrestler_name(
     wrestler_id: i32,
     name: String,
     nickname: Option<String>,
-) -> Result<Wrestler, String> {
+) -> Result<WrestlerDetails, String> {
     let args = serde_wasm_bindgen::to_value(&serde_json::json!({
         "wrestlerId": wrestler_id,
         "name": name,
@@ -119,7 +122,7 @@ async fn update_wrestler_name(
 async fn update_wrestler_real_name(
     wrestler_id: i32,
     real_name: Option<String>,
-) -> Result<Wrestler, String> {
+) -> Result<WrestlerDetails, String> {
     let args = serde_wasm_bindgen::to_value(&serde_json::json!({
         "wrestlerId": wrestler_id,
         "realName": real_name
@@ -133,7 +136,7 @@ async fn update_wrestler_real_name(
 async fn update_wrestler_biography(
     wrestler_id: i32,
     biography: Option<String>,
-) -> Result<Wrestler, String> {
+) -> Result<WrestlerDetails, String> {
     let args = serde_wasm_bindgen::to_value(&serde_json::json!({
         "wrestlerId": wrestler_id,
         "biography": biography
@@ -197,6 +200,37 @@ async fn get_titles_for_wrestler(wrestler_gender: String) -> Result<Vec<Title>, 
     Ok(titles_with_holders.into_iter().map(|twh| twh.title).collect())
 }
 
+async fn get_current_titles_for_wrestler(wrestler_id: i32) -> Result<Vec<TitleWithHolders>, String> {
+    let args = serde_wasm_bindgen::to_value(&serde_json::json!({
+        "wrestlerId": wrestler_id
+    }))
+    .map_err(|e| e.to_string())?;
+
+    let result = invoke("get_titles", args).await;
+    let all_titles: Vec<TitleWithHolders> = serde_wasm_bindgen::from_value(result)
+        .map_err(|e| e.to_string())?;
+    
+    // Filter titles where the wrestler is the current holder
+    Ok(all_titles.into_iter()
+        .filter(|title_with_holders| {
+            title_with_holders.current_holders.iter()
+                .any(|holder| holder.holder.wrestler_id == wrestler_id)
+        })
+        .collect())
+}
+
+async fn vacate_title(title_id: i32) -> Result<String, String> {
+    let args = serde_wasm_bindgen::to_value(&serde_json::json!({
+        "titleId": title_id
+    }))
+    .map_err(|e| e.to_string())?;
+
+    // Note: This would require a backend function to set current_holder_id to NULL
+    // For now, this is a placeholder that would call a future backend endpoint
+    let result = invoke("vacate_title", args).await;
+    serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
+}
+
 async fn assign_title_to_wrestler(
     title_id: i32, 
     wrestler_id: i32,
@@ -206,7 +240,7 @@ async fn assign_title_to_wrestler(
 ) -> Result<String, String> {
     let args = serde_wasm_bindgen::to_value(&serde_json::json!({
         "titleId": title_id,
-        "wrestlerId": wrestler_id,
+        "newWrestlerId": wrestler_id,
         "eventName": event_name,
         "eventLocation": event_location,
         "changeMethod": change_method
@@ -230,7 +264,7 @@ fn extract_wrestler_id_from_url() -> Option<i32> {
 
 #[component]
 pub fn WrestlerDetailsWindow() -> impl IntoView {
-    let (wrestler, set_wrestler) = signal(None::<Wrestler>);
+    let (wrestler, set_wrestler) = signal(None::<WrestlerDetails>);
     let (shows, set_shows) = signal(Vec::<Show>::new());
     let (loading, set_loading) = signal(true);
     let (error, set_error) = signal(None::<String>);
@@ -328,7 +362,7 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
     };
 
 
-    // Check for URL changes using web_sys setTimeout in a loop
+    // Check for URL changes using proper cleanup mechanism
     Effect::new(move |_| {
         use wasm_bindgen::JsCast;
         
@@ -346,12 +380,21 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
         
         // Set up recurring check every 500ms
         let check_function = check_url_change.as_ref().unchecked_ref();
-        if let Some(window) = web_sys::window() {
-            window.set_interval_with_callback_and_timeout_and_arguments_0(check_function, 500).ok();
-        }
+        let interval_id = if let Some(window) = web_sys::window() {
+            window.set_interval_with_callback_and_timeout_and_arguments_0(check_function, 500).unwrap_or(-1)
+        } else {
+            -1
+        };
         
-        // Don't forget the closure or it will be dropped
-        check_url_change.forget();
+        // Return cleanup function - Leptos will call this when the effect is disposed
+        move || {
+            if interval_id != -1 {
+                if let Some(window) = web_sys::window() {
+                    window.clear_interval_with_handle(interval_id);
+                }
+            }
+            // Closure will be properly dropped here
+        }
     });
 
     // Load shows data once on mount
@@ -444,10 +487,6 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
                                                 wrestler=wrestler
                                             />
 
-                                            // Title Selection Component
-                                            <TitleSelectionComponent 
-                                                wrestler=wrestler
-                                            />
                                         </div>
 
                                         // Right side - Stats and info
@@ -665,7 +704,7 @@ fn PowerBarEdit(
 
 #[component]
 fn PromotionSection<F>(
-    wrestler: ReadSignal<Option<Wrestler>>,
+    wrestler: ReadSignal<Option<WrestlerDetails>>,
     shows: ReadSignal<Vec<Show>>,
     on_promotion_change: F,
 ) -> impl IntoView
@@ -730,7 +769,7 @@ where
 
 #[component]
 fn BasicStatsSection<F>(
-    wrestler: ReadSignal<Option<Wrestler>>,
+    wrestler: ReadSignal<Option<WrestlerDetails>>,
     on_stats_change: F,
 ) -> impl IntoView
 where
@@ -921,7 +960,7 @@ where
 
 #[component]
 fn HeaderSection(
-    wrestler: ReadSignal<Option<Wrestler>>,
+    wrestler: ReadSignal<Option<WrestlerDetails>>,
 ) -> impl IntoView {
     view! {
         <div class="bg-base-300 border-b border-base-content/20 p-6 text-center relative">
@@ -959,7 +998,7 @@ fn PhotoSection() -> impl IntoView {
 
 #[component]
 fn NameBannerSection<F>(
-    wrestler: ReadSignal<Option<Wrestler>>,
+    wrestler: ReadSignal<Option<WrestlerDetails>>,
     on_name_change: F,
 ) -> impl IntoView
 where
@@ -1060,7 +1099,7 @@ where
 
 #[component]
 fn RealNameSection<F>(
-    wrestler: ReadSignal<Option<Wrestler>>,
+    wrestler: ReadSignal<Option<WrestlerDetails>>,
     on_real_name_change: F,
 ) -> impl IntoView
 where
@@ -1142,7 +1181,7 @@ where
 
 #[component]
 fn BiographySection<F>(
-    wrestler: ReadSignal<Option<Wrestler>>,
+    wrestler: ReadSignal<Option<WrestlerDetails>>,
     on_biography_change: F,
 ) -> impl IntoView
 where
@@ -1225,7 +1264,7 @@ where
 
 #[component]
 fn ChampionshipTeamSection(
-    wrestler: ReadSignal<Option<Wrestler>>,
+    wrestler: ReadSignal<Option<WrestlerDetails>>,
 ) -> impl IntoView {
     view! {
         <div class="card bg-base-200 border border-base-100">
@@ -1243,21 +1282,10 @@ fn ChampionshipTeamSection(
                     </span>
                 </div>
                 
-                // Current Belt section
+                // Current Title section
                 <div class="space-y-2">
-                    <span class="text-base-content/70 font-medium text-sm">"Current Belt:"</span>
-                    <div class="bg-base-300 border border-base-content/20 rounded-lg p-3 flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-warning/20 border border-warning/50 rounded-lg flex items-center justify-center">
-                            // Championship belt icon
-                            <svg class="w-6 h-6 text-warning" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M5 16L3 14l5.5-5.5L10 10l4-4 4 4 1.5-1.5L15 3l-4 4L7 3 2.5 8.5 5 11v5zm2.5 2.5L9 17l1.5 1.5L12 17l1.5 1.5L15 17l1.5 1.5L18 17v-2l-1.5-1.5L15 15l-1.5-1.5L12 15l-1.5-1.5L9 15l-1.5 1.5L6 17v2l1.5-1.5z"/>
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <p class="text-base-content/80 text-sm italic">"No championship held"</p>
-                            <p class="text-base-content/50 text-xs">"Belt management coming soon"</p>
-                        </div>
-                    </div>
+                    <span class="text-base-content/70 font-medium text-sm">"Current Title:"</span>
+                    <TitleComponent wrestler=wrestler />
                 </div>
                 
                 // Tag Team section
@@ -1298,7 +1326,7 @@ fn ChampionshipTeamSection(
 
 #[component]
 fn DeleteWrestlerComponent(
-    wrestler: ReadSignal<Option<Wrestler>>,
+    wrestler: ReadSignal<Option<WrestlerDetails>>,
 ) -> impl IntoView {
     let (show_confirmation, set_show_confirmation) = signal(false);
     let (deleting, set_deleting) = signal(false);
@@ -1426,180 +1454,125 @@ fn DeleteWrestlerComponent(
     }
 }
 
-#[component]
-fn TitleSelectionComponent(
-    wrestler: ReadSignal<Option<Wrestler>>,
-) -> impl IntoView {
-    let (available_titles, set_available_titles) = signal(Vec::<Title>::new());
-    let (loading_titles, set_loading_titles) = signal(false);
-    let (titles_error, set_titles_error) = signal(None::<String>);
-    let (assigning_title, set_assigning_title) = signal(None::<i32>);
-    let (assignment_success, set_assignment_success) = signal(None::<String>);
-    let (selected_title_id, set_selected_title_id) = signal(None::<i32>);
 
-    // Load titles when wrestler changes
+#[component]
+fn TitleComponent(
+    wrestler: ReadSignal<Option<WrestlerDetails>>,
+) -> impl IntoView {
+    let (current_titles, set_current_titles) = signal(Vec::<TitleWithHolders>::new());
+    let (loading, set_loading) = signal(false);
+
+    // Load current titles when wrestler changes
     Effect::new(move |_| {
         if let Some(w) = wrestler.get() {
             spawn_local(async move {
-                set_loading_titles.set(true);
-                set_titles_error.set(None);
+                set_loading.set(true);
                 
-                match get_titles_for_wrestler(w.gender.clone()).await {
+                match get_current_titles_for_wrestler(w.id).await {
                     Ok(titles) => {
-                        set_available_titles.set(titles);
+                        set_current_titles.set(titles);
                     }
-                    Err(e) => {
-                        set_titles_error.set(Some(format!("Failed to load titles: {}", e)));
+                    Err(_) => {
+                        set_current_titles.set(Vec::new());
                     }
                 }
                 
-                set_loading_titles.set(false);
+                set_loading.set(false);
             });
         }
     });
 
-    // Handler for title assignment
-    let handle_assign_title = move |title_id: i32| {
-        if let Some(w) = wrestler.get() {
-            spawn_local(async move {
-                set_assigning_title.set(Some(title_id));
-                set_titles_error.set(None);
-                set_assignment_success.set(None);
-                
-                match assign_title_to_wrestler(
-                    title_id,
-                    w.id,
-                    Some("Title Assignment".to_string()),
-                    Some("WWE Universe Manager".to_string()),
-                    Some("Assigned".to_string())
-                ).await {
-                    Ok(_) => {
-                        set_assignment_success.set(Some("Title assigned successfully!".to_string()));
-                        set_selected_title_id.set(None); // Clear the dropdown selection
-                        // Reload titles to update the UI
-                        match get_titles_for_wrestler(w.gender.clone()).await {
-                            Ok(titles) => {
-                                set_available_titles.set(titles);
-                            }
-                            Err(e) => {
-                                set_titles_error.set(Some(format!("Failed to reload titles: {}", e)));
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        set_titles_error.set(Some(format!("Failed to assign title: {}", e)));
-                    }
-                }
-                
-                set_assigning_title.set(None);
-            });
+    // Helper function to get prestige styling based on title division
+    let get_prestige_styling = |division: &str| -> (&str, &str, &str) {
+        match division {
+            // Tier 1 - World Championships (Gold)
+            "World" | "WWE Championship" | "Women's World" | "WWE Women's Championship" => {
+                ("bg-yellow-500/20 border-yellow-500/50", "bg-yellow-500/30 border-yellow-500", "text-yellow-600")
+            },
+            // Tier 2 - Secondary Championships (Silver) 
+            "Intercontinental" | "United States" | "Women's Intercontinental" | "Women's United States" => {
+                ("bg-slate-400/20 border-slate-400/50", "bg-slate-400/30 border-slate-400", "text-slate-600")
+            },
+            // Tier 3 - Tag Team Championships (Bronze)
+            "World Tag Team" | "WWE Tag Team" | "Women's Tag Team" => {
+                ("bg-orange-600/20 border-orange-600/50", "bg-orange-600/30 border-orange-600", "text-orange-700")
+            },
+            // Tier 4 - Specialty Championships (Purple)
+            _ => {
+                ("bg-purple-500/20 border-purple-500/50", "bg-purple-500/30 border-purple-500", "text-purple-600")
+            }
         }
     };
 
     view! {
-        <div class="card bg-base-200 border border-base-100">
-            <div class="card-body">
-                <div class="flex items-center justify-between mb-4 border-b border-base-content/20 pb-2">
-                    <h4 class="text-base-content font-bold text-lg">
-                        "Assign Title"
-                    </h4>
-                    <div class="badge badge-outline">
-                        {move || {
-                            let gender = wrestler.get().map(|w| w.gender).unwrap_or_default();
-                            if gender == "Other" {
-                                "All Titles".to_string()
-                            } else {
-                                format!("{} + Mixed", gender)
-                            }
-                        }}
-                    </div>
-                </div>
-
-                <Show when=move || titles_error.get().is_some()>
-                    <div class="alert alert-error mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span class="text-sm">{move || titles_error.get().unwrap_or_default()}</span>
-                    </div>
-                </Show>
-
-                <Show when=move || assignment_success.get().is_some()>
-                    <div class="alert alert-success mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span class="text-sm">{move || assignment_success.get().unwrap_or_default()}</span>
-                    </div>
-                </Show>
-
-                <div class="flex gap-2">
-                    <select 
-                        class="select select-bordered flex-1"
-                        disabled=move || loading_titles.get() || assigning_title.get().is_some()
-                        on:change:target=move |ev| {
-                            let value = ev.target().value();
-                            if let Ok(title_id) = value.parse::<i32>() {
-                                set_selected_title_id.set(Some(title_id));
-                            } else {
-                                set_selected_title_id.set(None);
-                            }
-                        }
-                    >
-                        <option value="">"Select a title to assign..."</option>
-                        {move || {
-                            available_titles.get().into_iter().map(|title| {
-                                let status = if title.current_holder_id.is_some() {
-                                    " (Currently Held)"
-                                } else {
-                                    ""
-                                };
-                                view! {
-                                    <option 
-                                        value=title.id.to_string()
-                                        disabled=title.current_holder_id.is_some()
-                                    >
-                                        {format!("{} - {} {}{}", title.name, title.division, title.title_type, status)}
-                                    </option>
-                                }
-                            }).collect::<Vec<_>>()
-                        }}
-                    </select>
-                    
-                    <button 
-                        class="btn btn-primary gap-1"
-                        disabled=move || selected_title_id.get().is_none() || assigning_title.get().is_some()
-                        on:click=move |_| {
-                            if let Some(title_id) = selected_title_id.get() {
-                                handle_assign_title(title_id);
-                            }
-                        }
-                    >
-                        <Show when=move || assigning_title.get().is_some()>
-                            <span class="loading loading-spinner loading-sm"></span>
-                        </Show>
-                        <Show when=move || assigning_title.get().is_none()>
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                            </svg>
-                        </Show>
-                        {move || if assigning_title.get().is_some() { "Assigning..." } else { "Assign Title" }}
-                    </button>
-                </div>
-
-                <Show when=move || loading_titles.get()>
-                    <div class="flex justify-center items-center py-4">
-                        <span class="loading loading-spinner loading-sm"></span>
-                        <span class="ml-2 text-base-content/70 text-sm">"Loading titles..."</span>
-                    </div>
-                </Show>
-
-                <Show when=move || !loading_titles.get() && available_titles.get().is_empty() && titles_error.get().is_none()>
-                    <div class="text-center text-base-content/60 text-sm py-4">
-                        "No titles available for this wrestler's gender"
-                    </div>
-                </Show>
+        <Show when=move || loading.get()>
+            <div class="bg-base-300 border border-base-content/20 rounded-lg p-4 flex items-center justify-center">
+                <span class="loading loading-spinner loading-sm"></span>
+                <span class="ml-2 text-base-content/70">"Loading titles..."</span>
             </div>
-        </div>
+        </Show>
+
+        <Show when=move || !loading.get() && current_titles.get().is_empty()>
+            <div class="bg-base-300 border border-base-content/20 rounded-lg p-4 text-center">
+                <div class="w-12 h-12 bg-base-content/10 border border-base-content/20 rounded-lg flex items-center justify-center mx-auto mb-3">
+                    <svg class="w-8 h-8 text-base-content/40" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M5 16L3 14l5.5-5.5L10 10l4-4 4 4 1.5-1.5L15 3l-4 4L7 3 2.5 8.5 5 11v5zm2.5 2.5L9 17l1.5 1.5L12 17l1.5 1.5L15 17l1.5 1.5L18 17v-2l-1.5-1.5L15 15l-1.5-1.5L12 15l-1.5-1.5L9 15l-1.5 1.5L6 17v2l1.5-1.5z"/>
+                    </svg>
+                </div>
+                <p class="text-base-content/70 text-sm italic">"No championship held"</p>
+            </div>
+        </Show>
+
+        <Show when=move || !loading.get() && !current_titles.get().is_empty()>
+            <div class="space-y-3">
+                <For
+                    each=move || current_titles.get()
+                    key=|title_with_holders| title_with_holders.title.id
+                    children=move |title_with_holders| {
+                        let title = title_with_holders.title.clone();
+                        let (bg_class, icon_class, text_class) = get_prestige_styling(&title.division);
+                        
+                        view! {
+                            <div class=format!("rounded-lg p-4 border {}", bg_class)>
+                                // Title header with prestige-colored icon
+                                <div class="flex items-center space-x-3 mb-3">
+                                    <div class=format!("w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 {}", icon_class)>
+                                        <svg class=format!("w-6 h-6 {}", text_class) fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M5 16L3 14l5.5-5.5L10 10l4-4 4 4 1.5-1.5L15 3l-4 4L7 3 2.5 8.5 5 11v5zm2.5 2.5L9 17l1.5 1.5L12 17l1.5 1.5L15 17l1.5 1.5L18 17v-2l-1.5-1.5L15 15l-1.5-1.5L12 15l-1.5-1.5L9 15l-1.5 1.5L6 17v2l1.5-1.5z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <h3 class="text-base-content font-bold text-lg truncate">{title.name.clone()}</h3>
+                                        <p class="text-base-content/70 text-sm">{format!("{} {}", title.division, title.title_type)}</p>
+                                    </div>
+                                </div>
+                                
+                                // Weeks held info
+                                <div class="text-base-content/60 text-sm">
+                                    {move || {
+                                        if let Some(days) = title_with_holders.days_held {
+                                            let weeks = if days >= 7 { days / 7 } else { 0 };
+                                            let remaining_days = days % 7;
+                                            
+                                            if weeks > 0 {
+                                                if remaining_days > 0 {
+                                                    format!("{} weeks, {} days", weeks, remaining_days)
+                                                } else {
+                                                    format!("{} weeks", weeks)
+                                                }
+                                            } else {
+                                                format!("{} days", days)
+                                            }
+                                        } else {
+                                            "New champion".to_string()
+                                        }
+                                    }}
+                                </div>
+                            </div>
+                        }
+                    }
+                />
+            </div>
+        </Show>
     }
 }

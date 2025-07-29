@@ -85,53 +85,65 @@ extern "C" {
     async fn invoke(cmd: &str, args: JsValue) -> JsValue;
 }
 
-/// Fetches shows from the backend via Tauri
-pub async fn fetch_shows() -> Result<Vec<Show>, String> {
-    let result_js = invoke("get_shows", JsValue::NULL).await;
+/// Generic helper function for Tauri command invocation with proper error handling
+pub async fn invoke_tauri<T, R>(command: &str, args: T) -> Result<R, String>
+where
+    T: Serialize,
+    R: for<'de> Deserialize<'de>,
+{
+    let args_value = serde_wasm_bindgen::to_value(&args).map_err(|e| {
+        let error_msg = format!("Failed to serialize args for command '{}': {}", command, e);
+        console::log_1(&error_msg.clone().into());
+        error_msg
+    })?;
+
+    console::log_1(&format!("Invoking Tauri command '{}'...", command).into());
+    let result_js = invoke(command, args_value).await;
+    console::log_1(&format!("Tauri command '{}' returned result", command).into());
 
     serde_wasm_bindgen::from_value(result_js).map_err(|e| {
-        let error_msg = format!("Failed to deserialize shows: {}", e);
+        let error_msg = format!("Failed to deserialize result from command '{}': {}", command, e);
         console::log_1(&error_msg.clone().into());
         error_msg
     })
+}
+
+/// Generic helper for Tauri commands that don't need arguments
+pub async fn invoke_tauri_no_args<R>(command: &str) -> Result<R, String>
+where
+    R: for<'de> Deserialize<'de>,
+{
+    console::log_1(&format!("Invoking Tauri command '{}' (no args)...", command).into());
+    let result_js = invoke(command, JsValue::NULL).await;
+    console::log_1(&format!("Tauri command '{}' returned result", command).into());
+
+    serde_wasm_bindgen::from_value(result_js).map_err(|e| {
+        let error_msg = format!("Failed to deserialize result from command '{}': {}", command, e);
+        console::log_1(&error_msg.clone().into());
+        error_msg
+    })
+}
+
+/// Fetches shows from the backend via Tauri
+pub async fn fetch_shows() -> Result<Vec<Show>, String> {
+    invoke_tauri_no_args("get_shows").await
 }
 
 /// Creates a new show via Tauri
 pub async fn create_show(show_data: ShowData) -> Result<Show, String> {
     console::log_1(&format!("create_show called with: {:?}", show_data).into());
 
-    // Tauri expects arguments to be wrapped in an object with parameter names as keys
     let args = serde_json::json!({
         "showData": show_data
     });
 
-    let args_value = serde_wasm_bindgen::to_value(&args).map_err(|e| {
-        let error_msg = format!("Failed to serialize show data: {}", e);
-        console::log_1(&error_msg.clone().into());
-        error_msg
-    })?;
-
-    console::log_1(&"Invoking Tauri command 'create_show'...".into());
-    let result_js = invoke("create_show", args_value).await;
-    console::log_1(&format!("Tauri command returned: {:?}", result_js).into());
-
-    serde_wasm_bindgen::from_value(result_js).map_err(|e| {
-        let error_msg = format!("Failed to deserialize show result: {}", e);
-        console::log_1(&error_msg.clone().into());
-        error_msg
-    })
+    invoke_tauri("create_show", args).await
 }
 
 
 /// Fetches wrestlers from the backend via Tauri
 pub async fn fetch_wrestlers() -> Result<Vec<Wrestler>, String> {
-    let result_js = invoke("get_wrestlers", JsValue::NULL).await;
-
-    serde_wasm_bindgen::from_value(result_js).map_err(|e| {
-        let error_msg = format!("Failed to deserialize wrestlers: {}", e);
-        console::log_1(&error_msg.clone().into());
-        error_msg
-    })
+    invoke_tauri_no_args("get_wrestlers").await
 }
 
 
