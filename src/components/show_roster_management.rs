@@ -1,5 +1,6 @@
 use crate::types::{assign_wrestler_to_show, fetch_shows, fetch_wrestlers, fetch_wrestlers_for_show, remove_wrestler_from_show, Promotion, Show, Wrestler};
 use leptos::prelude::*;
+use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 
 /// Show Roster Management component for assigning wrestlers to shows
@@ -19,15 +20,27 @@ pub fn ShowRosterManagement(
     let (selected_show, set_selected_show) = signal(None::<Show>);
     let (current_roster, set_current_roster) = signal(Vec::<Wrestler>::new());
     let (available_wrestlers, set_available_wrestlers) = signal(Vec::<Wrestler>::new());
+    let (shows, set_shows) = signal(Vec::<Show>::new());
     let (loading, set_loading) = signal(false);
+    let (shows_loading, set_shows_loading) = signal(true);
     let (status_message, set_status_message) = signal(None::<String>);
     let (error_message, set_error_message) = signal(None::<String>);
     
-    // Fetch shows for the selected promotion
-    let shows_resource = LocalResource::new(move || {
-        async move {
-            fetch_shows().await // TODO: Filter by promotion when backend supports it
-        }
+    // Load shows on component mount using Effect like working components
+    Effect::new(move |_| {
+        spawn_local(async move {
+            set_shows_loading.set(true);
+            match fetch_shows().await {
+                Ok(data) => {
+                    set_shows.set(data);
+                    set_error_message.set(None);
+                }
+                Err(e) => {
+                    set_error_message.set(Some(format!("Failed to load shows: {}", e)));
+                }
+            }
+            set_shows_loading.set(false);
+        });
     });
     
     // Load roster data when show selection changes
@@ -64,16 +77,15 @@ pub fn ShowRosterManagement(
     };
     
     // Handle show selection change
-    let on_show_change = move |event| {
-        let value = event_target_value(&event);
+    let on_show_change = move |ev: web_sys::Event| {
+        let target = ev.target().unwrap();
+        let select = target.dyn_into::<web_sys::HtmlSelectElement>().unwrap();
+        let value = select.value();
         if let Ok(show_id) = value.parse::<i32>() {
-            if let Some(shows_result) = shows_resource.get() {
-                if let Ok(shows) = shows_result.as_ref() {
-                    if let Some(show) = shows.iter().find(|s| s.id == show_id) {
-                        set_selected_show.set(Some(show.clone()));
-                        load_roster_data(show_id);
-                    }
-                }
+            let shows_list = shows.get();
+            if let Some(show) = shows_list.iter().find(|s| s.id == show_id) {
+                set_selected_show.set(Some(show.clone()));
+                load_roster_data(show_id);
             }
         } else {
             set_selected_show.set(None);
@@ -167,34 +179,31 @@ pub fn ShowRosterManagement(
                             class="select select-bordered w-full max-w-xs"
                             on:change=on_show_change
                         >
-                            <option value="" selected=selected_show.get().is_none()>
+                            <option value="" selected=move || selected_show.get().is_none()>
                                 "Choose a show..."
                             </option>
-                            <Suspense fallback=move || view! { <option>"Loading shows..."</option> }>
-                                {move || {
-                                    if let Some(shows_result) = shows_resource.get() {
-                                        if let Ok(shows) = shows_result.as_ref() {
-                                            shows.iter().map(|show| {
-                                                let is_selected = selected_show.get()
-                                                    .map(|s| s.id == show.id)
-                                                    .unwrap_or(false);
-                                                let id_str = show.id.to_string();
-                                                let name_str = show.name.clone();
-                                                
-                                                view! {
-                                                    <option value=id_str selected=is_selected>
-                                                        {name_str}
-                                                    </option>
-                                                }.into_any()
-                                            }).collect::<Vec<_>>()
-                                        } else {
-                                            vec![view! { <option>"Error loading shows"</option> }.into_any()]
+                            {move || {
+                                let shows_list = shows.get();
+                                if shows_loading.get() {
+                                    vec![view! { <option value="".to_string() selected=false>{"Loading shows...".to_string()}</option> }]
+                                } else if shows_list.is_empty() {
+                                    vec![view! { <option value="".to_string() selected=false>{"No shows available".to_string()}</option> }]
+                                } else {
+                                    shows_list.iter().map(|show| {
+                                        let is_selected = selected_show.get()
+                                            .map(|s| s.id == show.id)
+                                            .unwrap_or(false);
+                                        let id_str = show.id.to_string();
+                                        let name_str = show.name.clone();
+                                        
+                                        view! {
+                                            <option value=id_str selected=is_selected>
+                                                {name_str}
+                                            </option>
                                         }
-                                    } else {
-                                        vec![view! { <option>"Loading..."</option> }.into_any()]
-                                    }
-                                }}
-                            </Suspense>
+                                    }).collect::<Vec<_>>()
+                                }
+                            }}
                         </select>
                     </div>
                 </div>

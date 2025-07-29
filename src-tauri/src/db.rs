@@ -60,10 +60,10 @@ pub fn internal_create_show(
 }
 
 /// Gets all shows for a promotion ordered by ID (used by tests and Tauri commands)
-pub fn internal_get_shows(conn: &mut SqliteConnection, promotion_id: i32) -> Result<Vec<Show>, DieselError> {
+pub fn internal_get_shows(conn: &mut SqliteConnection, promo_id: i32) -> Result<Vec<Show>, DieselError> {
     use crate::schema::shows::dsl::*;
     shows
-        .filter(crate::schema::shows::promotion_id.eq(promotion_id))
+        .filter(promotion_id.eq(promo_id))
         .order(id.asc())
         .load::<Show>(conn)
 }
@@ -1094,8 +1094,193 @@ pub fn create_test_data(state: State<'_, DbState>) -> Result<String, String> {
         title_count += 1;
     }
     
+    // Assign wrestlers to show rosters
+    let all_wrestlers = internal_get_wrestlers(&mut conn).map_err(|e| format!("Error getting wrestlers: {}", e))?;
+    let raw_show_id = raw_show.as_ref().map(|s| s.id).ok_or("RAW show not found")?;
+    let smackdown_show_id = smackdown_show.as_ref().map(|s| s.id).ok_or("SmackDown show not found")?;
+    
+    // Assign all 5 wrestlers to RAW
+    for wrestler in &all_wrestlers {
+        internal_assign_wrestler_to_show(&mut conn, raw_show_id, wrestler.id)
+            .map_err(|e| format!("Failed to assign wrestler {} to RAW: {}", wrestler.name, e))?;
+    }
+    
+    // Assign 3 wrestlers to SmackDown (Charlotte, Becky, and Stone Cold)
+    let smackdown_wrestlers = ["Charlotte Flair", "Becky Lynch", "Stone Cold Steve Austin"];
+    for wrestler in &all_wrestlers {
+        if smackdown_wrestlers.contains(&wrestler.name.as_str()) {
+            internal_assign_wrestler_to_show(&mut conn, smackdown_show_id, wrestler.id)
+                .map_err(|e| format!("Failed to assign wrestler {} to SmackDown: {}", wrestler.name, e))?;
+        }
+    }
+    
+    // Assign title holders
+    let all_titles = internal_get_titles(&mut conn).map_err(|e| format!("Error getting titles: {}", e))?;
+    
+    // Make The Rock the World Heavyweight Champion
+    if let Some(rock) = all_wrestlers.iter().find(|w| w.name == "The Rock") {
+        if let Some(whc) = all_titles.iter().find(|t| t.title.name == "World Heavyweight Championship") {
+            internal_update_title_holder(
+                &mut conn,
+                whc.title.id,
+                rock.id,
+                Some("Monday Night RAW"),
+                Some("Won in tournament final"),
+                None
+            ).map_err(|e| format!("Failed to assign World Heavyweight Championship: {}", e))?;
+        }
+    }
+    
+    // Make Charlotte Flair the WWE Women's Champion
+    if let Some(charlotte) = all_wrestlers.iter().find(|w| w.name == "Charlotte Flair") {
+        if let Some(wwe_womens) = all_titles.iter().find(|t| t.title.name == "WWE Women's Championship") {
+            internal_update_title_holder(
+                &mut conn,
+                wwe_womens.title.id,
+                charlotte.id,
+                Some("Friday Night SmackDown"),
+                Some("Defeated previous champion"),
+                None
+            ).map_err(|e| format!("Failed to assign WWE Women's Championship: {}", e))?;
+        }
+    }
+    
+    // Create sample matches
+    let match_data_list = vec![
+        // RAW matches
+        MatchData {
+            show_id: raw_show_id,
+            match_name: Some("World Heavyweight Championship Match".to_string()),
+            match_type: "Singles".to_string(),
+            match_stipulation: Some("Standard".to_string()),
+            scheduled_date: None,
+            match_order: Some(5),
+            is_title_match: true,
+            title_id: all_titles.iter().find(|t| t.title.name == "World Heavyweight Championship").map(|t| t.title.id),
+        },
+        MatchData {
+            show_id: raw_show_id,
+            match_name: Some("Grudge Match".to_string()),
+            match_type: "Singles".to_string(),
+            match_stipulation: Some("No Disqualification".to_string()),
+            scheduled_date: None,
+            match_order: Some(3),
+            is_title_match: false,
+            title_id: None,
+        },
+        MatchData {
+            show_id: raw_show_id,
+            match_name: Some("Opening Contest".to_string()),
+            match_type: "Singles".to_string(),
+            match_stipulation: Some("Standard".to_string()),
+            scheduled_date: None,
+            match_order: Some(1),
+            is_title_match: false,
+            title_id: None,
+        },
+        // SmackDown matches
+        MatchData {
+            show_id: smackdown_show_id,
+            match_name: Some("WWE Women's Championship Match".to_string()),
+            match_type: "Singles".to_string(),
+            match_stipulation: Some("Standard".to_string()),
+            scheduled_date: None,
+            match_order: Some(4),
+            is_title_match: true,
+            title_id: all_titles.iter().find(|t| t.title.name == "WWE Women's Championship").map(|t| t.title.id),
+        },
+        MatchData {
+            show_id: smackdown_show_id,
+            match_name: Some("Main Event Singles Match".to_string()),
+            match_type: "Singles".to_string(),
+            match_stipulation: Some("Falls Count Anywhere".to_string()),
+            scheduled_date: None,
+            match_order: Some(5),
+            is_title_match: false,
+            title_id: None,
+        },
+    ];
+    
+    let mut match_count = 0;
+    for match_data in match_data_list {
+        let created_match = internal_create_match(&mut conn, &match_data)
+            .map_err(|e| format!("Failed to create match '{}': {}", match_data.match_name.as_deref().unwrap_or("Unknown"), e))?;
+        
+        // Add participants based on match
+        match match_data.match_name.as_deref().unwrap_or("") {
+            "World Heavyweight Championship Match" => {
+                // The Rock vs John Cena
+                if let Some(rock) = all_wrestlers.iter().find(|w| w.name == "The Rock") {
+                    internal_add_wrestler_to_match(&mut conn, created_match.id, rock.id, None, Some(1))
+                        .map_err(|e| format!("Failed to add The Rock to match: {}", e))?;
+                }
+                if let Some(cena) = all_wrestlers.iter().find(|w| w.name == "John Cena") {
+                    internal_add_wrestler_to_match(&mut conn, created_match.id, cena.id, None, Some(2))
+                        .map_err(|e| format!("Failed to add John Cena to match: {}", e))?;
+                }
+                // Set The Rock as winner
+                if let Some(rock) = all_wrestlers.iter().find(|w| w.name == "The Rock") {
+                    internal_set_match_winner(&mut conn, created_match.id, rock.id)
+                        .map_err(|e| format!("Failed to set match winner: {}", e))?;
+                }
+            },
+            "Grudge Match" => {
+                // Stone Cold vs The Rock
+                if let Some(austin) = all_wrestlers.iter().find(|w| w.name == "Stone Cold Steve Austin") {
+                    internal_add_wrestler_to_match(&mut conn, created_match.id, austin.id, None, Some(1))
+                        .map_err(|e| format!("Failed to add Stone Cold to match: {}", e))?;
+                }
+                if let Some(rock) = all_wrestlers.iter().find(|w| w.name == "The Rock") {
+                    internal_add_wrestler_to_match(&mut conn, created_match.id, rock.id, None, Some(2))
+                        .map_err(|e| format!("Failed to add The Rock to match: {}", e))?;
+                }
+            },
+            "Opening Contest" => {
+                // Becky Lynch vs John Cena (intergender match)
+                if let Some(becky) = all_wrestlers.iter().find(|w| w.name == "Becky Lynch") {
+                    internal_add_wrestler_to_match(&mut conn, created_match.id, becky.id, None, Some(1))
+                        .map_err(|e| format!("Failed to add Becky Lynch to match: {}", e))?;
+                }
+                if let Some(cena) = all_wrestlers.iter().find(|w| w.name == "John Cena") {
+                    internal_add_wrestler_to_match(&mut conn, created_match.id, cena.id, None, Some(2))
+                        .map_err(|e| format!("Failed to add John Cena to match: {}", e))?;
+                }
+            },
+            "WWE Women's Championship Match" => {
+                // Charlotte vs Becky
+                if let Some(charlotte) = all_wrestlers.iter().find(|w| w.name == "Charlotte Flair") {
+                    internal_add_wrestler_to_match(&mut conn, created_match.id, charlotte.id, None, Some(1))
+                        .map_err(|e| format!("Failed to add Charlotte to match: {}", e))?;
+                }
+                if let Some(becky) = all_wrestlers.iter().find(|w| w.name == "Becky Lynch") {
+                    internal_add_wrestler_to_match(&mut conn, created_match.id, becky.id, None, Some(2))
+                        .map_err(|e| format!("Failed to add Becky to match: {}", e))?;
+                }
+                // Set Charlotte as winner
+                if let Some(charlotte) = all_wrestlers.iter().find(|w| w.name == "Charlotte Flair") {
+                    internal_set_match_winner(&mut conn, created_match.id, charlotte.id)
+                        .map_err(|e| format!("Failed to set match winner: {}", e))?;
+                }
+            },
+            "Main Event Singles Match" => {
+                // Stone Cold vs Charlotte
+                if let Some(austin) = all_wrestlers.iter().find(|w| w.name == "Stone Cold Steve Austin") {
+                    internal_add_wrestler_to_match(&mut conn, created_match.id, austin.id, None, Some(1))
+                        .map_err(|e| format!("Failed to add Stone Cold to match: {}", e))?;
+                }
+                if let Some(charlotte) = all_wrestlers.iter().find(|w| w.name == "Charlotte Flair") {
+                    internal_add_wrestler_to_match(&mut conn, created_match.id, charlotte.id, None, Some(2))
+                        .map_err(|e| format!("Failed to add Charlotte to match: {}", e))?;
+                }
+            },
+            _ => {}
+        }
+        
+        match_count += 1;
+    }
+    
     info!("Test data created successfully");
-    Ok(format!("Test data created: 2 shows, 5 wrestlers, and {} titles", title_count))
+    Ok(format!("Test data created: 2 shows, 5 wrestlers, {} titles, show rosters assigned, 2 title holders, and {} matches with participants", title_count, match_count))
 }
 
 // ===== Show Roster Operations =====

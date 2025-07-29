@@ -188,7 +188,7 @@ fn Header(
                                 class="select select-bordered select-sm w-48 max-w-xs"
                                 on:change=on_promotion_change
                             >
-                                <option value="ceo" selected=selected_promotion.get().is_none()>
+                                <option value="ceo" selected=move || selected_promotion.get().is_none()>
                                     "CEO Dashboard"
                                 </option>
                                 <Suspense fallback=move || view! { <option>"Loading promotions..."</option> }>
