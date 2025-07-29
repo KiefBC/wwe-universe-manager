@@ -7,6 +7,7 @@ use web_sys::console;
 #[component]
 pub fn CreatePromotion(
     set_current_page: WriteSignal<String>,
+    set_refresh_trigger: WriteSignal<u32>,
 ) -> impl IntoView {
     let (name, set_name) = signal(String::new());
     let (description, set_description) = signal(String::new());
@@ -39,6 +40,9 @@ pub fn CreatePromotion(
                     console::log_1(&format!("✅ Promotion created successfully: {:?}", promotion).into());
                     set_submit_message.set(format!("Promotion '{}' created successfully!", promotion.name));
                     set_is_submitting.set(false);
+                    
+                    // Trigger refresh of CEO dashboard resources
+                    set_refresh_trigger.update(|x| *x += 1);
                     
                     // Navigate back to CEO dashboard after a short delay
                     set_timeout(

@@ -1,4 +1,4 @@
-use crate::types::{assign_wrestler_to_show, fetch_shows, fetch_wrestlers, fetch_wrestlers_for_show, remove_wrestler_from_show, Promotion, Show, Wrestler};
+use crate::types::{assign_wrestler_to_show, fetch_shows, fetch_wrestlers, fetch_wrestlers_for_show, remove_wrestler_from_show, Show, Wrestler};
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
@@ -14,7 +14,6 @@ use wasm_bindgen_futures::spawn_local;
 #[component]
 pub fn ShowRosterManagement(
     set_current_page: WriteSignal<String>,
-    selected_promotion: ReadSignal<Option<Promotion>>,
 ) -> impl IntoView {
     // State management
     let (selected_show, set_selected_show) = signal(None::<Show>);
@@ -147,13 +146,7 @@ pub fn ShowRosterManagement(
                         "Show Roster Management"
                     </h2>
                     <p class="text-base-content/70">
-                        {move || {
-                            if let Some(promotion) = selected_promotion.get() {
-                                format!("Manage wrestler assignments for {} shows", promotion.name)
-                            } else {
-                                "Manage wrestler assignments for shows".to_string()
-                            }
-                        }}
+                        "Manage wrestler assignments for shows"
                     </p>
                 </div>
                 <button

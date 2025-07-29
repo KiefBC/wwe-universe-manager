@@ -80,7 +80,7 @@ pub fn WrestlersList(
         let current_term = search_term.get();
         spawn_local(async move {
             gloo_timers::future::TimeoutFuture::new(300).await;
-            if search_term.get() == current_term {
+            if search_term.get_untracked() == current_term {
                 set_debounced_search_term.set(current_term);
             }
         });

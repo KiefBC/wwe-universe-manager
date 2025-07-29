@@ -1,4 +1,4 @@
-use crate::types::{fetch_shows, Promotion};
+use crate::types::fetch_shows;
 use leptos::prelude::*;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
@@ -10,23 +10,21 @@ extern "C" {
     async fn invoke(cmd: &str, args: JsValue) -> JsValue;
 }
 
-/// Promotion-specific dashboard component 
+/// GM Dashboard component 
 /// 
-/// Displays promotion-specific:
-/// - Shows for the selected promotion
-/// - Action buttons for creating shows, viewing wrestlers, and managing championships
-/// - Statistics cards showing promotion-specific counts
-/// - Booker button for match booking
+/// Main dashboard for wrestling management:
+/// - Create shows, wrestlers, and championships
+/// - Access show rosters and match booking
+/// - Central hub for all wrestling management activities
 #[component]
 pub fn PromotionDashboard(
     set_current_page: WriteSignal<String>,
     refresh_trigger: ReadSignal<u32>,
-    selected_promotion: ReadSignal<Option<Promotion>>,
 ) -> impl IntoView {
-    // Get promotion-specific shows (filtered by promotion_id in the future)
+    // Get shows for the application
     let _shows_resource = LocalResource::new(move || {
         let _trigger = refresh_trigger.get(); // This makes the resource reactive to refresh_trigger
-        fetch_shows() // TODO: Filter by selected_promotion.get().map(|p| p.id) when backend supports it
+        fetch_shows()
     });
     
     // Navigate to wrestlers list page
@@ -61,22 +59,10 @@ pub fn PromotionDashboard(
         <div class="space-y-8">
             <div class="text-center mb-8">
                 <h2 class="text-3xl font-bold text-base-content mb-2">
-                    {move || {
-                        if let Some(promotion) = selected_promotion.get() {
-                            format!("{} Management Dashboard", promotion.name)
-                        } else {
-                            "Promotion Dashboard".to_string()
-                        }
-                    }}
+                    "GM Dashboard"
                 </h2>
                 <p class="text-base-content/70">
-                    {move || {
-                        if let Some(promotion) = selected_promotion.get() {
-                            format!("Manage {} shows, wrestlers, and championships", promotion.name)
-                        } else {
-                            "Select a promotion to manage".to_string()
-                        }
-                    }}
+                    "Manage shows, wrestlers, and championships"
                 </p>
             </div>
 

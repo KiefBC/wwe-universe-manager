@@ -1,7 +1,7 @@
 use crate::types::{
     add_wrestler_to_match, create_match, fetch_matches_for_show,
     fetch_shows, fetch_wrestlers_for_show, Match, MatchData,
-    Promotion, Show, Wrestler,
+    Show, Wrestler,
 };
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
@@ -19,7 +19,6 @@ use wasm_bindgen_futures::spawn_local;
 #[component]
 pub fn BookerDashboard(
     set_current_page: WriteSignal<String>,
-    selected_promotion: ReadSignal<Option<Promotion>>,
 ) -> impl IntoView {
     // State management
     let (selected_show, set_selected_show) = signal(None::<Show>);
@@ -165,13 +164,7 @@ pub fn BookerDashboard(
                         "Match Booking Dashboard"
                     </h2>
                     <p class="text-base-content/70">
-                        {move || {
-                            if let Some(promotion) = selected_promotion.get() {
-                                format!("Book matches and manage match cards for {} shows", promotion.name)
-                            } else {
-                                "Book matches and manage match cards".to_string()
-                            }
-                        }}
+                        "Book matches and manage match cards"
                     </p>
                 </div>
                 <button

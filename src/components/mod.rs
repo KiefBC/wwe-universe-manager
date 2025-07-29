@@ -1,5 +1,4 @@
 pub mod booker_dashboard;
-pub mod ceo_dashboard;
 pub mod create_promotion;
 pub mod create_show;
 pub mod create_title;
@@ -12,7 +11,6 @@ pub mod wrestler_details_window;
 pub mod wrestlers_list;
 
 pub use booker_dashboard::BookerDashboard;
-pub use ceo_dashboard::CeoDashboard;
 pub use create_promotion::CreatePromotion;
 pub use create_show::CreateShow;
 pub use create_title::CreateTitle;
