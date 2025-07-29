@@ -86,6 +86,7 @@ diesel::table! {
         gender -> Text,
         show_id -> Nullable<Integer>,
         is_active -> Bool,
+        is_user_created -> Nullable<Bool>,
     }
 }
 

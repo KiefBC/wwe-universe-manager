@@ -50,7 +50,10 @@ async fn create_title(title_data: TitleData) -> Result<(), String> {
     .map_err(|e| e.to_string())?;
 
     let result = invoke("create_belt", args).await;
-    serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
+    // The backend returns a Title object, but we only care about success/failure
+    serde_wasm_bindgen::from_value::<crate::types::Title>(result)
+        .map(|_| ()) // Convert Title to unit type
+        .map_err(|e| e.to_string())
 }
 
 #[component]

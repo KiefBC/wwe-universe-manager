@@ -1,0 +1,1 @@
+ALTER TABLE titles ADD COLUMN is_user_created BOOLEAN DEFAULT FALSE;

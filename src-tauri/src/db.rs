@@ -375,6 +375,30 @@ pub fn internal_create_signature_move(
         .get_result(conn)
 }
 
+/// Deletes a wrestler (only if user-created)
+pub fn internal_delete_wrestler(
+    conn: &mut SqliteConnection,
+    wrestler_id: i32,
+) -> Result<(), DieselError> {
+    use crate::schema::wrestlers::dsl::*;
+    
+    // First check if the wrestler exists and is user-created
+    let wrestler = wrestlers
+        .filter(id.eq(wrestler_id))
+        .first::<Wrestler>(conn)?;
+    
+    // Only allow deletion of user-created wrestlers
+    if !wrestler.is_user_created.unwrap_or(false) {
+        return Err(DieselError::RollbackTransaction);
+    }
+    
+    // Delete the wrestler (database handles cascading deletes via foreign key constraints)
+    diesel::delete(wrestlers.filter(id.eq(wrestler_id)))
+        .execute(conn)?;
+        
+    Ok(())
+}
+
 #[tauri::command]
 pub fn create_wrestler(
     state: State<'_, DbState>,
@@ -565,6 +589,25 @@ pub fn update_wrestler_biography(
         })
 }
 
+#[tauri::command]
+pub fn delete_wrestler(state: State<'_, DbState>, wrestler_id: i32) -> Result<String, String> {
+    let mut conn = get_connection(&state)?;
+
+    internal_delete_wrestler(&mut conn, wrestler_id)
+        .inspect(|_| {
+            info!("Wrestler with ID {} deleted successfully", wrestler_id);
+        })
+        .map_err(|e| {
+            error!("Error deleting wrestler: {}", e);
+            match e {
+                DieselError::RollbackTransaction => "Cannot delete system wrestler - only user-created wrestlers can be deleted".to_string(),
+                DieselError::NotFound => "Wrestler not found".to_string(),
+                _ => format!("Failed to delete wrestler: {}", e),
+            }
+        })
+        .map(|_| "Wrestler deleted successfully".to_string())
+}
+
 
 // ===== Title Operations =====
 
@@ -577,6 +620,7 @@ pub fn internal_create_belt(
     gender: &str,
     show_id: Option<i32>,
     current_holder_id: Option<i32>,
+    is_user_created: bool,
 ) -> Result<Title, DieselError> {
     // Calculate prestige tier based on division
     let prestige_tier = match division {
@@ -595,6 +639,7 @@ pub fn internal_create_belt(
         gender: gender.to_string(),
         show_id,
         is_active: true,
+        is_user_created: Some(is_user_created),
     };
 
     diesel::insert_into(crate::schema::titles::dsl::titles)
@@ -615,6 +660,7 @@ pub fn create_belt(state: State<'_, DbState>, title_data: TitleData) -> Result<T
         &title_data.gender,
         title_data.show_id,
         title_data.current_holder_id,
+        true, // User-created titles
     )
     .inspect(|title| {
         info!("Title '{}' created successfully", title.name);
@@ -686,6 +732,102 @@ pub fn get_titles(state: State<'_, DbState>) -> Result<Vec<TitleWithHolders>, St
         })
 }
 
+/// Deletes a title (only if user-created)
+pub fn internal_delete_title(
+    conn: &mut SqliteConnection,
+    title_id: i32,
+) -> Result<(), DieselError> {
+    use crate::schema::{titles, title_holders};
+    
+    // First check if the title exists and is user-created
+    let title = titles::table
+        .filter(titles::id.eq(title_id))
+        .first::<Title>(conn)?;
+    
+    // Only allow deletion of user-created titles
+    if !title.is_user_created.unwrap_or(false) {
+        return Err(DieselError::RollbackTransaction);
+    }
+    
+    // End any current title reigns for this title before deletion
+    let now = Utc::now().naive_utc();
+    diesel::update(title_holders::table)
+        .filter(title_holders::title_id.eq(title_id))
+        .filter(title_holders::held_until.is_null())
+        .set(title_holders::held_until.eq(now))
+        .execute(conn)?;
+    
+    // Delete the title (database handles cascading deletes via foreign key constraints)
+    diesel::delete(titles::table.filter(titles::id.eq(title_id)))
+        .execute(conn)?;
+        
+    Ok(())
+}
+
+/// Gets titles that can be assigned to a wrestler based on gender compatibility
+pub fn internal_get_titles_for_wrestler_gender(
+    conn: &mut SqliteConnection,
+    wrestler_gender: &str,
+) -> Result<Vec<TitleWithHolders>, DieselError> {
+    use crate::schema::{titles, title_holders, wrestlers};
+    
+    // Filter titles based on gender compatibility:
+    // - Male wrestlers can hold Male and Mixed titles
+    // - Female wrestlers can hold Female and Mixed titles  
+    // - Other gender wrestlers can hold any title
+    let gender_filter = match wrestler_gender {
+        "Male" => vec!["Male", "Mixed"],
+        "Female" => vec!["Female", "Mixed"], 
+        _ => vec!["Male", "Female", "Mixed"], // "Other" or any other gender
+    };
+    
+    // Get active titles that match gender criteria
+    let filtered_titles = titles::table
+        .filter(titles::is_active.eq(true))
+        .filter(titles::gender.eq_any(gender_filter))
+        .order(titles::prestige_tier.asc())
+        .then_order_by(titles::name.asc())
+        .load::<Title>(conn)?;
+
+    let mut titles_with_holders = Vec::new();
+
+    for title in filtered_titles {
+        // Get current holders for this title
+        let current_holders_data = title_holders::table
+            .inner_join(wrestlers::table.on(title_holders::wrestler_id.eq(wrestlers::id)))
+            .filter(title_holders::title_id.eq(title.id))
+            .filter(title_holders::held_until.is_null())
+            .select((TitleHolder::as_select(), wrestlers::name, wrestlers::gender))
+            .load::<(TitleHolder, String, String)>(conn)?;
+
+        let current_holders: Vec<TitleHolderInfo> = current_holders_data
+            .into_iter()
+            .map(|(holder, wrestler_name, wrestler_gender)| TitleHolderInfo {
+                holder,
+                wrestler_name,
+                wrestler_gender,
+            })
+            .collect();
+
+        // Calculate days held for the first holder (for single titles)
+        let days_held = if let Some(first_holder) = current_holders.first() {
+            let now = Utc::now().naive_utc();
+            let duration = now - first_holder.holder.held_since;
+            Some(duration.num_days() as i32)
+        } else {
+            None
+        };
+
+        titles_with_holders.push(TitleWithHolders {
+            title,
+            current_holders,
+            days_held,
+        });
+    }
+
+    Ok(titles_with_holders)
+}
+
 /// Updates title holder (ends current reign and starts new one)
 pub fn internal_update_title_holder(
     conn: &mut SqliteConnection,
@@ -748,6 +890,39 @@ pub fn update_title_holder(
     })?;
 
     Ok("Title holder updated successfully".to_string())
+}
+
+#[tauri::command]
+pub fn delete_title(state: State<'_, DbState>, title_id: i32) -> Result<String, String> {
+    let mut conn = get_connection(&state)?;
+
+    internal_delete_title(&mut conn, title_id)
+        .inspect(|_| {
+            info!("Title with ID {} deleted successfully", title_id);
+        })
+        .map_err(|e| {
+            error!("Error deleting title: {}", e);
+            match e {
+                DieselError::RollbackTransaction => "Cannot delete system title - only user-created titles can be deleted".to_string(),
+                DieselError::NotFound => "Title not found".to_string(),
+                _ => format!("Failed to delete title: {}", e),
+            }
+        })
+        .map(|_| "Title deleted successfully".to_string())
+}
+
+#[tauri::command]
+pub fn get_titles_for_wrestler(
+    state: State<'_, DbState>,
+    wrestler_gender: String,
+) -> Result<Vec<TitleWithHolders>, String> {
+    let mut conn = get_connection(&state)?;
+    
+    internal_get_titles_for_wrestler_gender(&mut conn, &wrestler_gender)
+        .map_err(|e| {
+            error!("Error fetching titles for wrestler gender: {}", e);
+            format!("Failed to fetch titles for wrestler: {}", e)
+        })
 }
 
 /// Gets all titles filtered by show assignment
@@ -1028,7 +1203,7 @@ pub fn create_test_data(state: State<'_, DbState>) -> Result<String, String> {
 
     let mut title_count = 0;
     for (name, title_type, division, gender, show_id) in test_titles {
-        internal_create_belt(&mut conn, name, title_type, division, gender, show_id, None)
+        internal_create_belt(&mut conn, name, title_type, division, gender, show_id, None, false)
             .map_err(|e| format!("Failed to create title '{}': {}", name, e))?;
         title_count += 1;
     }

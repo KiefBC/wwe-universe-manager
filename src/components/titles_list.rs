@@ -2,19 +2,7 @@ use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Title {
-    pub id: i32,
-    pub name: String,
-    pub current_holder_id: Option<i32>,
-    pub title_type: String,
-    pub division: String,
-    pub prestige_tier: i32,
-    pub gender: String,
-    pub show_id: Option<i32>,
-    pub is_active: bool,
-}
+use crate::types::Title;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TitleHolderInfo {

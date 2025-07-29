@@ -32,5 +32,6 @@ dotenvy = "0.15"
 chrono = { version = "0.4", features = ["serde"] }
 serial_test = "3.1.1"
 argon2 = "0.5.3"
+rand = "0.8"
 log = "0.4.22"
 env_logger = "0.10"

@@ -55,6 +55,20 @@ pub struct ShowData {
     pub description: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Title {
+    pub id: i32,
+    pub name: String,
+    pub current_holder_id: Option<i32>,
+    pub title_type: String,
+    pub division: String,
+    pub prestige_tier: i32,
+    pub gender: String,
+    pub show_id: Option<i32>,
+    pub is_active: bool,
+    pub is_user_created: Option<bool>,
+}
+
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct Wrestler {

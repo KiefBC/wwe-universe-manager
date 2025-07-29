@@ -4,6 +4,33 @@ use crate::schema::users::dsl::*;
 use diesel::prelude::*;
 use log::{error, info, warn};
 use tauri::State;
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
+use argon2::password_hash::SaltString;
+use rand::rngs::OsRng;
+
+/// Hash a password using Argon2
+fn hash_password(password_str: &str) -> Result<String, String> {
+    let salt = SaltString::generate(&mut OsRng);
+    let argon2 = Argon2::default();
+    
+    argon2
+        .hash_password(password_str.as_bytes(), &salt)
+        .map(|hash| hash.to_string())
+        .map_err(|e| format!("Failed to hash password: {}", e))
+}
+
+/// Verify a password against its hash
+fn verify_password(password_str: &str, hash_str: &str) -> Result<bool, String> {
+    let parsed_hash = PasswordHash::new(hash_str)
+        .map_err(|e| format!("Failed to parse password hash: {}", e))?;
+    
+    let argon2 = Argon2::default();
+    
+    match argon2.verify_password(password_str.as_bytes(), &parsed_hash) {
+        Ok(()) => Ok(true),
+        Err(_) => Ok(false),
+    }
+}
 
 /// Checks if a user exists in the database
 pub fn check_user_exists(conn: &mut SqliteConnection, username_check: &str) -> bool {
@@ -43,12 +70,19 @@ pub fn internal_verify_credentials(
         .optional()
     {
         Ok(Some(user)) => {
-            if user.password == user_password {
-                info!("Credentials verified for user: {}", user_username);
-                true
-            } else {
-                warn!("Invalid password for user: {}", user_username);
-                false
+            match verify_password(user_password, &user.password) {
+                Ok(true) => {
+                    info!("Credentials verified for user: {}", user_username);
+                    true
+                }
+                Ok(false) => {
+                    warn!("Invalid password for user: {}", user_username);
+                    false
+                }
+                Err(e) => {
+                    error!("Password verification error for user '{}': {}", user_username, e);
+                    false
+                }
             }
         }
         Ok(None) => {
@@ -110,10 +144,19 @@ pub fn register_user(
         return false;
     }
 
-    // Create new user
+    // Hash the password before storing
+    let hashed_password = match hash_password(&user_password) {
+        Ok(hash) => hash,
+        Err(e) => {
+            error!("Failed to hash password for user '{}': {}", user_username, e);
+            return false;
+        }
+    };
+
+    // Create new user with hashed password
     let new_user = NewUser {
         username: user_username.clone(),
-        password: user_password,
+        password: hashed_password,
     };
 
     match diesel::insert_into(users)

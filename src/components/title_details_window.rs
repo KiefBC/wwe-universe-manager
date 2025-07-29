@@ -3,19 +3,7 @@ use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use web_sys::window;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Title {
-    pub id: i32,
-    pub name: String,
-    pub current_holder_id: Option<i32>,
-    pub title_type: String,
-    pub division: String,
-    pub prestige_tier: i32,
-    pub gender: String,
-    pub show_id: Option<i32>,
-    pub is_active: bool,
-}
+use crate::types::Title;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TitleHolderInfo {
@@ -73,6 +61,16 @@ async fn update_title_holder(
     serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
 }
 
+async fn delete_title(title_id: i32) -> Result<String, String> {
+    let args = serde_wasm_bindgen::to_value(&serde_json::json!({
+        "titleId": title_id
+    }))
+    .map_err(|e| e.to_string())?;
+
+    let result = invoke("delete_title", args).await;
+    serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
+}
+
 #[component]
 pub fn TitleDetailsWindow() -> impl IntoView {
     let (title_data, set_title_data) = signal(None::<TitleWithHolders>);
@@ -88,6 +86,11 @@ pub fn TitleDetailsWindow() -> impl IntoView {
     let (change_method, set_change_method) = signal("won".to_string());
     let (updating, set_updating) = signal(false);
     let (update_success, set_update_success) = signal(None::<String>);
+    
+    // Delete functionality
+    let (show_delete_confirmation, set_show_delete_confirmation) = signal(false);
+    let (deleting, set_deleting) = signal(false);
+    let (delete_error, set_delete_error) = signal(None::<String>);
 
     // Parse title ID from URL hash
     let title_id = move || {
@@ -258,6 +261,40 @@ pub fn TitleDetailsWindow() -> impl IntoView {
         }
     };
 
+    // Delete handlers
+    let handle_delete_click = move |_| {
+        set_show_delete_confirmation.set(true);
+        set_delete_error.set(None);
+    };
+
+    let handle_confirm_delete = move |_| {
+        if let Some(title) = title_data.get() {
+            spawn_local(async move {
+                set_deleting.set(true);
+                set_delete_error.set(None);
+                
+                match delete_title(title.title.id).await {
+                    Ok(_) => {
+                        // Close the window after successful deletion
+                        if let Some(window) = web_sys::window() {
+                            let _ = window.close();
+                        }
+                    }
+                    Err(e) => {
+                        set_delete_error.set(Some(format!("Failed to delete title: {}", e)));
+                    }
+                }
+                
+                set_deleting.set(false);
+            });
+        }
+    };
+
+    let handle_cancel_delete = move |_| {
+        set_show_delete_confirmation.set(false);
+        set_delete_error.set(None);
+    };
+
     view! {
         <div class="container mx-auto p-6 bg-base-100 min-h-screen">
             <Show when=move || loading.get()>
@@ -335,13 +372,87 @@ pub fn TitleDetailsWindow() -> impl IntoView {
                                                     </span>
                                                 </div>
                                             </div>
-                                            <div class="text-right">
-                                                <div class="text-2xl font-bold text-base-content">
-                                                    "Tier " {title.prestige_tier}
+                                            <div class="text-right space-y-2">
+                                                <div>
+                                                    <div class="text-2xl font-bold text-base-content">
+                                                        "Tier " {title.prestige_tier}
+                                                    </div>
+                                                    <div class="text-sm text-base-content/60">
+                                                        "Prestige Level"
+                                                    </div>
                                                 </div>
-                                                <div class="text-sm text-base-content/60">
-                                                    "Prestige Level"
-                                                </div>
+                                                
+                                                // Delete button (only for user-created titles)
+                                                <Show when=move || title.is_user_created.unwrap_or(false)>
+                                                    <div class="flex flex-col gap-2">
+                                                        <Show when=move || delete_error.get().is_some()>
+                                                            <div class="alert alert-error">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                </svg>
+                                                                <span class="text-xs">{move || delete_error.get().unwrap_or_default()}</span>
+                                                            </div>
+                                                        </Show>
+                                                        
+                                                        <Show when=move || !show_delete_confirmation.get()>
+                                                            <button
+                                                                class="btn btn-error btn-sm gap-1"
+                                                                disabled=move || deleting.get()
+                                                                on:click=handle_delete_click
+                                                            >
+                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                </svg>
+                                                                "Delete Title"
+                                                            </button>
+                                                        </Show>
+
+                                                        <Show when=move || show_delete_confirmation.get()>
+                                                            <div class="space-y-2">
+                                                                <div class="bg-error/20 border border-error/30 rounded-lg p-3">
+                                                                    <div class="flex items-center gap-2 mb-2">
+                                                                        <svg class="w-4 h-4 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                                                        </svg>
+                                                                        <h5 class="text-error font-bold text-sm">"Confirm Deletion"</h5>
+                                                                    </div>
+                                                                    <p class="text-error/90 text-xs mb-2">
+                                                                        "Are you sure you want to delete "
+                                                                        <strong>{move || title_data.get().map(|t| t.title.name.clone()).unwrap_or_default()}</strong>
+                                                                        "? This action cannot be undone."
+                                                                    </p>
+                                                                    <p class="text-error/70 text-xs">
+                                                                        "This will also remove all title history and holder records."
+                                                                    </p>
+                                                                </div>
+                                                                <div class="flex gap-1">
+                                                                    <button
+                                                                        class="btn btn-error btn-xs flex-1 gap-1"
+                                                                        disabled=move || deleting.get()
+                                                                        on:click=handle_confirm_delete
+                                                                    >
+                                                                        <Show when=move || deleting.get()>
+                                                                            <span class="loading loading-spinner loading-xs"></span>
+                                                                        </Show>
+                                                                        <Show when=move || !deleting.get()>
+                                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                            </svg>
+                                                                        </Show>
+                                                                        {move || if deleting.get() { "Deleting..." } else { "Delete Forever" }}
+                                                                    </button>
+                                                                    <button
+                                                                        class="btn btn-ghost btn-xs flex-1"
+                                                                        disabled=move || deleting.get()
+                                                                        on:click=handle_cancel_delete
+                                                                    >
+                                                                        "Cancel"
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </Show>
+                                                    </div>
+                                                </Show>
                                             </div>
                                         </div>
 

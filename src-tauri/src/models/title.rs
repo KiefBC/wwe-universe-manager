@@ -22,6 +22,7 @@ pub struct Title {
     pub gender: String,
     pub show_id: Option<i32>,
     pub is_active: bool,
+    pub is_user_created: Option<bool>,
 }
 
 // Struct for Diesel insertion (uses owned String, no lifetime)
@@ -36,6 +37,7 @@ pub struct NewTitle {
     pub gender: String,
     pub show_id: Option<i32>,
     pub is_active: bool,
+    pub is_user_created: Option<bool>,
 }
 
 // Struct for Tauri command argument

@@ -2,7 +2,7 @@ use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
-use crate::types::{Show, fetch_shows};
+use crate::types::{Show, fetch_shows, Title};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Wrestler {
@@ -144,6 +144,79 @@ async fn update_wrestler_biography(
     serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
 }
 
+async fn delete_wrestler(wrestler_id: i32) -> Result<String, String> {
+    let args = serde_wasm_bindgen::to_value(&serde_json::json!({
+        "wrestlerId": wrestler_id
+    }))
+    .map_err(|e| e.to_string())?;
+
+    let result = invoke("delete_wrestler", args).await;
+    serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
+}
+
+// Import TitleWithHolders struct  
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TitleWithHolders {
+    pub title: Title,
+    pub current_holders: Vec<TitleHolderInfo>,
+    pub days_held: Option<i32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TitleHolder {
+    pub id: i32,
+    pub title_id: i32,
+    pub wrestler_id: i32,
+    pub held_since: String, // Using String for simplicity in frontend
+    pub held_until: Option<String>,
+    pub event_name: Option<String>,
+    pub event_location: Option<String>,
+    pub change_method: Option<String>,
+    pub created_at: Option<String>,
+    pub updated_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TitleHolderInfo {
+    pub holder: TitleHolder,
+    pub wrestler_name: String,
+    pub wrestler_gender: String,
+}
+
+async fn get_titles_for_wrestler(wrestler_gender: String) -> Result<Vec<Title>, String> {
+    let args = serde_wasm_bindgen::to_value(&serde_json::json!({
+        "wrestlerGender": wrestler_gender
+    }))
+    .map_err(|e| e.to_string())?;
+
+    let result = invoke("get_titles_for_wrestler", args).await;
+    let titles_with_holders: Vec<TitleWithHolders> = serde_wasm_bindgen::from_value(result)
+        .map_err(|e| e.to_string())?;
+    
+    // Extract just the Title objects from TitleWithHolders
+    Ok(titles_with_holders.into_iter().map(|twh| twh.title).collect())
+}
+
+async fn assign_title_to_wrestler(
+    title_id: i32, 
+    wrestler_id: i32,
+    event_name: Option<String>,
+    event_location: Option<String>,
+    change_method: Option<String>
+) -> Result<String, String> {
+    let args = serde_wasm_bindgen::to_value(&serde_json::json!({
+        "titleId": title_id,
+        "wrestlerId": wrestler_id,
+        "eventName": event_name,
+        "eventLocation": event_location,
+        "changeMethod": change_method
+    }))
+    .map_err(|e| e.to_string())?;
+
+    let result = invoke("update_title_holder", args).await;
+    serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
+}
+
 
 fn extract_wrestler_id_from_url() -> Option<i32> {
     web_sys::window()?
@@ -265,7 +338,7 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
             
             Closure::wrap(Box::new(move || {
                 let current_id = extract_wrestler_id_from_url();
-                if current_id != current_wrestler_id_clone.get() {
+                if current_id != current_wrestler_id_clone.get_untracked() {
                     set_wrestler_id_clone.set(current_id);
                 }
             }) as Box<dyn Fn()>)
@@ -357,6 +430,9 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
                                             // Wrestler image placeholder
                                             <PhotoSection />
 
+                                            // Delete wrestler component (only for user-created wrestlers)
+                                            <DeleteWrestlerComponent wrestler=wrestler />
+
                                             // Wrestler name banner
                                             <NameBannerSection 
                                                 wrestler=wrestler
@@ -365,6 +441,11 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
 
                                             // Championship & Team Status
                                             <ChampionshipTeamSection 
+                                                wrestler=wrestler
+                                            />
+
+                                            // Title Selection Component
+                                            <TitleSelectionComponent 
                                                 wrestler=wrestler
                                             />
                                         </div>
@@ -595,9 +676,9 @@ where
         <div class="card bg-base-200 border border-base-100 mb-4">
             <div class="card-body">
             <div class="grid grid-cols-2 gap-4 text-sm">
-                // Promotion section
+                // Show section
                 <div>
-                    <span class="text-base-content/70 font-medium">"Promotion: "</span>
+                    <span class="text-base-content/70 font-medium">"Show: "</span>
                 </div>
                 <div>
                     {move || {
@@ -608,7 +689,7 @@ where
                                 }
                             } else {
                                 view! {
-                                    <span class="text-base-content/60 italic">{"No promotion assigned".to_string()}</span>
+                                    <span class="text-base-content/60 italic">{"No show assigned".to_string()}</span>
                                 }
                             }
                         } else {
@@ -618,7 +699,7 @@ where
                         }
                     }}
                 </div>
-                // Promotion dropdown
+                // Show dropdown
                 <div class="col-span-2">
                     <select 
                         class="select select-bordered w-full select-sm"
@@ -629,7 +710,7 @@ where
                             on_promotion_change(ev.target().value());
                         }
                     >
-                        <option value="">"Select a promotion..."</option>
+                        <option value="">"Select a show..."</option>
                         {move || shows.get().into_iter().map(|show| {
                             view! {
                                 <option 
@@ -1210,6 +1291,314 @@ fn ChampionshipTeamSection(
                     </div>
                 </div>
             </div>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+fn DeleteWrestlerComponent(
+    wrestler: ReadSignal<Option<Wrestler>>,
+) -> impl IntoView {
+    let (show_confirmation, set_show_confirmation) = signal(false);
+    let (deleting, set_deleting) = signal(false);
+    let (error, set_error) = signal(None::<String>);
+
+    let handle_delete_click = move |_| {
+        set_show_confirmation.set(true);
+        set_error.set(None);
+    };
+
+    let handle_confirm_delete = move |_| {
+        if let Some(w) = wrestler.get() {
+            let wrestler_id = w.id;
+            set_deleting.set(true);
+            set_error.set(None);
+            
+            spawn_local(async move {
+                match delete_wrestler(wrestler_id).await {
+                    Ok(_) => {
+                        // Close the window after successful deletion
+                        if let Some(window) = web_sys::window() {
+                            let _ = window.close();
+                        }
+                    }
+                    Err(e) => {
+                        set_error.set(Some(e));
+                        set_deleting.set(false);
+                        set_show_confirmation.set(false);
+                    }
+                }
+            });
+        }
+    };
+
+    let handle_cancel_delete = move |_| {
+        set_show_confirmation.set(false);
+        set_error.set(None);
+    };
+
+    view! {
+        <Show when=move || wrestler.get().and_then(|w| w.is_user_created).unwrap_or(false)>
+            <div class="card bg-error/10 border border-error/30 relative overflow-hidden">
+                <div class="card-body p-4">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 bg-error/20 border border-error/50 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="text-error font-bold text-lg">"Danger Zone"</h4>
+                            <p class="text-error/80 text-sm">"Permanently delete this wrestler"</p>
+                        </div>
+                    </div>
+                    
+                    <Show when=move || error.get().is_some()>
+                        <div class="alert alert-error mb-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>{move || error.get().unwrap_or_default()}</span>
+                        </div>
+                    </Show>
+
+                    <Show when=move || !show_confirmation.get()>
+                        <button
+                            class="btn btn-error w-full gap-2"
+                            disabled=move || deleting.get()
+                            on:click=handle_delete_click
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            "Delete Wrestler"
+                        </button>
+                    </Show>
+
+                    <Show when=move || show_confirmation.get()>
+                        <div class="space-y-4">
+                            <div class="bg-error/20 border border-error/30 rounded-lg p-4">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <svg class="w-5 h-5 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                    </svg>
+                                    <h5 class="text-error font-bold">"Confirm Deletion"</h5>
+                                </div>
+                                <p class="text-error/90 text-sm mb-3">
+                                    "Are you sure you want to delete "
+                                    <strong>{move || wrestler.get().map(|w| w.name).unwrap_or_default()}</strong>
+                                    "? This action cannot be undone."
+                                </p>
+                                <p class="text-error/70 text-xs">
+                                    "This will also remove the wrestler from all show rosters, matches, and title histories."
+                                </p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button
+                                    class="btn btn-error flex-1 gap-2"
+                                    disabled=move || deleting.get()
+                                    on:click=handle_confirm_delete
+                                >
+                                    <Show when=move || deleting.get()>
+                                        <span class="loading loading-spinner loading-sm"></span>
+                                    </Show>
+                                    <Show when=move || !deleting.get()>
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </Show>
+                                    {move || if deleting.get() { "Deleting..." } else { "Yes, Delete Forever" }}
+                                </button>
+                                <button
+                                    class="btn btn-ghost flex-1"
+                                    disabled=move || deleting.get()
+                                    on:click=handle_cancel_delete
+                                >
+                                    "Cancel"
+                                </button>
+                            </div>
+                        </div>
+                    </Show>
+                </div>
+            </div>
+        </Show>
+    }
+}
+
+#[component]
+fn TitleSelectionComponent(
+    wrestler: ReadSignal<Option<Wrestler>>,
+) -> impl IntoView {
+    let (available_titles, set_available_titles) = signal(Vec::<Title>::new());
+    let (loading_titles, set_loading_titles) = signal(false);
+    let (titles_error, set_titles_error) = signal(None::<String>);
+    let (assigning_title, set_assigning_title) = signal(None::<i32>);
+    let (assignment_success, set_assignment_success) = signal(None::<String>);
+    let (selected_title_id, set_selected_title_id) = signal(None::<i32>);
+
+    // Load titles when wrestler changes
+    Effect::new(move |_| {
+        if let Some(w) = wrestler.get() {
+            spawn_local(async move {
+                set_loading_titles.set(true);
+                set_titles_error.set(None);
+                
+                match get_titles_for_wrestler(w.gender.clone()).await {
+                    Ok(titles) => {
+                        set_available_titles.set(titles);
+                    }
+                    Err(e) => {
+                        set_titles_error.set(Some(format!("Failed to load titles: {}", e)));
+                    }
+                }
+                
+                set_loading_titles.set(false);
+            });
+        }
+    });
+
+    // Handler for title assignment
+    let handle_assign_title = move |title_id: i32| {
+        if let Some(w) = wrestler.get() {
+            spawn_local(async move {
+                set_assigning_title.set(Some(title_id));
+                set_titles_error.set(None);
+                set_assignment_success.set(None);
+                
+                match assign_title_to_wrestler(
+                    title_id,
+                    w.id,
+                    Some("Title Assignment".to_string()),
+                    Some("WWE Universe Manager".to_string()),
+                    Some("Assigned".to_string())
+                ).await {
+                    Ok(_) => {
+                        set_assignment_success.set(Some("Title assigned successfully!".to_string()));
+                        set_selected_title_id.set(None); // Clear the dropdown selection
+                        // Reload titles to update the UI
+                        match get_titles_for_wrestler(w.gender.clone()).await {
+                            Ok(titles) => {
+                                set_available_titles.set(titles);
+                            }
+                            Err(e) => {
+                                set_titles_error.set(Some(format!("Failed to reload titles: {}", e)));
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        set_titles_error.set(Some(format!("Failed to assign title: {}", e)));
+                    }
+                }
+                
+                set_assigning_title.set(None);
+            });
+        }
+    };
+
+    view! {
+        <div class="card bg-base-200 border border-base-100">
+            <div class="card-body">
+                <div class="flex items-center justify-between mb-4 border-b border-base-content/20 pb-2">
+                    <h4 class="text-base-content font-bold text-lg">
+                        "Assign Title"
+                    </h4>
+                    <div class="badge badge-outline">
+                        {move || {
+                            let gender = wrestler.get().map(|w| w.gender).unwrap_or_default();
+                            if gender == "Other" {
+                                "All Titles".to_string()
+                            } else {
+                                format!("{} + Mixed", gender)
+                            }
+                        }}
+                    </div>
+                </div>
+
+                <Show when=move || titles_error.get().is_some()>
+                    <div class="alert alert-error mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span class="text-sm">{move || titles_error.get().unwrap_or_default()}</span>
+                    </div>
+                </Show>
+
+                <Show when=move || assignment_success.get().is_some()>
+                    <div class="alert alert-success mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span class="text-sm">{move || assignment_success.get().unwrap_or_default()}</span>
+                    </div>
+                </Show>
+
+                <div class="flex gap-2">
+                    <select 
+                        class="select select-bordered flex-1"
+                        disabled=move || loading_titles.get() || assigning_title.get().is_some()
+                        on:change:target=move |ev| {
+                            let value = ev.target().value();
+                            if let Ok(title_id) = value.parse::<i32>() {
+                                set_selected_title_id.set(Some(title_id));
+                            } else {
+                                set_selected_title_id.set(None);
+                            }
+                        }
+                    >
+                        <option value="">"Select a title to assign..."</option>
+                        {move || {
+                            available_titles.get().into_iter().map(|title| {
+                                let status = if title.current_holder_id.is_some() {
+                                    " (Currently Held)"
+                                } else {
+                                    ""
+                                };
+                                view! {
+                                    <option 
+                                        value=title.id.to_string()
+                                        disabled=title.current_holder_id.is_some()
+                                    >
+                                        {format!("{} - {} {}{}", title.name, title.division, title.title_type, status)}
+                                    </option>
+                                }
+                            }).collect::<Vec<_>>()
+                        }}
+                    </select>
+                    
+                    <button 
+                        class="btn btn-primary gap-1"
+                        disabled=move || selected_title_id.get().is_none() || assigning_title.get().is_some()
+                        on:click=move |_| {
+                            if let Some(title_id) = selected_title_id.get() {
+                                handle_assign_title(title_id);
+                            }
+                        }
+                    >
+                        <Show when=move || assigning_title.get().is_some()>
+                            <span class="loading loading-spinner loading-sm"></span>
+                        </Show>
+                        <Show when=move || assigning_title.get().is_none()>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                        </Show>
+                        {move || if assigning_title.get().is_some() { "Assigning..." } else { "Assign Title" }}
+                    </button>
+                </div>
+
+                <Show when=move || loading_titles.get()>
+                    <div class="flex justify-center items-center py-4">
+                        <span class="loading loading-spinner loading-sm"></span>
+                        <span class="ml-2 text-base-content/70 text-sm">"Loading titles..."</span>
+                    </div>
+                </Show>
+
+                <Show when=move || !loading_titles.get() && available_titles.get().is_empty() && titles_error.get().is_none()>
+                    <div class="text-center text-base-content/60 text-sm py-4">
+                        "No titles available for this wrestler's gender"
+                    </div>
+                </Show>
             </div>
         </div>
     }
