@@ -60,9 +60,13 @@
     {
       "group": "Features",
       "pages": [
+        "features/multi-window-interface",
         "features/show-management",
         "features/wrestler-management", 
         "features/title-management",
+        "features/match-booking",
+        "features/show-rosters",
+        "features/power-ratings",
         "features/user-authentication",
         "features/test-data"
       ]
@@ -71,17 +75,25 @@
       "group": "Architecture",
       "pages": [
         "architecture/overview",
-        "architecture/frontend",
-        "architecture/backend",
-        "architecture/database"
+        "architecture/database-schema",
+        "architecture/frontend-components",
+        "architecture/backend-services",
+        "architecture/multi-window-system",
+        "architecture/state-management"
       ]
     },
     {
       "group": "Components",
       "pages": [
         "components/dashboard",
+        "components/booker-dashboard",
         "components/create-show",
         "components/wrestler-details-window",
+        "components/title-details-window",
+        "components/show-roster-management",
+        "components/wrestler-modules",
+        "components/title-modules",
+        "components/show-modules",
         "components/shared-types"
       ]
     },
@@ -92,12 +104,16 @@
       ]
     },
     {
-      "group": "Endpoint Examples",
+      "group": "API Endpoints",
       "pages": [
         "api-reference/endpoint/shows",
         "api-reference/endpoint/wrestlers",
         "api-reference/endpoint/titles",
-        "api-reference/endpoint/users"
+        "api-reference/endpoint/matches",
+        "api-reference/endpoint/show-rosters",
+        "api-reference/endpoint/authentication",
+        "api-reference/endpoint/window-management",
+        "api-reference/endpoint/utilities"
       ]
     }
   ],

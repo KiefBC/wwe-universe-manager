@@ -1,0 +1,782 @@
+---
+title: "Booker Dashboard"
+description: "Comprehensive match booking interface with show-specific roster management"
+---
+
+## Overview
+
+The Booker Dashboard is the central hub for wrestling match creation and management. It provides a streamlined interface for booking matches with show-specific wrestler rosters, creating complex match types, and managing match results - all while maintaining roster integrity and storyline continuity.
+
+<img
+  className="block dark:hidden"
+  src="/images/booker-dashboard-light.png"
+  alt="Booker Dashboard Light Mode"
+/>
+<img
+  className="hidden dark:block"
+  src="/images/booker-dashboard-dark.png"
+  alt="Booker Dashboard Dark Mode"
+/>
+
+## Component Architecture
+
+The Booker Dashboard is built with a modular component structure:
+
+```rust
+// Main component structure
+#[component]
+pub fn BookerDashboard() -> impl IntoView {
+    // Show selection and state management
+    let (current_show, set_current_show) = create_signal(None::<Show>);
+    let (show_roster, set_show_roster) = create_signal(Vec::<Wrestler>::new());
+    let (matches, set_matches) = create_signal(Vec::<Match>::new());
+    
+    // Integrated subcomponents
+    view! {
+        <ShowSelector current_show=current_show set_current_show=set_current_show />
+        <RosterSection show_roster=show_roster />
+        <MatchCreationForm current_show=current_show show_roster=show_roster />
+        <MatchListSection matches=matches current_show=current_show />
+    }
+}
+```
+
+### Key Subcomponents
+
+<CardGroup cols={2}>
+  <Card
+    title="Show Selector"
+    icon="tv"
+  >
+    Dropdown interface for selecting which show to book matches for
+  </Card>
+  <Card
+    title="Roster Section"
+    icon="users"
+  >
+    Display of wrestlers assigned to the current show's roster
+  </Card>
+  <Card
+    title="Match Creation Form"
+    icon="plus-circle"
+  >
+    Comprehensive form for creating new matches with participants
+  </Card>
+  <Card
+    title="Match List Section"
+    icon="list"
+  >
+    Display and management of existing matches for the current show
+  </Card>
+</CardGroup>
+
+## Show Selection System
+
+### Dynamic Show Loading
+
+The dashboard automatically loads available shows and allows seamless switching:
+
+```rust
+// Show selection effect
+Effect::new(move |_| {
+    spawn_local(async move {
+        match get_shows().await {
+            Ok(shows) => {
+                set_available_shows.set(shows);
+                // Auto-select first show if none selected
+                if current_show.get().is_none() && !shows.is_empty() {
+                    set_current_show.set(Some(shows[0].clone()));
+                }
+            }
+            Err(e) => set_error.set(Some(format!("Failed to load shows: {}", e))),
+        }
+    });
+});
+```
+
+### Show-Specific Context
+
+When a show is selected, the dashboard automatically updates:
+
+<Tabs>
+  <Tab title="Roster Loading">
+    ```rust
+    // Load wrestlers assigned to selected show
+    Effect::new(move |_| {
+        if let Some(show) = current_show.get() {
+            spawn_local(async move {
+                match get_wrestlers_for_show(show.id).await {
+                    Ok(roster) => set_show_roster.set(roster),
+                    Err(e) => log::error!("Failed to load roster: {}", e),
+                }
+            });
+        }
+    });
+    ```
+  </Tab>
+  
+  <Tab title="Match Loading">
+    ```rust
+    // Load existing matches for selected show
+    Effect::new(move |_| {
+        if let Some(show) = current_show.get() {
+            spawn_local(async move {
+                match get_matches_for_show(show.id).await {
+                    Ok(show_matches) => set_matches.set(show_matches),
+                    Err(e) => log::error!("Failed to load matches: {}", e),
+                }
+            });
+        }
+    });
+    ```
+  </Tab>
+  
+  <Tab title="Title Loading">
+    ```rust
+    // Load titles available for selected show
+    Effect::new(move |_| {
+        if let Some(show) = current_show.get() {
+            spawn_local(async move {
+                match get_titles_for_show(show.id).await {
+                    Ok(show_titles) => set_available_titles.set(show_titles),
+                    Err(e) => log::error!("Failed to load titles: {}", e),
+                }
+            });
+        }
+    });
+    ```
+  </Tab>
+</Tabs>
+
+## Roster Management Integration
+
+### Show-Specific Roster Display
+
+The roster section shows only wrestlers assigned to the current show:
+
+```rust
+#[component]
+pub fn RosterSection(show_roster: ReadSignal<Vec<Wrestler>>) -> impl IntoView {
+    view! {
+        <div class="bg-slate-800 rounded-lg p-6">
+            <h3 class="text-xl font-bold text-yellow-400 mb-4">
+                "Show Roster (" {move || show_roster.get().len()} " wrestlers)"
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <For
+                    each=show_roster
+                    key=|wrestler| wrestler.id
+                    children=move |wrestler| view! {
+                        <WrestlerCard wrestler=wrestler booking_mode=true />
+                    }
+                />
+            </div>
+        </div>
+    }
+}
+```
+
+### Wrestler Assignment Interface
+
+Quick wrestler assignment directly from the booking interface:
+
+```rust
+#[component] 
+pub fn WrestlerAssignmentSection(
+    current_show: ReadSignal<Option<Show>>,
+    show_roster: ReadSignal<Vec<Wrestler>>,
+    on_roster_update: WriteSignal<()>,
+) -> impl IntoView {
+    let (available_wrestlers, set_available_wrestlers) = create_signal(Vec::<Wrestler>::new());
+    
+    // Load all wrestlers not on current show roster
+    Effect::new(move |_| {
+        if let Some(_show) = current_show.get() {
+            spawn_local(async move {
+                let all_wrestlers = get_wrestlers().await.unwrap_or_default();
+                let roster_ids: HashSet<i32> = show_roster.get()
+                    .iter()
+                    .map(|w| w.id)
+                    .collect();
+                    
+                let available: Vec<Wrestler> = all_wrestlers
+                    .into_iter()
+                    .filter(|w| !roster_ids.contains(&w.id))
+                    .collect();
+                    
+                set_available_wrestlers.set(available);
+            });
+        }
+    });
+    
+    // Assignment interface UI
+    view! {
+        <div class="mt-6">
+            <h4 class="text-lg font-semibold mb-3">"Add Wrestlers to Roster"</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <For
+                    each=available_wrestlers
+                    key=|wrestler| wrestler.id
+                    children=move |wrestler| {
+                        let assign_wrestler = move |_| {
+                            let wrestler_id = wrestler.id;
+                            if let Some(show) = current_show.get() {
+                                spawn_local(async move {
+                                    if assign_wrestler_to_show(show.id, wrestler_id).await.is_ok() {
+                                        on_roster_update.set(());
+                                    }
+                                });
+                            }
+                        };
+                        
+                        view! {
+                            <div class="flex items-center justify-between p-3 bg-slate-700 rounded">
+                                <span>{wrestler.name.clone()}</span>
+                                <button 
+                                    on:click=assign_wrestler
+                                    class="btn btn-sm btn-primary"
+                                >
+                                    "Add to Roster"
+                                </button>
+                            </div>
+                        }
+                    }
+                />
+            </div>
+        </div>
+    }
+}
+```
+
+## Match Creation Interface
+
+### Comprehensive Match Form
+
+The match creation form supports all match types and configurations:
+
+```rust
+#[component]
+pub fn MatchCreationForm(
+    current_show: ReadSignal<Option<Show>>,
+    show_roster: ReadSignal<Vec<Wrestler>>,
+) -> impl IntoView {
+    let (match_name, set_match_name) = create_signal(String::new());
+    let (match_type, set_match_type) = create_signal("Singles".to_string());
+    let (match_stipulation, set_match_stipulation) = create_signal(String::new());
+    let (is_title_match, set_is_title_match) = create_signal(false);
+    let (selected_title, set_selected_title) = create_signal(None::<i32>);
+    let (match_order, set_match_order) = create_signal(1i32);
+    let (selected_participants, set_selected_participants) = create_signal(Vec::<i32>::new());
+    
+    let create_match_action = move |_| {
+        if let Some(show) = current_show.get() {
+            let match_data = MatchData {
+                show_id: show.id,
+                match_name: if match_name.get().is_empty() { None } else { Some(match_name.get()) },
+                match_type: match_type.get(),
+                match_stipulation: if match_stipulation.get().is_empty() { None } else { Some(match_stipulation.get()) },
+                scheduled_date: None,
+                match_order: Some(match_order.get()),
+                is_title_match: is_title_match.get(),
+                title_id: selected_title.get(),
+            };
+            
+            spawn_local(async move {
+                match create_match(match_data).await {
+                    Ok(new_match) => {
+                        // Add selected participants
+                        for (i, wrestler_id) in selected_participants.get().iter().enumerate() {
+                            let _ = add_wrestler_to_match(
+                                new_match.id,
+                                *wrestler_id,
+                                None, // Team assignment handled based on match type
+                                Some(i as i32 + 1), // Entrance order
+                            ).await;
+                        }
+                        
+                        // Reset form
+                        set_match_name.set(String::new());
+                        set_selected_participants.set(Vec::new());
+                        
+                        log::info!("Match created successfully");
+                    }
+                    Err(e) => log::error!("Failed to create match: {}", e),
+                }
+            });
+        }
+    };
+    
+    view! {
+        <div class="bg-slate-800 rounded-lg p-6">
+            <h3 class="text-xl font-bold text-yellow-400 mb-4">"Create New Match"</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                // Match details form fields
+                <input 
+                    type="text"
+                    placeholder="Match Name (optional)"
+                    prop:value=match_name
+                    on:input=move |ev| set_match_name.set(event_target_value(&ev))
+                    class="input input-bordered w-full"
+                />
+                
+                <select 
+                    prop:value=match_type
+                    on:change=move |ev| set_match_type.set(event_target_value(&ev))
+                    class="select select-bordered w-full"
+                >
+                    <option value="Singles">"Singles Match"</option>
+                    <option value="Tag Team">"Tag Team Match"</option>
+                    <option value="Triple Threat">"Triple Threat Match"</option>
+                    <option value="Fatal Four Way">"Fatal Four Way Match"</option>
+                    <option value="Battle Royal">"Battle Royal"</option>
+                </select>
+                
+                // Additional form fields...
+            </div>
+            
+            // Participant selection interface
+            <ParticipantSelector 
+                show_roster=show_roster
+                selected_participants=selected_participants
+                set_selected_participants=set_selected_participants
+                match_type=match_type
+            />
+            
+            <button 
+                on:click=create_match_action
+                class="btn btn-primary mt-4"
+                disabled=move || current_show.get().is_none() || selected_participants.get().len() < 2
+            >
+                "Create Match"
+            </button>
+        </div>
+    }
+}
+```
+
+### Participant Selection System
+
+Dynamic participant selection based on match type:
+
+```rust
+#[component]
+pub fn ParticipantSelector(
+    show_roster: ReadSignal<Vec<Wrestler>>,
+    selected_participants: ReadSignal<Vec<i32>>,
+    set_selected_participants: WriteSignal<Vec<i32>>,
+    match_type: ReadSignal<String>,
+) -> impl IntoView {
+    let max_participants = move || match match_type.get().as_str() {
+        "Singles" => 2,
+        "Tag Team" => 4,
+        "Triple Threat" => 3,
+        "Fatal Four Way" => 4,
+        "Battle Royal" => 20, // Or unlimited
+        _ => 2,
+    };
+    
+    let min_participants = move || match match_type.get().as_str() {
+        "Battle Royal" => 6,
+        _ => 2,
+    };
+    
+    let toggle_participant = move |wrestler_id: i32| {
+        let mut current = selected_participants.get();
+        if let Some(pos) = current.iter().position(|&id| id == wrestler_id) {
+            current.remove(pos);
+        } else if current.len() < max_participants() {
+            current.push(wrestler_id);
+        }
+        set_selected_participants.set(current);
+    };
+    
+    view! {
+        <div class="mt-6">
+            <h4 class="text-lg font-semibold mb-3">
+                "Select Participants (" 
+                {move || selected_participants.get().len()} 
+                "/" 
+                {max_participants} 
+                ")"
+            </h4>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <For
+                    each=show_roster
+                    key=|wrestler| wrestler.id
+                    children=move |wrestler| {
+                        let is_selected = move || selected_participants.get().contains(&wrestler.id);
+                        let wrestler_id = wrestler.id;
+                        
+                        view! {
+                            <div 
+                                class=move || format!(
+                                    "p-3 rounded cursor-pointer border-2 transition-colors {}",
+                                    if is_selected() { 
+                                        "bg-yellow-600 border-yellow-400" 
+                                    } else { 
+                                        "bg-slate-700 border-slate-600 hover:border-slate-500" 
+                                    }
+                                )
+                                on:click=move |_| toggle_participant(wrestler_id)
+                            >
+                                <div class="font-semibold">{wrestler.name.clone()}</div>
+                                <div class="text-sm text-slate-300">
+                                    {wrestler.wins} "-" {wrestler.losses}
+                                </div>
+                            </div>
+                        }
+                    }
+                />
+            </div>
+            
+            <div class="mt-4 text-sm text-slate-400">
+                "Minimum participants: " {min_participants}
+            </div>
+        </div>
+    }
+}
+```
+
+## Match Management Interface
+
+### Match List Display
+
+Shows all matches for the current show with management options:
+
+```rust
+#[component]
+pub fn MatchListSection(
+    matches: ReadSignal<Vec<Match>>,
+    current_show: ReadSignal<Option<Show>>,
+) -> impl IntoView {
+    view! {
+        <div class="bg-slate-800 rounded-lg p-6">
+            <h3 class="text-xl font-bold text-yellow-400 mb-4">
+                "Match Card (" {move || matches.get().len()} " matches)"
+            </h3>
+            
+            <div class="space-y-4">
+                <For
+                    each=matches
+                    key=|match_obj| match_obj.id
+                    children=move |match_obj| view! {
+                        <MatchCard match_obj=match_obj />
+                    }
+                />
+            </div>
+            
+            <Show when=move || matches.get().is_empty()>
+                <div class="text-center py-8 text-slate-400">
+                    <p>"No matches booked for this show yet."</p>
+                    <p class="text-sm mt-1">"Use the form above to create your first match."</p>
+                </div>
+            </Show>
+        </div>
+    }
+}
+```
+
+### Individual Match Cards
+
+Each match displays comprehensive information with management actions:
+
+```rust
+#[component] 
+pub fn MatchCard(match_obj: Match) -> impl IntoView {
+    let (participants, set_participants) = create_signal(Vec::<MatchParticipantWithWrestler>::new());
+    let match_id = match_obj.id;
+    
+    // Load match participants
+    Effect::new(move |_| {
+        spawn_local(async move {
+            match get_match_participants(match_id).await {
+                Ok(match_participants) => set_participants.set(match_participants),
+                Err(e) => log::error!("Failed to load participants: {}", e),
+            }
+        });
+    });
+    
+    view! {
+        <div class="border border-slate-600 rounded-lg p-4">
+            <div class="flex justify-between items-start mb-3">
+                <div>
+                    <h4 class="font-bold text-lg">
+                        {match_obj.match_name.clone().unwrap_or_else(|| "Untitled Match".to_string())}
+                    </h4>
+                    <p class="text-slate-300">{match_obj.match_type.clone()}</p>
+                    <Show when=move || match_obj.match_stipulation.is_some()>
+                        <p class="text-yellow-400 text-sm">
+                            {match_obj.match_stipulation.clone().unwrap_or_default()}
+                        </p>
+                    </Show>
+                </div>
+                
+                <div class="text-right">
+                    <div class="text-sm text-slate-400">
+                        "Match " {match_obj.match_order.unwrap_or(0)}
+                    </div>
+                    <Show when=move || match_obj.is_title_match>
+                        <div class="text-yellow-400 font-semibold text-sm">
+                            "TITLE MATCH"
+                        </div>
+                    </Show>
+                </div>
+            </div>
+            
+            // Participants display
+            <div class="mb-3">
+                <h5 class="font-semibold mb-2">"Participants:"</h5>
+                <div class="flex flex-wrap gap-2">
+                    <For
+                        each=participants
+                        key=|p| p.id
+                        children=move |participant| view! {
+                            <span class="bg-slate-700 px-2 py-1 rounded text-sm">
+                                {participant.wrestler_name.clone()}
+                                <Show when=move || participant.team_number.is_some()>
+                                    " (Team " {participant.team_number.unwrap_or(0)} ")"
+                                </Show>
+                            </span>
+                        }
+                    />
+                </div>
+            </div>
+            
+            // Match result section
+            <MatchResultSection match_obj=match_obj participants=participants />
+        </div>
+    }
+}
+```
+
+## Result Management
+
+### Winner Selection Interface
+
+Set match winners with automatic title updates:
+
+```rust
+#[component]
+pub fn MatchResultSection(
+    match_obj: Match,
+    participants: ReadSignal<Vec<MatchParticipantWithWrestler>>,
+) -> impl IntoView {
+    let (selected_winner, set_selected_winner) = create_signal(None::<i32>);
+    let match_id = match_obj.id;
+    
+    let set_winner_action = move |_| {
+        if let Some(winner_id) = selected_winner.get() {
+            spawn_local(async move {
+                match set_match_winner(match_id, winner_id).await {
+                    Ok(_) => {
+                        log::info!("Match winner set successfully");
+                        // Trigger refresh of match data
+                    }
+                    Err(e) => log::error!("Failed to set winner: {}", e),
+                }
+            });
+        }
+    };
+    
+    view! {
+        <div class="border-t border-slate-600 pt-3 mt-3">
+            <Show 
+                when=move || match_obj.winner_id.is_none()
+                fallback=move || view! {
+                    <div class="text-green-400 font-semibold">
+                        "Winner: " 
+                        {participants.get()
+                            .iter()
+                            .find(|p| Some(p.wrestler_id) == match_obj.winner_id)
+                            .map(|p| p.wrestler_name.clone())
+                            .unwrap_or_else(|| "Unknown".to_string())
+                        }
+                    </div>
+                }
+            >
+                <div>
+                    <h6 class="font-semibold mb-2">"Set Winner:"</h6>
+                    <div class="flex flex-wrap gap-2 mb-3">
+                        <For
+                            each=participants
+                            key=|p| p.id
+                            children=move |participant| {
+                                let participant_id = participant.wrestler_id;
+                                view! {
+                                    <button
+                                        class=move || format!(
+                                            "btn btn-sm {}",
+                                            if Some(participant_id) == selected_winner.get() {
+                                                "btn-primary"
+                                            } else {
+                                                "btn-outline btn-secondary"
+                                            }
+                                        )
+                                        on:click=move |_| set_selected_winner.set(Some(participant_id))
+                                    >
+                                        {participant.wrestler_name.clone()}
+                                    </button>
+                                }
+                            }
+                        />
+                    </div>
+                    
+                    <button
+                        on:click=set_winner_action
+                        class="btn btn-success btn-sm"
+                        disabled=move || selected_winner.get().is_none()
+                    >
+                        "Set Winner"
+                    </button>
+                </div>
+            </Show>
+        </div>
+    }
+}
+```
+
+## State Management and Performance
+
+### Reactive State Updates
+
+The dashboard uses Leptos signals for efficient state management:
+
+```rust
+// Centralized state management
+pub struct BookerState {
+    pub current_show: RwSignal<Option<Show>>,
+    pub show_roster: RwSignal<Vec<Wrestler>>,
+    pub matches: RwSignal<Vec<Match>>,
+    pub available_titles: RwSignal<Vec<TitleWithHolders>>,
+    pub loading: RwSignal<bool>,
+    pub error: RwSignal<Option<String>>,
+}
+
+impl BookerState {
+    pub fn new() -> Self {
+        Self {
+            current_show: create_rw_signal(None),
+            show_roster: create_rw_signal(Vec::new()),
+            matches: create_rw_signal(Vec::new()),
+            available_titles: create_rw_signal(Vec::new()),
+            loading: create_rw_signal(false),
+            error: create_rw_signal(None),
+        }
+    }
+    
+    pub async fn refresh_show_data(&self) {
+        if let Some(show) = self.current_show.get() {
+            self.loading.set(true);
+            
+            let (roster_result, matches_result, titles_result) = tokio::join!(
+                get_wrestlers_for_show(show.id),
+                get_matches_for_show(show.id),
+                get_titles_for_show(show.id)
+            );
+            
+            if let Ok(roster) = roster_result {
+                self.show_roster.set(roster);
+            }
+            
+            if let Ok(matches) = matches_result {
+                self.matches.set(matches);
+            }
+            
+            if let Ok(titles) = titles_result {
+                self.available_titles.set(titles);
+            }
+            
+            self.loading.set(false);
+        }
+    }
+}
+```
+
+### Performance Optimizations
+
+<AccordionGroup>
+  <Accordion title="Efficient Rendering">
+    - Uses `For` component for optimal list rendering
+    - Minimal re-renders through targeted signal updates
+    - Lazy loading of participant data
+  </Accordion>
+  
+  <Accordion title="Batch Operations">
+    - Multiple participants added in single transaction
+    - Parallel data loading with `tokio::join!`
+    - Debounced form inputs for responsive UX
+  </Accordion>
+  
+  <Accordion title="Memory Management">
+    - Rust ownership prevents memory leaks
+    - Automatic cleanup of unused signals
+    - Efficient string cloning only when necessary
+  </Accordion>
+</AccordionGroup>
+
+## Integration Points
+
+### Database Integration
+
+Direct integration with the match booking API:
+
+```rust
+// API integration examples
+use crate::types::{
+    create_match, add_wrestler_to_match, set_match_winner,
+    get_matches_for_show, get_match_participants,
+    assign_wrestler_to_show, remove_wrestler_from_show
+};
+
+// All operations are type-safe and validated at compile time
+```
+
+### Component Communication
+
+The dashboard communicates with other components through shared signals:
+
+- **Main Dashboard**: Show selection coordination
+- **Wrestler Details**: Opening wrestler windows from roster
+- **Title Management**: Championship integration and updates
+- **Show Roster Management**: Roster assignment synchronization
+
+## Error Handling and Validation
+
+### User-Friendly Error Messages
+
+```rust
+let handle_error = move |error: String| {
+    let user_message = match error.as_str() {
+        e if e.contains("not assigned to show") => 
+            "This wrestler is not on the current show's roster. Add them to the roster first.",
+        e if e.contains("already in match") =>
+            "This wrestler is already booked in another match on this show.",
+        e if e.contains("title not available") =>
+            "This championship is not available for the current show.",
+        _ => "An unexpected error occurred. Please try again.",
+    };
+    
+    set_error.set(Some(user_message.to_string()));
+};
+```
+
+### Form Validation
+
+Real-time validation prevents common booking errors:
+
+```rust
+// Validation logic
+let can_create_match = move || {
+    current_show.get().is_some() &&
+    selected_participants.get().len() >= 2 &&
+    (!is_title_match.get() || selected_title.get().is_some())
+};
+
+let participant_limit_reached = move || {
+    selected_participants.get().len() >= max_participants_for_type(match_type.get())
+};
+```
+
+The Booker Dashboard represents the culmination of sophisticated wrestling management functionality, providing an intuitive interface for complex match booking while maintaining data integrity and supporting realistic wrestling storylines.

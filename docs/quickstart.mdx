@@ -12,13 +12,25 @@ Before you begin, make sure you have the following installed:
     title="Rust"
     icon="rust"
   >
-    Install from [rustup.rs](https://rustup.rs/)
+    Latest stable version from [rustup.rs](https://rustup.rs/)
   </Card>
   <Card
     title="Node.js"
     icon="node-js"
   >
     Version 18+ from [nodejs.org](https://nodejs.org/)
+  </Card>
+  <Card
+    title="Diesel CLI"
+    icon="database"
+  >
+    Install with: `cargo install diesel_cli --no-default-features --features sqlite`
+  </Card>
+  <Card
+    title="SQLite3"
+    icon="server"
+  >
+    Required for database operations (usually pre-installed on most systems)
   </Card>
 </CardGroup>
 
@@ -122,37 +134,106 @@ cargo test -p wwe-universe-manager-ui      # Frontend tests
 cargo test -p wwe-universe-manager         # Backend tests
 ```
 
+## First Run Experience
+
+Once the application launches, you'll see the main dashboard. Here's what to do first:
+
+<Steps>
+  <Step title="Generate Test Data">
+    Click the **"Test Data"** button to populate your database with:
+    - 5 sample wrestlers with power ratings
+    - 2 wrestling shows (Monday Night RAW, Friday Night SmackDown)
+    - 15 championship titles across different divisions
+  </Step>
+  <Step title="Explore Multi-Window Interface">
+    - Click **"Wrestlers"** to open the wrestler management window
+    - Click **"Championships"** to open title management
+    - Notice how each opens in its own native desktop window
+  </Step>
+  <Step title="Try Match Booking">
+    - Select a show from the dropdown
+    - Click **"Book Matches"** to access the Booker Dashboard
+    - Create your first match with show roster wrestlers
+  </Step>
+</Steps>
+
 ## Next Steps
 
-Now that you have WWE Universe Manager running, explore these features:
+Now that you have WWE Universe Manager running, explore these advanced features:
 
 <CardGroup cols={2}>
   <Card
-    title="Create Your First Show"
-    icon="plus"
-    href="/features/show-management"
+    title="Multi-Window Interface"
+    icon="window-restore"
+    href="/features/multi-window-interface"
   >
-    Learn how to create and manage wrestling shows
+    Learn about the native desktop window system
   </Card>
   <Card
-    title="Build Your Roster"
-    icon="users"
-    href="/features/wrestler-management"
+    title="Match Booking System"
+    icon="handshake"
+    href="/features/match-booking"
   >
-    Add wrestlers to your universe
+    Create matches with participants and title implications
   </Card>
   <Card
-    title="Setup Championships"
-    icon="trophy"
-    href="/features/title-management"
+    title="Show Roster Management"
+    icon="users-gear"
+    href="/features/show-rosters"
   >
-    Create championship titles and assign holders
+    Assign wrestlers to shows and manage rosters
   </Card>
   <Card
-    title="Architecture Overview"
-    icon="sitemap"
-    href="/architecture/overview"
+    title="Power Ratings System"
+    icon="chart-line"
+    href="/features/power-ratings"
   >
-    Understand how the application is structured
+    Understand wrestler attributes and character development
+  </Card>
+  <Card
+    title="Database Schema"
+    icon="database"
+    href="/architecture/database-schema"
+  >
+    Deep dive into the sophisticated data architecture
+  </Card>
+  <Card
+    title="API Reference"
+    icon="code"
+    href="/api-reference/introduction"
+  >
+    Complete documentation of all 34+ Tauri commands
   </Card>
 </CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Application Won't Start">
+    - Ensure all prerequisites are installed
+    - Check that CSS was built: `npm run build-css-prod`
+    - Verify database setup: `diesel migration run`
+    - Try cleaning and rebuilding: `cargo clean && npm run dev`
+  </Accordion>
+  
+  <Accordion title="Database Errors">
+    - Check DATABASE_URL in .env file
+    - Ensure SQLite3 is installed
+    - Run migrations: `diesel migration run`
+    - Reset database if needed: `diesel database reset`
+  </Accordion>
+  
+  <Accordion title="CSS Not Loading">
+    - Ensure Tailwind CSS is built: `npm run build-css-prod`
+    - Check Node.js version (18+ required)
+    - Verify npm dependencies: `npm install`
+    - Try clearing npm cache: `npm cache clean --force`
+  </Accordion>
+  
+  <Accordion title="Windows Not Opening">
+    - Check JavaScript console for errors
+    - Ensure application has proper permissions
+    - Try restarting the application
+    - Check Tauri configuration in `src-tauri/tauri.conf.json`
+  </Accordion>
+</AccordionGroup>

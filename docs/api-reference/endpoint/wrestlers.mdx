@@ -1,0 +1,408 @@
+---
+title: "Wrestlers API"
+description: "Complete wrestler management with enhanced profiles and power ratings"
+---
+
+## Overview
+
+The Wrestlers API provides comprehensive wrestler management functionality, including basic CRUD operations, enhanced wrestler profiles with power ratings, and detailed biographical information.
+
+## Core Operations
+
+### Get All Wrestlers
+
+<CodeGroup>
+
+```rust Frontend (Leptos)
+use crate::types::get_wrestlers;
+
+let wrestlers = get_wrestlers().await?;
+```
+
+```rust Tauri Command
+#[tauri::command]
+pub fn get_wrestlers(state: State<'_, DbState>) -> Result<Vec<Wrestler>, String>
+```
+
+</CodeGroup>
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "name": "John Cena",
+    "gender": "Male",
+    "wins": 25,
+    "losses": 5,
+    "real_name": "John Felix Anthony Cena Jr.",
+    "height": "6'1\"",
+    "weight": "251 lbs",
+    "debut_year": 2002,
+    "promotion": "WWE",
+    "strength": 95,
+    "speed": 80,
+    "agility": 75,
+    "stamina": 90,
+    "charisma": 98,
+    "technique": 85,
+    "biography": "16-time World Champion...",
+    "is_user_created": false
+  }
+]
+```
+
+### Get Wrestler by ID
+
+<CodeGroup>
+
+```rust Frontend (Leptos)
+use crate::types::get_wrestler_by_id;
+
+let wrestler = get_wrestler_by_id(wrestler_id).await?;
+```
+
+```rust Tauri Command
+#[tauri::command]
+pub fn get_wrestler_by_id(
+    state: State<'_, DbState>, 
+    wrestler_id: i32
+) -> Result<Option<Wrestler>, String>
+```
+
+</CodeGroup>
+
+**Parameters:**
+- `wrestler_id`: Integer ID of the wrestler
+
+## Wrestler Creation
+
+### Create Basic Wrestler
+
+<CodeGroup>
+
+```rust Frontend (Leptos)
+use crate::types::{create_wrestler, WrestlerData};
+
+let wrestler_data = WrestlerData {
+    name: "New Wrestler".to_string(),
+    gender: "Male".to_string(),
+};
+
+let wrestler = create_wrestler(wrestler_data).await?;
+```
+
+```rust Tauri Command
+#[tauri::command]
+pub fn create_wrestler(
+    state: State<'_, DbState>,
+    wrestler_data: WrestlerData,
+) -> Result<Wrestler, String>
+```
+
+</CodeGroup>
+
+### Create Enhanced Wrestler
+
+<CodeGroup>
+
+```rust Frontend (Leptos)
+use crate::types::{create_user_wrestler, EnhancedWrestlerData};
+
+let wrestler_data = EnhancedWrestlerData {
+    name: "Enhanced Wrestler".to_string(),
+    gender: "Female".to_string(),
+    real_name: Some("Real Name".to_string()),
+    height: Some("5'8\"".to_string()),
+    weight: Some("145 lbs".to_string()),
+    debut_year: Some(2020),
+    promotion: Some("WWE".to_string()),
+    strength: Some(85),
+    speed: Some(90),
+    agility: Some(95),
+    stamina: Some(80),
+    charisma: Some(88),
+    technique: Some(92),
+    biography: Some("Rising star...".to_string()),
+};
+
+let wrestler = create_user_wrestler(wrestler_data).await?;
+```
+
+```rust Tauri Command
+#[tauri::command]
+pub fn create_user_wrestler(
+    state: State<'_, DbState>,
+    wrestler_data: EnhancedWrestlerData,
+) -> Result<Wrestler, String>
+```
+
+</CodeGroup>
+
+## Wrestler Updates
+
+### Update Wrestler Name
+
+<CodeGroup>
+
+```rust Frontend (Leptos)
+use crate::types::update_wrestler_name;
+
+let updated = update_wrestler_name(wrestler_id, "New Name".to_string()).await?;
+```
+
+```rust Tauri Command
+#[tauri::command]
+pub fn update_wrestler_name(
+    state: State<'_, DbState>,
+    wrestler_id: i32,
+    new_name: String,
+) -> Result<Wrestler, String>
+```
+
+</CodeGroup>
+
+### Update Power Ratings
+
+<CodeGroup>
+
+```rust Frontend (Leptos)
+use crate::types::{update_wrestler_power_ratings, PowerRatings};
+
+let ratings = PowerRatings {
+    strength: 90,
+    speed: 85,
+    agility: 88,
+    stamina: 92,
+    charisma: 95,
+    technique: 87,
+};
+
+let updated = update_wrestler_power_ratings(wrestler_id, ratings).await?;
+```
+
+```rust Tauri Command
+#[tauri::command]
+pub fn update_wrestler_power_ratings(
+    state: State<'_, DbState>,
+    wrestler_id: i32,
+    ratings: PowerRatings,
+) -> Result<Wrestler, String>
+```
+
+</CodeGroup>
+
+### Update Basic Stats
+
+<CodeGroup>
+
+```rust Frontend (Leptos)
+use crate::types::update_wrestler_basic_stats;
+
+let updated = update_wrestler_basic_stats(
+    wrestler_id, 
+    30, // wins
+    8   // losses
+).await?;
+```
+
+```rust Tauri Command
+#[tauri::command]
+pub fn update_wrestler_basic_stats(
+    state: State<'_, DbState>,
+    wrestler_id: i32,
+    wins: i32,
+    losses: i32,
+) -> Result<Wrestler, String>
+```
+
+</CodeGroup>
+
+### Update Promotion
+
+<CodeGroup>
+
+```rust Frontend (Leptos)
+use crate::types::update_wrestler_promotion;
+
+let updated = update_wrestler_promotion(
+    wrestler_id, 
+    "AEW".to_string()
+).await?;
+```
+
+```rust Tauri Command
+#[tauri::command]
+pub fn update_wrestler_promotion(
+    state: State<'_, DbState>,
+    wrestler_id: i32,
+    promotion: String,
+) -> Result<Wrestler, String>
+```
+
+</CodeGroup>
+
+### Update Real Name
+
+<CodeGroup>
+
+```rust Frontend (Leptos)
+use crate::types::update_wrestler_real_name;
+
+let updated = update_wrestler_real_name(
+    wrestler_id, 
+    "John Smith".to_string()
+).await?;
+```
+
+```rust Tauri Command
+#[tauri::command]
+pub fn update_wrestler_real_name(
+    state: State<'_, DbState>,
+    wrestler_id: i32,
+    real_name: String,
+) -> Result<Wrestler, String>
+```
+
+</CodeGroup>
+
+### Update Biography
+
+<CodeGroup>
+
+```rust Frontend (Leptos)
+use crate::types::update_wrestler_biography;
+
+let updated = update_wrestler_biography(
+    wrestler_id, 
+    "Updated biography...".to_string()
+).await?;
+```
+
+```rust Tauri Command
+#[tauri::command]
+pub fn update_wrestler_biography(
+    state: State<'_, DbState>,
+    wrestler_id: i32,
+    biography: String,
+) -> Result<Wrestler, String>
+```
+
+</CodeGroup>
+
+## Wrestler Deletion
+
+### Delete Wrestler
+
+<CodeGroup>
+
+```rust Frontend (Leptos)
+use crate::types::delete_wrestler;
+
+let result = delete_wrestler(wrestler_id).await?;
+```
+
+```rust Tauri Command
+#[tauri::command]
+pub fn delete_wrestler(
+    state: State<'_, DbState>, 
+    wrestler_id: i32
+) -> Result<String, String>
+```
+
+</CodeGroup>
+
+**Response:**
+```json
+"Wrestler deleted successfully"
+```
+
+## Data Types
+
+### Wrestler
+
+```rust
+pub struct Wrestler {
+    pub id: i32,
+    pub name: String,
+    pub gender: String,
+    pub wins: i32,
+    pub losses: i32,
+    pub real_name: Option<String>,
+    pub nickname: Option<String>,
+    pub height: Option<String>,
+    pub weight: Option<String>,
+    pub debut_year: Option<i32>,
+    pub promotion: Option<String>,
+    pub strength: Option<i32>,
+    pub speed: Option<i32>,
+    pub agility: Option<i32>,
+    pub stamina: Option<i32>,
+    pub charisma: Option<i32>,
+    pub technique: Option<i32>,
+    pub biography: Option<String>,
+    pub is_user_created: Option<bool>,
+    pub created_at: Option<chrono::NaiveDateTime>,
+    pub updated_at: Option<chrono::NaiveDateTime>,
+}
+```
+
+### WrestlerData
+
+```rust
+pub struct WrestlerData {
+    pub name: String,
+    pub gender: String,
+}
+```
+
+### EnhancedWrestlerData
+
+```rust
+pub struct EnhancedWrestlerData {
+    pub name: String,
+    pub gender: String,
+    pub real_name: Option<String>,
+    pub height: Option<String>,
+    pub weight: Option<String>,
+    pub debut_year: Option<i32>,
+    pub promotion: Option<String>,
+    pub strength: Option<i32>,
+    pub speed: Option<i32>,
+    pub agility: Option<i32>,
+    pub stamina: Option<i32>,
+    pub charisma: Option<i32>,
+    pub technique: Option<i32>,
+    pub biography: Option<String>,
+}
+```
+
+### PowerRatings
+
+```rust
+pub struct PowerRatings {
+    pub strength: i32,
+    pub speed: i32,
+    pub agility: i32,
+    pub stamina: i32,
+    pub charisma: i32,
+    pub technique: i32,
+}
+```
+
+## Error Handling
+
+All wrestler operations return `Result<T, String>` where the error string contains details about what went wrong:
+
+- **Database connection errors**: "Failed to get database connection"
+- **Wrestler not found**: "Wrestler with id {id} not found"
+- **Validation errors**: "Invalid wrestler data provided"
+- **Foreign key constraints**: "Cannot delete wrestler - referenced by other records"
+
+## Usage Notes
+
+- Power ratings should be between 1-100
+- Gender field accepts "Male", "Female", or "Other"
+- All wrestler fields except `name` and `gender` are optional
+- The `is_user_created` field distinguishes between test data and user-created wrestlers
+- Wrestlers are global resources available to all shows via show roster assignments

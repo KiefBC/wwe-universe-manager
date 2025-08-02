@@ -1,0 +1,294 @@
+---
+title: "Window Management API"
+description: "Multi-window desktop interface with state preservation"
+---
+
+## Overview
+
+The Window Management API provides sophisticated multi-window functionality for the desktop application. This system allows users to open dedicated windows for wrestler details, title management, and other specialized interfaces while maintaining state and preventing duplicate windows.
+
+## Window Operations
+
+### Open Wrestler Window
+
+<CodeGroup>
+
+```rust Frontend (Leptos)
+use crate::types::open_wrestler_window;
+
+// Open wrestler window with specific ID
+open_wrestler_window(Some("1".to_string())).await?;
+
+// Open default wrestler window
+open_wrestler_window(None).await?;
+```
+
+```rust Tauri Command
+#[tauri::command]
+async fn open_wrestler_window(
+    app: AppHandle, 
+    wrestler_id: Option<String>
+) -> Result<(), String>
+```
+
+</CodeGroup>
+
+**Parameters:**
+- `wrestler_id`: Optional string ID of the wrestler (defaults to "default")
+
+**Window Properties:**
+- **Label**: `"wrestler-details"` (single instance)
+- **Title**: `"Wrestler Details"`
+- **Size**: `885px × 860px`
+- **URL**: `index.html#wrestler?id={wrestler_id}`
+
+### Open Title Window
+
+<CodeGroup>
+
+```rust Frontend (Leptos)
+use crate::types::open_title_window;
+
+// Open title window with specific ID
+open_title_window(Some("1".to_string())).await?;
+
+// Open default title window
+open_title_window(None).await?;
+```
+
+```rust Tauri Command
+#[tauri::command]
+async fn open_title_window(
+    app: AppHandle, 
+    title_id: Option<String>
+) -> Result<(), String>
+```
+
+</CodeGroup>
+
+**Parameters:**
+- `title_id`: Optional string ID of the title (defaults to "default")
+
+**Window Properties:**
+- **Label**: `"title-details"` (single instance)
+- **Title**: `"Title Details"`
+- **Size**: `885px × 860px`
+- **URL**: `index.html#title?id={title_id}`
+
+## Window Management Features
+
+### Single Instance Windows
+Both wrestler and title windows use consistent labels to ensure only one instance exists:
+- Attempting to open a second wrestler window will focus the existing one
+- Same behavior applies to title windows
+- Prevents window proliferation and memory issues
+
+### State Preservation
+Windows maintain their state through URL-based routing:
+- Wrestler ID is preserved in the URL hash: `#wrestler?id=1`
+- Title ID is preserved in the URL hash: `#title?id=1`
+- State persists through window focus changes and app restarts
+
+### Dynamic Content Loading
+Each window dynamically loads content based on the ID parameter:
+- Wrestler windows fetch and display specific wrestler data
+- Title windows fetch and display specific title information
+- Real-time updates reflect database changes
+
+## URL-Based Routing System
+
+The window system uses a sophisticated URL parsing mechanism:
+
+### URL Structure
+```
+index.html#wrestler?id=1
+          ^      ^  ^
+          |      |  └─ Entity ID
+          |      └─ Query parameter
+          └─ Hash-based route
+```
+
+### Route Detection
+```rust
+// Frontend route detection
+let is_wrestler_window = window().location().hash()
+    .unwrap_or_default()
+    .contains("#wrestler");
+
+let is_title_window = window().location().hash()
+    .unwrap_or_default()  
+    .contains("#title");
+```
+
+### ID Extraction
+```rust
+// Extract ID from URL
+pub fn extract_id_from_url() -> Option<i32> {
+    let hash = window().location().hash().ok()?;
+    
+    if let Some(query_start) = hash.find('?') {
+        let query = &hash[query_start + 1..];
+        for param in query.split('&') {
+            if let Some((key, value)) = param.split_once('=') {
+                if key == "id" {
+                    return value.parse().ok();
+                }
+            }
+        }
+    }
+    None
+}
+```
+
+## Window Lifecycle Management
+
+### Window Creation
+```rust
+let url = format!("index.html#wrestler?id={}", wrestler_id);
+let window = tauri::WebviewWindowBuilder::new(
+    &app, 
+    window_label, 
+    tauri::WebviewUrl::App(url.into())
+)
+.title("Wrestler Details")
+.inner_size(885.0, 860.0)
+.build()?;
+```
+
+### Window Focus
+If a window with the same label already exists:
+- The existing window is brought to the front
+- No new window is created
+- Content updates to reflect new ID if different
+
+### Window Closing
+- Windows can be closed normally through OS controls
+- No special cleanup required due to Rust's automatic memory management
+- State is preserved in URL for potential reopening
+
+## Integration with Components
+
+### Wrestler Details Window
+The wrestler window loads the `WrestlerDetailsWindow` component:
+- Fetches wrestler data based on URL ID
+- Displays comprehensive wrestler information
+- Provides editing capabilities
+- Includes power ratings management
+
+### Title Details Window  
+The title window loads the `TitleDetailsWindow` component:
+- Fetches title data with current holder information
+- Displays championship history
+- Provides title management actions
+- Includes holder change functionality
+
+## Error Handling
+
+Window operations return `Result<(), String>`:
+
+- **Window creation errors**: "Failed to create window: {error}"
+- **Invalid URL errors**: "Failed to parse window URL"
+- **App handle errors**: "App handle not available"
+- **Window focus errors**: "Failed to focus existing window"
+
+## Usage Examples
+
+### Opening Wrestler Windows from Main Interface
+
+```rust
+// From wrestler list component
+let open_wrestler = move |wrestler_id: i32| {
+    spawn_local(async move {
+        if let Err(e) = open_wrestler_window(Some(wrestler_id.to_string())).await {
+            log::error!("Failed to open wrestler window: {}", e);
+        }
+    });
+};
+
+// In component template
+view! {
+    <button on:click=move |_| open_wrestler(wrestler.id)>
+        "View Details"
+    </button>
+}
+```
+
+### Opening Title Windows from Championship List
+
+```rust
+// From title list component
+let open_title = move |title_id: i32| {
+    spawn_local(async move {
+        if let Err(e) = open_title_window(Some(title_id.to_string())).await {
+            log::error!("Failed to open title window: {}", e);
+        }
+    });
+};
+
+// In component template
+view! {
+    <button on:click=move |_| open_title(title.id)>
+        "Manage Title"
+    </button>
+}
+```
+
+### Dynamic Window Updates
+
+```rust
+// Update window content when data changes
+let update_wrestler_window = move |new_wrestler_id: i32| {
+    // Close existing window
+    if let Ok(windows) = app.webview_windows() {
+        if let Some(window) = windows.get("wrestler-details") {
+            let _ = window.close();
+        }
+    }
+    
+    // Open new window with updated ID
+    spawn_local(async move {
+        open_wrestler_window(Some(new_wrestler_id.to_string())).await.ok();
+    });
+};
+```
+
+## Multi-Window Workflow
+
+### Typical User Workflow
+1. **Main Dashboard**: Select show, access management options
+2. **Wrestler Window**: Open from roster list, edit wrestler details
+3. **Title Window**: Open from championship list, manage title holders
+4. **Simultaneous Use**: Have multiple windows open for comparison
+
+### Window Coordination
+- Each window operates independently
+- Changes in one window can trigger updates in others
+- Database changes are reflected across all open windows
+- No window blocking or modal behavior
+
+## Performance Considerations
+
+### Memory Management
+- Single instance windows prevent memory bloat
+- Rust's ownership system ensures proper cleanup
+- No manual memory management required
+
+### State Synchronization
+- URL-based state is lightweight and efficient
+- No complex state synchronization between windows
+- Database serves as single source of truth
+
+### Responsive Updates
+- Windows update in real-time when data changes
+- Efficient re-rendering through Leptos reactive system
+- Minimal performance impact from multiple windows
+
+## Future Enhancements
+
+The window system is designed to support additional window types:
+
+- **Match Booking Window**: Dedicated match creation interface
+- **Show Management Window**: Comprehensive show editing
+- **Statistics Window**: Performance analytics and reports
+- **Settings Window**: Application configuration
+- **Draft Window**: Interactive draft interface
