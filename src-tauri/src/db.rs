@@ -1048,7 +1048,7 @@ pub fn internal_get_titles(conn: &mut SqliteConnection) -> Result<Vec<TitleWithH
         let days_held = if let Some(first_holder) = current_holders.first() {
             let now = Utc::now().naive_utc();
             let duration = now - first_holder.holder.held_since;
-            Some(duration.num_days() as i32)
+            Some((duration.num_days()) as i32)
         } else {
             None
         };
@@ -1188,7 +1188,7 @@ pub fn internal_get_titles_for_wrestler_gender(
         let days_held = if let Some(first_holder) = current_holders.first() {
             let now = Utc::now().naive_utc();
             let duration = now - first_holder.holder.held_since;
-            Some(duration.num_days() as i32)
+            Some((duration.num_days()) as i32)
         } else {
             None
         };
@@ -1424,7 +1424,7 @@ pub fn internal_get_titles_for_show(
         let days_held = if let Some(first_holder) = current_holders.first() {
             let now = Utc::now().naive_utc();
             let duration = now - first_holder.holder.held_since;
-            Some(duration.num_days() as i32)
+            Some((duration.num_days()) as i32)
         } else {
             None
         };
@@ -1484,7 +1484,7 @@ pub fn internal_get_unassigned_titles(
         let days_held = if let Some(first_holder) = current_holders.first() {
             let now = Utc::now().naive_utc();
             let duration = now - first_holder.holder.held_since;
-            Some(duration.num_days() as i32)
+            Some((duration.num_days()) as i32)
         } else {
             None
         };

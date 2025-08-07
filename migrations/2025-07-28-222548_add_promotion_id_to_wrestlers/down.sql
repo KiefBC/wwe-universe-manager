@@ -1,1 +1,0 @@
-ALTER TABLE wrestlers DROP COLUMN promotion_id;

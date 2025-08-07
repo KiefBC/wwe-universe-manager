@@ -61,6 +61,7 @@ A comprehensive WWE Universe management application built entirely in Rust, feat
    echo "DATABASE_URL=database.db" > .env
    diesel setup
    diesel migration run
+   # Fast setup: Only 5 consolidated migrations with proper separation of concerns for optimal developer experience
    ```
 
 4. **Build CSS and run the app**

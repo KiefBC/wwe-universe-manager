@@ -1,8 +1,8 @@
-//\! Championship title models and data structures
-//\! 
-//\! This module contains all title-related database models and data transfer objects.
-//\! Titles are global entities that can be assigned to specific shows or remain
-//\! cross-brand.
+//! Championship title models and data structures
+//! 
+//! This module contains all title-related database models and data transfer objects.
+//! Titles are global entities that can be assigned to specific shows or remain
+//! cross-brand.
 
 use crate::models::{Show, Wrestler};
 use crate::schema::titles;
@@ -16,8 +16,6 @@ use serde::{Deserialize, Serialize};
 /// entities that can be assigned to specific shows or remain cross-brand.
 /// Each title has a prestige tier, gender restrictions, and tracking for
 /// current and historical holders.
-/// 
-/// IMPORTANT: Field order must exactly match database schema column order\!
 #[derive(Debug, Queryable, Selectable, Identifiable, Associations, Serialize, Deserialize)]
 #[diesel(table_name = titles)]
 #[diesel(belongs_to(Wrestler, foreign_key = current_holder_id))]
@@ -30,6 +28,10 @@ pub struct Title {
     pub name: String,
     /// ID of the current champion (None if vacant)
     pub current_holder_id: Option<i32>,
+    /// Timestamp when the title was created
+    pub created_at: Option<NaiveDateTime>,
+    /// Timestamp when the title was last updated
+    pub updated_at: Option<NaiveDateTime>,
     /// Type of title ("Singles", "Tag Team", etc.)
     pub title_type: String,
     /// Division/category ("World", "Intercontinental", "Women's World", etc.)
@@ -44,10 +46,6 @@ pub struct Title {
     pub is_active: bool,
     /// Whether this title was created by a user (vs system-created)
     pub is_user_created: Option<bool>,
-    /// Timestamp when the title was created
-    pub created_at: Option<NaiveDateTime>,
-    /// Timestamp when the title was last updated
-    pub updated_at: Option<NaiveDateTime>,
 }
 
 /// Model for creating a new championship title
@@ -81,4 +79,3 @@ pub struct TitleData {
     pub gender: String,
     pub show_id: Option<i32>,
 }
-

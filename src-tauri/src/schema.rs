@@ -78,8 +78,6 @@ diesel::table! {
         id -> Integer,
         name -> Text,
         current_holder_id -> Nullable<Integer>,
-        created_at -> Nullable<Timestamp>,
-        updated_at -> Nullable<Timestamp>,
         title_type -> Text,
         division -> Text,
         prestige_tier -> Integer,
@@ -87,6 +85,8 @@ diesel::table! {
         show_id -> Nullable<Integer>,
         is_active -> Bool,
         is_user_created -> Nullable<Bool>,
+        created_at -> Nullable<Timestamp>,
+        updated_at -> Nullable<Timestamp>,
     }
 }
 
@@ -107,8 +107,6 @@ diesel::table! {
         gender -> Text,
         wins -> Integer,
         losses -> Integer,
-        created_at -> Nullable<Timestamp>,
-        updated_at -> Nullable<Timestamp>,
         real_name -> Nullable<Text>,
         nickname -> Nullable<Text>,
         height -> Nullable<Text>,
@@ -122,6 +120,8 @@ diesel::table! {
         technique -> Nullable<Integer>,
         biography -> Nullable<Text>,
         is_user_created -> Nullable<Bool>,
+        created_at -> Nullable<Timestamp>,
+        updated_at -> Nullable<Timestamp>,
     }
 }
 
@@ -135,6 +135,7 @@ diesel::joinable!(show_rosters -> wrestlers (wrestler_id));
 diesel::joinable!(signature_moves -> wrestlers (wrestler_id));
 diesel::joinable!(title_holders -> titles (title_id));
 diesel::joinable!(title_holders -> wrestlers (wrestler_id));
+diesel::joinable!(titles -> shows (show_id));
 diesel::joinable!(titles -> wrestlers (current_holder_id));
 
 diesel::allow_tables_to_appear_in_same_query!(

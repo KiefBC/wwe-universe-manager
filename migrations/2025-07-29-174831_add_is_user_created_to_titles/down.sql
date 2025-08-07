@@ -1,1 +1,0 @@
-ALTER TABLE titles DROP COLUMN is_user_created;

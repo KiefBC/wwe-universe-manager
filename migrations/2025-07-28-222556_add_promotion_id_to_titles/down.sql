@@ -1,1 +1,0 @@
-ALTER TABLE titles DROP COLUMN promotion_id;
