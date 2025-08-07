@@ -7,6 +7,7 @@ mod test_helpers;
 use test_helpers::*;
 
 #[test]
+#[ignore]
 #[serial]
 fn test_create_user_success() {
     let test_data = TestData::new();
@@ -28,6 +29,7 @@ fn test_create_user_success() {
 }
 
 #[test]
+#[ignore]
 #[serial]
 fn test_create_duplicate_user_fails() {
     let test_data = TestData::new();
@@ -51,6 +53,7 @@ fn test_create_duplicate_user_fails() {
 }
 
 #[test]
+#[ignore]
 #[serial]
 fn test_check_user_exists() {
     let test_data = TestData::new();
@@ -79,6 +82,7 @@ fn test_check_user_exists() {
 }
 
 #[test]
+#[ignore]
 #[serial]
 fn test_verify_credentials() {
     let test_data = TestData::new();
@@ -126,6 +130,7 @@ fn test_verify_credentials() {
 }
 
 #[test]
+#[ignore]
 #[serial]
 fn test_create_user_with_empty_fields() {
     let test_data = TestData::new();

@@ -1,6 +1,6 @@
 use serial_test::serial;
 
-use wwe_universe_manager_lib::db::{internal_create_wrestler, internal_create_enhanced_wrestler, internal_create_signature_move};
+use wwe_universe_manager_lib::db::{internal_create_wrestler, internal_create_enhanced_wrestler, internal_create_signature_move, internal_get_wrestlers};
 
 mod test_helpers;
 use test_helpers::*;
@@ -316,4 +316,84 @@ fn test_enhanced_wrestler_with_optional_fields() {
 
     // Cleanup
     test_data.cleanup_wrestlers(wrestler_name);
+}
+
+#[test]
+#[serial]
+fn test_fetch_wrestlers() {
+    let test_data = TestData::new();
+    let wrestler1_name = "Fetch Test Wrestler 1";
+    let wrestler2_name = "Fetch Test Wrestler 2";
+    let wrestler3_name = "Fetch Test Wrestler 3";
+
+    // Cleanup any existing test data
+    test_data.cleanup_wrestlers(wrestler1_name);
+    test_data.cleanup_wrestlers(wrestler2_name);
+    test_data.cleanup_wrestlers(wrestler3_name);
+
+    let mut conn = test_data.get_connection();
+
+    // Test fetching empty list first
+    let initial_wrestlers = internal_get_wrestlers(&mut conn)
+        .expect("Failed to fetch wrestlers initially");
+    let initial_count = initial_wrestlers.len();
+
+    // Create test wrestlers
+    let wrestler1 = internal_create_wrestler(&mut conn, wrestler1_name, "Male", 5, 1)
+        .expect("Failed to create wrestler 1");
+    
+    let wrestler2 = internal_create_wrestler(&mut conn, wrestler2_name, "Female", 8, 2)
+        .expect("Failed to create wrestler 2");
+        
+    let wrestler3 = internal_create_wrestler(&mut conn, wrestler3_name, "Other", 3, 0)
+        .expect("Failed to create wrestler 3");
+
+    // Fetch all wrestlers
+    let all_wrestlers = internal_get_wrestlers(&mut conn)
+        .expect("Failed to fetch wrestlers");
+
+    // Should have initial count + 3 new wrestlers
+    assert_eq!(all_wrestlers.len(), initial_count + 3);
+    
+    // Find our test wrestlers in the results (they should be ordered by ID)
+    let found_wrestler1 = all_wrestlers.iter().find(|w| w.name == wrestler1_name);
+    let found_wrestler2 = all_wrestlers.iter().find(|w| w.name == wrestler2_name);
+    let found_wrestler3 = all_wrestlers.iter().find(|w| w.name == wrestler3_name);
+
+    assert!(found_wrestler1.is_some(), "Wrestler 1 should be found in fetch results");
+    assert!(found_wrestler2.is_some(), "Wrestler 2 should be found in fetch results");
+    assert!(found_wrestler3.is_some(), "Wrestler 3 should be found in fetch results");
+
+    // Verify the fetched wrestlers have correct data
+    let found1 = found_wrestler1.unwrap();
+    assert_eq!(found1.id, wrestler1.id);
+    assert_eq!(found1.name, wrestler1_name);
+    assert_eq!(found1.gender, "Male");
+    assert_eq!(found1.wins, 5);
+    assert_eq!(found1.losses, 1);
+
+    let found2 = found_wrestler2.unwrap();
+    assert_eq!(found2.id, wrestler2.id);
+    assert_eq!(found2.name, wrestler2_name);
+    assert_eq!(found2.gender, "Female");
+    assert_eq!(found2.wins, 8);
+    assert_eq!(found2.losses, 2);
+
+    let found3 = found_wrestler3.unwrap();
+    assert_eq!(found3.id, wrestler3.id);
+    assert_eq!(found3.name, wrestler3_name);
+    assert_eq!(found3.gender, "Other");
+    assert_eq!(found3.wins, 3);
+    assert_eq!(found3.losses, 0);
+
+    // Verify wrestlers are ordered by ID (ascending)
+    let wrestler_ids: Vec<i32> = all_wrestlers.iter().map(|w| w.id).collect();
+    let mut sorted_ids = wrestler_ids.clone();
+    sorted_ids.sort();
+    assert_eq!(wrestler_ids, sorted_ids, "Wrestlers should be ordered by ID ascending");
+
+    // Cleanup
+    test_data.cleanup_wrestlers(wrestler1_name);
+    test_data.cleanup_wrestlers(wrestler2_name);
+    test_data.cleanup_wrestlers(wrestler3_name);
 }

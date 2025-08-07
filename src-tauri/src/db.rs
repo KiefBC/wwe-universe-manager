@@ -2183,11 +2183,18 @@ pub fn remove_wrestler_from_show(
 /// Returns empty vector if wrestler has no active assignments.
 /// 
 /// # Examples
-/// ```rust
+/// ```rust,no_run
+/// # use diesel::prelude::*;
+/// # use wwe_universe_manager_lib::db::internal_get_shows_for_wrestler;
+/// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// # let mut conn = todo!();
+/// # let wrestler_id = 1;
 /// let shows = internal_get_shows_for_wrestler(&mut conn, wrestler_id)?;
 /// for show in shows {
 ///     println!("Wrestler is assigned to: {}", show.name);
 /// }
+/// # Ok(())
+/// # }
 /// ```
 pub fn internal_get_shows_for_wrestler(
     conn: &mut SqliteConnection,
