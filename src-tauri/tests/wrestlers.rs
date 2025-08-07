@@ -152,7 +152,6 @@ fn test_create_enhanced_wrestler_success() {
         new_wrestler.height.as_ref().unwrap(),
         new_wrestler.weight.as_ref().unwrap(),
         new_wrestler.debut_year.unwrap(),
-        new_wrestler.promotion.as_ref().unwrap(),
         new_wrestler.strength.unwrap(),
         new_wrestler.speed.unwrap(),
         new_wrestler.agility.unwrap(),
@@ -173,7 +172,7 @@ fn test_create_enhanced_wrestler_success() {
     assert_eq!(wrestler.height, new_wrestler.height);
     assert_eq!(wrestler.weight, new_wrestler.weight);
     assert_eq!(wrestler.debut_year, new_wrestler.debut_year);
-    assert_eq!(wrestler.promotion, new_wrestler.promotion);
+    // Promotion field removed - wrestlers are now global entities
     assert_eq!(wrestler.strength, new_wrestler.strength);
     assert_eq!(wrestler.speed, new_wrestler.speed);
     assert_eq!(wrestler.agility, new_wrestler.agility);
@@ -296,7 +295,6 @@ fn test_enhanced_wrestler_with_optional_fields() {
         "5'8\"",
         "175 lbs",
         2018,
-        "AEW",
         5,
         9,
         7,
@@ -313,7 +311,7 @@ fn test_enhanced_wrestler_with_optional_fields() {
     assert_eq!(wrestler.wins, 12);
     assert_eq!(wrestler.losses, 8);
     assert_eq!(wrestler.real_name, Some("Real Name".to_string()));
-    assert_eq!(wrestler.promotion, Some("AEW".to_string()));
+    // Promotion field removed - wrestlers are now global entities
     assert_eq!(wrestler.technique, Some(9));
 
     // Cleanup

@@ -22,7 +22,8 @@ fn test_create_title_without_holder() {
         &new_title.division,
         &new_title.gender,
         new_title.show_id,
-        new_title.current_holder_id
+        new_title.current_holder_id,
+        false // is_user_created
     ).expect("Failed to create title");
 
     assert_eq!(title.name, new_title.name);
@@ -58,7 +59,8 @@ fn test_create_title_with_holder() {
         "World",
         "Mixed",
         None,
-        Some(wrestler.id)
+        Some(wrestler.id),
+        false // is_user_created
     ).expect("Failed to create title");
 
     assert_eq!(title.name, title_name);
@@ -89,7 +91,8 @@ fn test_create_multiple_titles() {
         "World",
         "Mixed",
         None,
-        None
+        None,
+        false // is_user_created
     ).expect("Failed to create title 1");
 
     let title2 = internal_create_belt(
@@ -99,7 +102,8 @@ fn test_create_multiple_titles() {
         "Intercontinental",
         "Mixed",
         None,
-        None
+        None,
+        false // is_user_created
     ).expect("Failed to create title 2");
 
     assert_ne!(title1.id, title2.id);
@@ -130,7 +134,8 @@ fn test_create_title_with_invalid_holder_id() {
         "World",
         "Mixed",
         None,
-        Some(99999)
+        Some(99999),
+        false // is_user_created
     );
 
     // Note: This test assumes foreign key constraints are enforced
@@ -177,7 +182,8 @@ fn test_title_holder_relationship() {
         "World",
         "Mixed",
         None,
-        None
+        None,
+        false // is_user_created
     ).expect("Failed to create title");
 
     assert_eq!(title.current_holder_id, None);
@@ -193,7 +199,8 @@ fn test_title_holder_relationship() {
         "World",
         "Mixed",
         None,
-        Some(wrestler.id)
+        Some(wrestler.id),
+        false // is_user_created
     ).expect("Failed to create title with holder");
 
     assert_eq!(title_with_holder.current_holder_id, Some(wrestler.id));

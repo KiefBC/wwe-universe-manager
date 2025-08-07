@@ -122,7 +122,7 @@ pub fn create_test_enhanced_wrestler() -> NewEnhancedWrestler {
         height: Some("6'2\"".to_string()),
         weight: Some("220 lbs".to_string()),
         debut_year: Some(2020),
-        promotion: Some("WWE".to_string()),
+        // promotion field removed - wrestlers are now global entities
         strength: Some(7),
         speed: Some(6),
         agility: Some(8),
@@ -154,6 +154,7 @@ pub fn create_test_title() -> NewTitle {
         gender: "Mixed".to_string(),
         show_id: None,
         is_active: true,
+        is_user_created: Some(false),
     }
 }
 

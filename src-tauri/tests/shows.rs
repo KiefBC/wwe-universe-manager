@@ -1,6 +1,6 @@
 use serial_test::serial;
 
-use wwe_universe_manager_lib::db::{internal_create_show, internal_get_shows};
+use wwe_universe_manager_lib::db::{internal_create_show, internal_get_shows, internal_get_wrestlers_for_show};
 
 mod test_helpers;
 use test_helpers::*;
@@ -236,12 +236,17 @@ fn test_get_shows_for_wrestler() {
 
     let shows_after_second = internal_get_shows_for_wrestler(&mut conn, wrestler.id)
         .expect("Failed to get shows after second assignment");
-    assert_eq!(shows_after_second.len(), 2);
     
-    // Shows should be ordered by name (ascending)
-    let show_names: Vec<String> = shows_after_second.iter().map(|s| s.name.clone()).collect();
-    assert!(show_names.contains(&show1_name.to_string()));
-    assert!(show_names.contains(&show2_name.to_string()));
+    // With exclusive assignment logic, wrestler should only be on one show (the latest assignment)
+    assert_eq!(shows_after_second.len(), 1);
+    assert_eq!(shows_after_second[0].id, show2.id);
+    assert_eq!(shows_after_second[0].name, show2_name);
+    
+    // Verify wrestler was transferred from show1 (should not be in show1's roster anymore)
+    let show1_roster = internal_get_wrestlers_for_show(&mut conn, show1.id)
+        .expect("Failed to get show1 roster after transfer");
+    assert!(!show1_roster.iter().any(|w| w.id == wrestler.id), 
+           "Wrestler should be transferred from show1");
 
     // Cleanup
     test_data.cleanup_shows(show1_name);

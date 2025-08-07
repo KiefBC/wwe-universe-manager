@@ -47,7 +47,8 @@ fn test_complete_wrestling_scenario() {
         "World",
         "Mixed",
         None,
-        None
+        None,
+        false // is_user_created
     ).expect("Failed to create title");
 
     // 4. Create a user
@@ -70,7 +71,8 @@ fn test_complete_wrestling_scenario() {
         "Intercontinental",
         "Mixed",
         None,
-        Some(wrestler1.id)
+        Some(wrestler1.id),
+        false // is_user_created
     ).expect("Failed to create title with holder");
 
     assert_eq!(title_with_holder.current_holder_id, Some(wrestler1.id));
@@ -110,7 +112,8 @@ fn test_title_holder_cascade_behavior() {
         "World",
         "Mixed",
         None,
-        Some(wrestler.id)
+        Some(wrestler.id),
+        false // is_user_created
     ).expect("Failed to create title with holder");
 
     assert_eq!(title.current_holder_id, Some(wrestler.id));
@@ -159,7 +162,8 @@ fn test_multiple_titles_same_holder() {
         "World",
         "Mixed",
         None,
-        Some(wrestler.id)
+        Some(wrestler.id),
+        false // is_user_created
     ).expect("Failed to create title 1");
 
     let title2 = internal_create_belt(
@@ -169,7 +173,8 @@ fn test_multiple_titles_same_holder() {
         "Intercontinental",
         "Mixed",
         None,
-        Some(wrestler.id)
+        Some(wrestler.id),
+        false // is_user_created
     ).expect("Failed to create title 2");
 
     assert_eq!(title1.current_holder_id, Some(wrestler.id));
@@ -217,7 +222,8 @@ fn test_stress_create_many_entities() {
             "World",
             "Mixed",
             None,
-            Some(wrestler.id)
+            Some(wrestler.id),
+            false // is_user_created
         ).expect("Failed to create stress title");
 
         let show = internal_create_show(&mut conn, &show_name, &format!("Stress show {}", i))
@@ -257,7 +263,8 @@ fn test_create_test_data_basic() {
         "World",
         "Mixed",
         None,
-        None
+        None,
+        false // is_user_created
     );
 
     match result {
