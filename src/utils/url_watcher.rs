@@ -1,3 +1,12 @@
+//! URL synchronization utilities for maintaining state across browser navigation
+//! 
+//! This module provides functionality to synchronize application state with
+//! browser URL changes, particularly for wrestler details windows.
+//!
+//! **Note**: Many functions are future infrastructure for advanced routing.
+
+#![allow(dead_code)]
+
 use crate::utils::url_parser::extract_wrestler_id_from_url;
 use leptos::prelude::*;
 use wasm_bindgen::prelude::*;

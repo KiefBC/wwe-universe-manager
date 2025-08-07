@@ -1,7 +1,11 @@
+#![allow(dead_code)]
+
 /// Application constants for the WWE Universe Manager
 /// 
 /// This module contains all magic numbers and configuration values
 /// used throughout the application to improve maintainability.
+///
+/// **Note**: Many constants are future infrastructure for upcoming features.
 
 pub mod ui_constants;
 

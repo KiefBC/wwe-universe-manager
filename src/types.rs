@@ -109,6 +109,16 @@ where
 }
 
 /// Generic helper for Tauri commands that don't need arguments
+/// 
+/// # Type Parameters
+/// * `R` - Expected return type (must be deserializable)
+/// 
+/// # Arguments
+/// * `command` - Name of the Tauri command to invoke
+/// 
+/// # Returns
+/// * `Ok(R)` - Deserialized response from the command
+/// * `Err(String)` - Error message if invocation or deserialization fails
 pub async fn invoke_tauri_no_args<R>(command: &str) -> Result<R, String>
 where
     R: for<'de> Deserialize<'de>,
@@ -124,12 +134,23 @@ where
     })
 }
 
-/// Fetches shows from the backend via Tauri
+/// Fetches all shows from the backend
+/// 
+/// # Returns
+/// * `Ok(Vec<Show>)` - List of all shows
+/// * `Err(String)` - Error message if fetch fails
 pub async fn fetch_shows() -> Result<Vec<Show>, String> {
     invoke_tauri_no_args("get_shows").await
 }
 
-/// Creates a new show via Tauri
+/// Creates a new show via Tauri command
+/// 
+/// # Arguments
+/// * `show_data` - Show name and description
+/// 
+/// # Returns
+/// * `Ok(Show)` - The newly created show
+/// * `Err(String)` - Error message if creation fails
 pub async fn create_show(show_data: ShowData) -> Result<Show, String> {
     console::log_1(&format!("create_show called with: {:?}", show_data).into());
 
@@ -141,13 +162,32 @@ pub async fn create_show(show_data: ShowData) -> Result<Show, String> {
 }
 
 
-/// Fetches wrestlers from the backend via Tauri
+/// Fetches all wrestlers from the backend
+/// 
+/// # Returns
+/// * `Ok(Vec<Wrestler>)` - List of all wrestlers
+/// * `Err(String)` - Error message if fetch fails
 pub async fn fetch_wrestlers() -> Result<Vec<Wrestler>, String> {
     invoke_tauri_no_args("get_wrestlers").await
 }
 
+/// Fetches all unassigned wrestlers (not on any show roster)
+/// 
+/// # Returns
+/// * `Ok(Vec<Wrestler>)` - List of wrestlers not assigned to any show
+/// * `Err(String)` - Error message if fetch fails
+pub async fn fetch_unassigned_wrestlers() -> Result<Vec<Wrestler>, String> {
+    invoke_tauri_no_args("get_unassigned_wrestlers").await
+}
 
-/// Fetches wrestlers assigned to a specific show
+/// Fetches wrestlers assigned to a specific show's roster
+/// 
+/// # Arguments
+/// * `show_id` - ID of the show
+/// 
+/// # Returns
+/// * `Ok(Vec<Wrestler>)` - List of wrestlers on the show's roster
+/// * `Err(String)` - Error message if fetch fails
 pub async fn fetch_wrestlers_for_show(show_id: i32) -> Result<Vec<Wrestler>, String> {
     console::log_1(&format!("fetch_wrestlers_for_show called with show_id: {}", show_id).into());
 
@@ -156,7 +196,7 @@ pub async fn fetch_wrestlers_for_show(show_id: i32) -> Result<Vec<Wrestler>, Str
     });
 
     let args_value = serde_wasm_bindgen::to_value(&args).map_err(|e| {
-        let error_msg = format!("Failed to serialize show_id: {}", e);
+        let error_msg = format!("Failed to serialize parameter 'show_id' for fetch_wrestlers_for_show(): {} (show_id: {})", e, show_id);
         console::log_1(&error_msg.clone().into());
         error_msg
     })?;
@@ -164,15 +204,22 @@ pub async fn fetch_wrestlers_for_show(show_id: i32) -> Result<Vec<Wrestler>, Str
     let result_js = invoke("get_wrestlers_for_show", args_value).await;
 
     serde_wasm_bindgen::from_value(result_js).map_err(|e| {
-        let error_msg = format!("Failed to deserialize wrestlers for show: {}", e);
+        let error_msg = format!("Failed to deserialize wrestlers response from fetch_wrestlers_for_show(): {} (show_id: {})", e, show_id);
         console::log_1(&error_msg.clone().into());
         error_msg
     })
 }
 
-/// Assigns a wrestler to a show roster
+/// Assigns a wrestler to a show's roster
+/// 
+/// # Arguments
+/// * `show_id` - ID of the show
+/// * `wrestler_id` - ID of the wrestler to assign
+/// 
+/// # Returns
+/// * `Ok(String)` - Success message
+/// * `Err(String)` - Error message if assignment fails
 pub async fn assign_wrestler_to_show(show_id: i32, wrestler_id: i32) -> Result<String, String> {
-    console::log_1(&format!("assign_wrestler_to_show called with show_id: {}, wrestler_id: {}", show_id, wrestler_id).into());
 
     let args = serde_json::json!({
         "showId": show_id,
@@ -180,23 +227,26 @@ pub async fn assign_wrestler_to_show(show_id: i32, wrestler_id: i32) -> Result<S
     });
 
     let args_value = serde_wasm_bindgen::to_value(&args).map_err(|e| {
-        let error_msg = format!("Failed to serialize assignment data: {}", e);
-        console::log_1(&error_msg.clone().into());
-        error_msg
+        format!("Failed to serialize parameters for assign_wrestler_to_show(): {} (show_id: {}, wrestler_id: {})", e, show_id, wrestler_id)
     })?;
 
     let result_js = invoke("assign_wrestler_to_show", args_value).await;
 
     serde_wasm_bindgen::from_value(result_js).map_err(|e| {
-        let error_msg = format!("Failed to deserialize assignment result: {}", e);
-        console::log_1(&error_msg.clone().into());
-        error_msg
+        format!("Failed to deserialize assignment response from assign_wrestler_to_show(): {} (show_id: {}, wrestler_id: {})", e, show_id, wrestler_id)
     })
 }
 
-/// Removes a wrestler from a show roster
+/// Removes a wrestler from a show's roster
+/// 
+/// # Arguments
+/// * `show_id` - ID of the show
+/// * `wrestler_id` - ID of the wrestler to remove
+/// 
+/// # Returns
+/// * `Ok(String)` - Success message
+/// * `Err(String)` - Error message if removal fails
 pub async fn remove_wrestler_from_show(show_id: i32, wrestler_id: i32) -> Result<String, String> {
-    console::log_1(&format!("remove_wrestler_from_show called with show_id: {}, wrestler_id: {}", show_id, wrestler_id).into());
 
     let args = serde_json::json!({
         "showId": show_id,
@@ -204,15 +254,41 @@ pub async fn remove_wrestler_from_show(show_id: i32, wrestler_id: i32) -> Result
     });
 
     let args_value = serde_wasm_bindgen::to_value(&args).map_err(|e| {
-        let error_msg = format!("Failed to serialize removal data: {}", e);
-        console::log_1(&error_msg.clone().into());
-        error_msg
+        format!("Failed to serialize parameters for remove_wrestler_from_show(): {} (show_id: {}, wrestler_id: {})", e, show_id, wrestler_id)
     })?;
 
     let result_js = invoke("remove_wrestler_from_show", args_value).await;
 
     serde_wasm_bindgen::from_value(result_js).map_err(|e| {
-        let error_msg = format!("Failed to deserialize removal result: {}", e);
+        format!("Failed to deserialize removal response from remove_wrestler_from_show(): {} (show_id: {}, wrestler_id: {})", e, show_id, wrestler_id)
+    })
+}
+
+/// Gets the shows that a wrestler is currently assigned to
+/// 
+/// # Arguments
+/// * `wrestler_id` - ID of the wrestler
+/// 
+/// # Returns
+/// * `Ok(Vec<Show>)` - List of shows the wrestler is assigned to
+/// * `Err(String)` - Error message if fetch fails
+pub async fn fetch_shows_for_wrestler(wrestler_id: i32) -> Result<Vec<Show>, String> {
+    console::log_1(&format!("fetch_shows_for_wrestler called with wrestler_id: {}", wrestler_id).into());
+
+    let args = serde_json::json!({
+        "wrestlerId": wrestler_id
+    });
+
+    let args_value = serde_wasm_bindgen::to_value(&args).map_err(|e| {
+        let error_msg = format!("Failed to serialize parameter 'wrestler_id' for fetch_shows_for_wrestler(): {} (wrestler_id: {})", e, wrestler_id);
+        console::log_1(&error_msg.clone().into());
+        error_msg
+    })?;
+
+    let result_js = invoke("get_shows_for_wrestler", args_value).await;
+
+    serde_wasm_bindgen::from_value(result_js).map_err(|e| {
+        let error_msg = format!("Failed to deserialize shows response from fetch_shows_for_wrestler(): {} (wrestler_id: {})", e, wrestler_id);
         console::log_1(&error_msg.clone().into());
         error_msg
     })
@@ -220,6 +296,10 @@ pub async fn remove_wrestler_from_show(show_id: i32, wrestler_id: i32) -> Result
 
 // Match-related types and functions
 
+/// Match data structure representing a wrestling match
+/// 
+/// Matches are contests that take place on shows and can be
+/// singles, tag team, or multi-person matches with various stipulations
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct Match {
     pub id: i32,
@@ -234,6 +314,7 @@ pub struct Match {
     pub title_id: Option<i32>,
 }
 
+/// Data transfer object for creating new matches
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct MatchData {
     pub show_id: i32,
@@ -246,6 +327,10 @@ pub struct MatchData {
     pub title_id: Option<i32>,
 }
 
+/// Match participant record linking wrestlers to matches
+/// 
+/// Tracks which wrestlers are in a match, their team assignment
+/// (for tag matches), and entrance order
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct MatchParticipant {
     pub id: i32,
@@ -255,6 +340,7 @@ pub struct MatchParticipant {
     pub entrance_order: Option<i32>,
 }
 
+/// Data transfer object for adding wrestlers to matches
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct MatchParticipantData {
     pub match_id: i32,
@@ -263,7 +349,14 @@ pub struct MatchParticipantData {
     pub entrance_order: Option<i32>,
 }
 
-/// Fetches matches for a specific show
+/// Fetches all matches scheduled for a specific show
+/// 
+/// # Arguments
+/// * `show_id` - ID of the show
+/// 
+/// # Returns
+/// * `Ok(Vec<Match>)` - List of matches ordered by match order
+/// * `Err(String)` - Error message if fetch fails
 pub async fn fetch_matches_for_show(show_id: i32) -> Result<Vec<Match>, String> {
     console::log_1(&format!("fetch_matches_for_show called with show_id: {}", show_id).into());
 
@@ -272,7 +365,7 @@ pub async fn fetch_matches_for_show(show_id: i32) -> Result<Vec<Match>, String> 
     });
 
     let args_value = serde_wasm_bindgen::to_value(&args).map_err(|e| {
-        let error_msg = format!("Failed to serialize show_id: {}", e);
+        let error_msg = format!("Failed to serialize parameter 'show_id' for fetch_matches_for_show(): {} (show_id: {})", e, show_id);
         console::log_1(&error_msg.clone().into());
         error_msg
     })?;
@@ -280,13 +373,20 @@ pub async fn fetch_matches_for_show(show_id: i32) -> Result<Vec<Match>, String> 
     let result_js = invoke("get_matches_for_show", args_value).await;
 
     serde_wasm_bindgen::from_value(result_js).map_err(|e| {
-        let error_msg = format!("Failed to deserialize matches: {}", e);
+        let error_msg = format!("Failed to deserialize matches response from fetch_matches_for_show(): {} (show_id: {})", e, show_id);
         console::log_1(&error_msg.clone().into());
         error_msg
     })
 }
 
-/// Creates a new match
+/// Creates a new match for a show
+/// 
+/// # Arguments
+/// * `match_data` - Match details including type, stipulation, and order
+/// 
+/// # Returns
+/// * `Ok(Match)` - The newly created match
+/// * `Err(String)` - Error message if creation fails
 pub async fn create_match(match_data: MatchData) -> Result<Match, String> {
     console::log_1(&format!("create_match called with: {:?}", match_data).into());
 
@@ -295,7 +395,7 @@ pub async fn create_match(match_data: MatchData) -> Result<Match, String> {
     });
 
     let args_value = serde_wasm_bindgen::to_value(&args).map_err(|e| {
-        let error_msg = format!("Failed to serialize match data: {}", e);
+        let error_msg = format!("Failed to serialize match data for create_match(): {} (match_type: {}, show_id: {})", e, match_data.match_type, match_data.show_id);
         console::log_1(&error_msg.clone().into());
         error_msg
     })?;
@@ -303,13 +403,23 @@ pub async fn create_match(match_data: MatchData) -> Result<Match, String> {
     let result_js = invoke("create_match", args_value).await;
 
     serde_wasm_bindgen::from_value(result_js).map_err(|e| {
-        let error_msg = format!("Failed to deserialize match result: {}", e);
+        let error_msg = format!("Failed to deserialize match response from create_match(): {} (match_type: {}, show_id: {})", e, match_data.match_type, match_data.show_id);
         console::log_1(&error_msg.clone().into());
         error_msg
     })
 }
 
-/// Adds a wrestler to a match
+/// Adds a wrestler as a participant in a match
+/// 
+/// # Arguments
+/// * `match_id` - ID of the match
+/// * `wrestler_id` - ID of the wrestler to add
+/// * `team_number` - Optional team assignment for tag matches
+/// * `entrance_order` - Optional entrance order
+/// 
+/// # Returns
+/// * `Ok(String)` - Success message
+/// * `Err(String)` - Error message if addition fails
 pub async fn add_wrestler_to_match(match_id: i32, wrestler_id: i32, team_number: Option<i32>, entrance_order: Option<i32>) -> Result<String, String> {
     console::log_1(&format!("add_wrestler_to_match called with match_id: {}, wrestler_id: {}, team_number: {:?}, entrance_order: {:?}", match_id, wrestler_id, team_number, entrance_order).into());
 
@@ -321,7 +431,7 @@ pub async fn add_wrestler_to_match(match_id: i32, wrestler_id: i32, team_number:
     });
 
     let args_value = serde_wasm_bindgen::to_value(&args).map_err(|e| {
-        let error_msg = format!("Failed to serialize match participant data: {}", e);
+        let error_msg = format!("Failed to serialize parameters for add_wrestler_to_match(): {} (match_id: {}, wrestler_id: {}, team_number: {:?})", e, match_id, wrestler_id, team_number);
         console::log_1(&error_msg.clone().into());
         error_msg
     })?;
@@ -329,13 +439,21 @@ pub async fn add_wrestler_to_match(match_id: i32, wrestler_id: i32, team_number:
     let result_js = invoke("add_wrestler_to_match", args_value).await;
 
     serde_wasm_bindgen::from_value(result_js).map_err(|e| {
-        let error_msg = format!("Failed to deserialize add wrestler result: {}", e);
+        let error_msg = format!("Failed to deserialize response from add_wrestler_to_match(): {} (match_id: {}, wrestler_id: {}, team_number: {:?})", e, match_id, wrestler_id, team_number);
         console::log_1(&error_msg.clone().into());
         error_msg
     })
 }
 
-/// Fetches participants for a specific match
+/// Fetches all participants in a specific match
+/// 
+/// # Arguments
+/// * `match_id` - ID of the match
+/// 
+/// # Returns
+/// * `Ok(Vec<MatchParticipant>)` - List of participants with details
+/// * `Err(String)` - Error message if fetch fails
+#[allow(dead_code)]
 pub async fn fetch_match_participants(match_id: i32) -> Result<Vec<MatchParticipant>, String> {
     console::log_1(&format!("fetch_match_participants called with match_id: {}", match_id).into());
 
@@ -344,7 +462,7 @@ pub async fn fetch_match_participants(match_id: i32) -> Result<Vec<MatchParticip
     });
 
     let args_value = serde_wasm_bindgen::to_value(&args).map_err(|e| {
-        let error_msg = format!("Failed to serialize match_id: {}", e);
+        let error_msg = format!("Failed to serialize parameter 'match_id' for fetch_match_participants(): {} (match_id: {})", e, match_id);
         console::log_1(&error_msg.clone().into());
         error_msg
     })?;
@@ -352,13 +470,22 @@ pub async fn fetch_match_participants(match_id: i32) -> Result<Vec<MatchParticip
     let result_js = invoke("get_match_participants", args_value).await;
 
     serde_wasm_bindgen::from_value(result_js).map_err(|e| {
-        let error_msg = format!("Failed to deserialize match participants: {}", e);
+        let error_msg = format!("Failed to deserialize match participants response from fetch_match_participants(): {} (match_id: {})", e, match_id);
         console::log_1(&error_msg.clone().into());
         error_msg
     })
 }
 
-/// Sets the winner of a match
+/// Sets the winner of a completed match
+/// 
+/// # Arguments
+/// * `match_id` - ID of the match
+/// * `winner_id` - ID of the winning wrestler
+/// 
+/// # Returns
+/// * `Ok(String)` - Success message
+/// * `Err(String)` - Error message if update fails
+#[allow(dead_code)]
 pub async fn set_match_winner(match_id: i32, winner_id: i32) -> Result<String, String> {
     console::log_1(&format!("set_match_winner called with match_id: {}, winner_id: {}", match_id, winner_id).into());
 
@@ -368,7 +495,7 @@ pub async fn set_match_winner(match_id: i32, winner_id: i32) -> Result<String, S
     });
 
     let args_value = serde_wasm_bindgen::to_value(&args).map_err(|e| {
-        let error_msg = format!("Failed to serialize winner data: {}", e);
+        let error_msg = format!("Failed to serialize parameters for set_match_winner(): {} (match_id: {}, winner_id: {})", e, match_id, winner_id);
         console::log_1(&error_msg.clone().into());
         error_msg
     })?;
@@ -376,7 +503,7 @@ pub async fn set_match_winner(match_id: i32, winner_id: i32) -> Result<String, S
     let result_js = invoke("set_match_winner", args_value).await;
 
     serde_wasm_bindgen::from_value(result_js).map_err(|e| {
-        let error_msg = format!("Failed to deserialize winner result: {}", e);
+        let error_msg = format!("Failed to deserialize response from set_match_winner(): {} (match_id: {}, winner_id: {})", e, match_id, winner_id);
         console::log_1(&error_msg.clone().into());
         error_msg
     })

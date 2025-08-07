@@ -2,6 +2,10 @@ use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
 /// Standardized error state for consistent error handling across components
+///
+/// **Note**: Many components are future infrastructure for comprehensive error handling.
+
+#[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum AppError {
     /// Network or API related errors
@@ -15,10 +19,12 @@ pub enum AppError {
 }
 
 impl AppError {
+    #[allow(dead_code)]
     pub fn network(message: impl Into<String>) -> Self {
         Self::Network(message.into())
     }
     
+    #[allow(dead_code)]
     pub fn validation(field: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Validation {
             field: field.into(),
@@ -26,10 +32,12 @@ impl AppError {
         }
     }
     
+    #[allow(dead_code)]
     pub fn general(message: impl Into<String>) -> Self {
         Self::General(message.into())
     }
     
+    #[allow(dead_code)]
     pub fn auth(message: impl Into<String>) -> Self {
         Self::Auth(message.into())
     }
@@ -57,6 +65,7 @@ impl AppError {
 
 /// Standardized loading state for consistent loading patterns
 #[derive(Clone, Debug, PartialEq)]
+#[allow(dead_code)]
 pub enum LoadingState {
     /// Not loading
     Idle,
@@ -81,6 +90,7 @@ impl LoadingState {
         matches!(self, LoadingState::Error(_))
     }
     
+    #[allow(dead_code)]
     pub fn is_idle(&self) -> bool {
         matches!(self, LoadingState::Idle)
     }
@@ -151,11 +161,14 @@ pub fn ErrorDisplay(
 
 /// Component for displaying standardized loading states
 #[component]
+#[allow(dead_code)]
 pub fn LoadingDisplay(
     /// The loading state to display
+    #[allow(unused_variables)]
     loading_state: ReadSignal<LoadingState>,
     /// Optional custom class for styling
     #[prop(optional)]
+    #[allow(unused_variables)]
     class: Option<String>,
 ) -> impl IntoView {
     let class_name = class.unwrap_or_default();

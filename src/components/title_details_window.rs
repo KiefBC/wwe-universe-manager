@@ -170,7 +170,7 @@ pub fn TitleDetailsWindow() -> impl IntoView {
 
 
     // Delete handlers
-    let handle_delete_click = move || {
+    let _handle_delete_click = move || {
         set_show_delete_confirmation.set(true);
         set_delete_error.set(None);
     };

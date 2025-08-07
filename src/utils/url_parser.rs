@@ -1,7 +1,11 @@
+#![allow(dead_code)]
+
 /// URL parsing utilities for wrestler details window
 /// 
 /// This module provides functions for extracting wrestler IDs from URLs
 /// and managing URL-based navigation state.
+///
+/// **Note**: Many functions are future infrastructure for advanced routing.
 
 /// Extract wrestler ID from the current URL hash
 /// 

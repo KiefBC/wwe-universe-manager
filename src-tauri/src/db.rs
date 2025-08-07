@@ -12,14 +12,27 @@ use std::env;
 use tauri::State;
 use chrono::Utc;
 
+/// Type alias for the database connection pool
 pub type Pool = r2d2::Pool<ConnectionManager<SqliteConnection>>;
+
+/// Type alias for a pooled database connection
 pub type DbConnection = diesel::r2d2::PooledConnection<ConnectionManager<SqliteConnection>>;
 
+/// State struct that holds the database connection pool for Tauri state management
 pub struct DbState {
+    /// The r2d2 connection pool for SQLite
     pub pool: Pool,
 }
 
 /// Establishes a connection pool to the SQLite database
+/// 
+/// # Returns
+/// A configured r2d2 connection pool for SQLite
+/// 
+/// # Panics
+/// - If the .env file cannot be loaded
+/// - If DATABASE_URL environment variable is not set
+/// - If the connection pool cannot be created
 pub fn establish_connection() -> Pool {
     dotenv().expect("Error loading .env file");
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
@@ -31,6 +44,13 @@ pub fn establish_connection() -> Pool {
 }
 
 /// Gets a database connection from the pool
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database connection pool
+/// 
+/// # Returns
+/// * `Ok(DbConnection)` - A pooled database connection
+/// * `Err(String)` - Error message if connection cannot be obtained
 fn get_connection(state: &State<'_, DbState>) -> Result<DbConnection, String> {
     state.pool.get().map_err(|e| {
         error!("Failed to get database connection: {}", e);
@@ -40,7 +60,16 @@ fn get_connection(state: &State<'_, DbState>) -> Result<DbConnection, String> {
 
 // ===== Show Operations =====
 
-/// Creates a new show (used by tests and Tauri commands)
+/// Creates a new show in the database (internal function for tests and commands)
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `name` - The name of the show (e.g., "Monday Night RAW")
+/// * `description` - Description of the show
+/// 
+/// # Returns
+/// * `Ok(Show)` - The newly created show with generated ID
+/// * `Err(DieselError)` - Database error if creation fails
 pub fn internal_create_show(
     conn: &mut SqliteConnection,
     name: &str,
@@ -57,7 +86,14 @@ pub fn internal_create_show(
         .get_result(conn)
 }
 
-/// Gets all shows ordered by ID (used by tests and Tauri commands)
+/// Gets all shows ordered by ID (internal function for tests and commands)
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// 
+/// # Returns
+/// * `Ok(Vec<Show>)` - Vector of all shows ordered by ID ascending
+/// * `Err(DieselError)` - Database error if query fails
 pub fn internal_get_shows(conn: &mut SqliteConnection) -> Result<Vec<Show>, DieselError> {
     use crate::schema::shows::dsl::*;
     shows
@@ -65,6 +101,15 @@ pub fn internal_get_shows(conn: &mut SqliteConnection) -> Result<Vec<Show>, Dies
         .load::<Show>(conn)
 }
 
+/// Tauri command to create a new wrestling show
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// * `show_data` - ShowData struct containing name and description
+/// 
+/// # Returns
+/// * `Ok(Show)` - The newly created show
+/// * `Err(String)` - Error message if creation fails
 #[tauri::command]
 pub fn create_show(state: State<'_, DbState>, show_data: ShowData) -> Result<Show, String> {
     let mut conn = get_connection(&state)?;
@@ -79,6 +124,14 @@ pub fn create_show(state: State<'_, DbState>, show_data: ShowData) -> Result<Sho
         })
 }
 
+/// Tauri command to fetch all wrestling shows
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// 
+/// # Returns
+/// * `Ok(Vec<Show>)` - Vector of all shows in the database
+/// * `Err(String)` - Error message if query fails
 #[tauri::command]
 pub fn get_shows(state: State<'_, DbState>) -> Result<Vec<Show>, String> {
     let mut conn = get_connection(&state)?;
@@ -92,7 +145,19 @@ pub fn get_shows(state: State<'_, DbState>) -> Result<Vec<Show>, String> {
 
 // ===== User Operations =====
 
-/// Creates a new user (used by tests and Tauri commands)
+/// Creates a new user in the database (internal function for tests and commands)
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `username` - The username for the new user
+/// * `password` - The password (will be hashed before storage)
+/// 
+/// # Returns
+/// * `Ok(User)` - The newly created user
+/// * `Err(DieselError)` - Database error if creation fails
+/// 
+/// # Note
+/// Passwords should be hashed before calling this function
 pub fn internal_create_user(
     conn: &mut SqliteConnection,
     username: &str,
@@ -109,6 +174,15 @@ pub fn internal_create_user(
         .get_result(conn)
 }
 
+/// Tauri command to create a new user account
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// * `user_data` - UserData struct containing username and password
+/// 
+/// # Returns
+/// * `Ok(User)` - The newly created user
+/// * `Err(String)` - Error message if creation fails
 #[tauri::command]
 pub fn create_user(state: State<'_, DbState>, user_data: UserData) -> Result<User, String> {
     let mut conn = get_connection(&state)?;
@@ -125,7 +199,17 @@ pub fn create_user(state: State<'_, DbState>, user_data: UserData) -> Result<Use
 
 // ===== Wrestler Operations =====
 
-/// Gets all wrestlers ordered by ID (used by tests and Tauri commands)
+/// Gets all wrestlers ordered by ID (internal function for tests and commands)
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// 
+/// # Returns
+/// * `Ok(Vec<Wrestler>)` - Vector of all wrestlers in the global pool
+/// * `Err(DieselError)` - Database error if query fails
+/// 
+/// # Note
+/// Wrestlers are global entities not tied to specific promotions
 pub fn internal_get_wrestlers(conn: &mut SqliteConnection) -> Result<Vec<Wrestler>, DieselError> {
     use crate::schema::wrestlers::dsl::*;
     wrestlers
@@ -133,13 +217,33 @@ pub fn internal_get_wrestlers(conn: &mut SqliteConnection) -> Result<Vec<Wrestle
         .load::<Wrestler>(conn)
 }
 
-/// Gets a specific wrestler by ID (used by tests and Tauri commands)
+/// Gets a specific wrestler by ID (internal function for tests and commands)
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `wrestler_id` - The ID of the wrestler to retrieve
+/// 
+/// # Returns
+/// * `Ok(Some(Wrestler))` - The wrestler if found
+/// * `Ok(None)` - If no wrestler with the given ID exists
+/// * `Err(DieselError)` - Database error if query fails
 pub fn internal_get_wrestler_by_id(conn: &mut SqliteConnection, wrestler_id: i32) -> Result<Option<Wrestler>, DieselError> {
     use crate::schema::wrestlers::dsl::*;
     wrestlers.filter(id.eq(wrestler_id)).first::<Wrestler>(conn).optional()
 }
 
-/// Creates a new wrestler (used by tests and Tauri commands)
+/// Creates a new wrestler with basic information (internal function)
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `name` - The wrestler's ring name
+/// * `gender` - Gender ("Male", "Female", or other)
+/// * `wins` - Number of wins
+/// * `losses` - Number of losses
+/// 
+/// # Returns
+/// * `Ok(Wrestler)` - The newly created wrestler
+/// * `Err(DieselError)` - Database error if creation fails
 pub fn internal_create_wrestler(
     conn: &mut SqliteConnection,
     name: &str,
@@ -161,7 +265,31 @@ pub fn internal_create_wrestler(
         .get_result(conn)
 }
 
-/// Creates a new wrestler with enhanced details (used for test data)
+/// Creates a new wrestler with enhanced details (internal function for test data)
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `wrestler_name` - Ring name
+/// * `wrestler_real_name` - Real name
+/// * `wrestler_nickname` - Nickname or catchphrase
+/// * `wrestler_gender` - Gender ("Male", "Female", or other)
+/// * `wrestler_wins` - Initial win count
+/// * `wrestler_losses` - Initial loss count
+/// * `wrestler_height` - Height (e.g., "6'5\"")
+/// * `wrestler_weight` - Weight (e.g., "260 lbs")
+/// * `wrestler_debut_year` - Year of wrestling debut
+/// * `wrestler_strength` - Strength rating (1-10)
+/// * `wrestler_speed` - Speed rating (1-10)
+/// * `wrestler_agility` - Agility rating (1-10)
+/// * `wrestler_stamina` - Stamina rating (1-10)
+/// * `wrestler_charisma` - Charisma rating (1-10)
+/// * `wrestler_technique` - Technique rating (1-10)
+/// * `wrestler_biography` - Biography text
+/// * `is_user_created` - Whether this is a user-created wrestler
+/// 
+/// # Returns
+/// * `Ok(Wrestler)` - The newly created wrestler with all details
+/// * `Err(DieselError)` - Database error if creation fails
 pub fn internal_create_enhanced_wrestler(
     conn: &mut SqliteConnection,
     wrestler_name: &str,
@@ -173,7 +301,6 @@ pub fn internal_create_enhanced_wrestler(
     wrestler_height: &str,
     wrestler_weight: &str,
     wrestler_debut_year: i32,
-    wrestler_promotion: &str,
     wrestler_strength: i32,
     wrestler_speed: i32,
     wrestler_agility: i32,
@@ -193,7 +320,6 @@ pub fn internal_create_enhanced_wrestler(
         height: Some(wrestler_height.to_string()),
         weight: Some(wrestler_weight.to_string()),
         debut_year: Some(wrestler_debut_year),
-        promotion: Some(wrestler_promotion.to_string()),
         strength: Some(wrestler_strength),
         speed: Some(wrestler_speed),
         agility: Some(wrestler_agility),
@@ -211,6 +337,17 @@ pub fn internal_create_enhanced_wrestler(
 }
 
 /// Creates a new user-created wrestler with enhanced details
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `wrestler_data` - EnhancedWrestlerData struct with all wrestler details
+/// 
+/// # Returns
+/// * `Ok(Wrestler)` - The newly created wrestler marked as user-created
+/// * `Err(DieselError)` - Database error if creation fails
+/// 
+/// # Note
+/// New wrestlers start with 0 wins and losses
 pub fn internal_create_user_wrestler(
     conn: &mut SqliteConnection,
     wrestler_data: &EnhancedWrestlerData,
@@ -227,7 +364,6 @@ pub fn internal_create_user_wrestler(
         height: wrestler_data.height.clone(),
         weight: wrestler_data.weight.clone(),
         debut_year: wrestler_data.debut_year,
-        promotion: wrestler_data.promotion.clone(),
         strength: wrestler_data.strength,
         speed: wrestler_data.speed,
         agility: wrestler_data.agility,
@@ -245,21 +381,22 @@ pub fn internal_create_user_wrestler(
         .get_result(conn)
 }
 
-/// Updates a wrestler's promotion
-pub fn internal_update_wrestler_promotion(
-    conn: &mut SqliteConnection,
-    wrestler_id: i32,
-    new_promotion: &str,
-) -> Result<Wrestler, DieselError> {
-    use crate::schema::wrestlers::dsl::*;
-    
-    diesel::update(wrestlers.filter(id.eq(wrestler_id)))
-        .set(promotion.eq(new_promotion))
-        .returning(Wrestler::as_returning())
-        .get_result(conn)
-}
 
 /// Updates a wrestler's power ratings
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `wrestler_id` - ID of the wrestler to update
+/// * `new_strength` - New strength rating (1-10, None to keep existing)
+/// * `new_speed` - New speed rating (1-10, None to keep existing)
+/// * `new_agility` - New agility rating (1-10, None to keep existing)
+/// * `new_stamina` - New stamina rating (1-10, None to keep existing)
+/// * `new_charisma` - New charisma rating (1-10, None to keep existing)
+/// * `new_technique` - New technique rating (1-10, None to keep existing)
+/// 
+/// # Returns
+/// * `Ok(Wrestler)` - The updated wrestler
+/// * `Err(DieselError)` - Database error if update fails
 pub fn internal_update_wrestler_power_ratings(
     conn: &mut SqliteConnection,
     wrestler_id: i32,
@@ -285,7 +422,20 @@ pub fn internal_update_wrestler_power_ratings(
         .get_result(conn)
 }
 
-/// Updates a wrestler's basic stats
+/// Updates a wrestler's basic statistics and physical attributes
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `wrestler_id` - ID of the wrestler to update
+/// * `new_height` - New height (e.g., "6'2\"", None to keep existing)
+/// * `new_weight` - New weight (e.g., "220 lbs", None to keep existing)
+/// * `new_debut_year` - New debut year (None to keep existing)
+/// * `new_wins` - New win count
+/// * `new_losses` - New loss count
+/// 
+/// # Returns
+/// * `Ok(Wrestler)` - The updated wrestler
+/// * `Err(DieselError)` - Database error if update fails
 pub fn internal_update_wrestler_basic_stats(
     conn: &mut SqliteConnection,
     wrestler_id: i32,
@@ -309,7 +459,17 @@ pub fn internal_update_wrestler_basic_stats(
         .get_result(conn)
 }
 
-/// Updates a wrestler's name and nickname
+/// Updates a wrestler's ring name and nickname
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `wrestler_id` - ID of the wrestler to update
+/// * `new_name` - New ring name
+/// * `new_nickname` - New nickname or catchphrase (None to clear)
+/// 
+/// # Returns
+/// * `Ok(Wrestler)` - The updated wrestler
+/// * `Err(DieselError)` - Database error if update fails
 pub fn internal_update_wrestler_name(
     conn: &mut SqliteConnection,
     wrestler_id: i32,
@@ -328,6 +488,15 @@ pub fn internal_update_wrestler_name(
 }
 
 /// Updates a wrestler's real name
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `wrestler_id` - ID of the wrestler to update
+/// * `new_real_name` - New real name (None to clear)
+/// 
+/// # Returns
+/// * `Ok(Wrestler)` - The updated wrestler
+/// * `Err(DieselError)` - Database error if update fails
 pub fn internal_update_wrestler_real_name(
     conn: &mut SqliteConnection,
     wrestler_id: i32,
@@ -341,7 +510,16 @@ pub fn internal_update_wrestler_real_name(
         .get_result(conn)
 }
 
-/// Updates a wrestler's biography
+/// Updates a wrestler's biography text
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `wrestler_id` - ID of the wrestler to update
+/// * `new_biography` - New biography text (None to clear)
+/// 
+/// # Returns
+/// * `Ok(Wrestler)` - The updated wrestler
+/// * `Err(DieselError)` - Database error if update fails
 pub fn internal_update_wrestler_biography(
     conn: &mut SqliteConnection,
     wrestler_id: i32,
@@ -357,6 +535,16 @@ pub fn internal_update_wrestler_biography(
 
 
 /// Creates a new signature move for a wrestler
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `wrestler_id` - ID of the wrestler who performs this move
+/// * `move_name` - Name of the move (e.g., "Stone Cold Stunner")
+/// * `move_type` - Type of move ("primary", "secondary", etc.)
+/// 
+/// # Returns
+/// * `Ok(SignatureMove)` - The newly created signature move
+/// * `Err(DieselError)` - Database error if creation fails
 pub fn internal_create_signature_move(
     conn: &mut SqliteConnection,
     wrestler_id: i32,
@@ -376,6 +564,18 @@ pub fn internal_create_signature_move(
 }
 
 /// Deletes a wrestler (only if user-created)
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `wrestler_id` - ID of the wrestler to delete
+/// 
+/// # Returns
+/// * `Ok(())` - If deletion was successful
+/// * `Err(DieselError::RollbackTransaction)` - If wrestler is not user-created
+/// * `Err(DieselError)` - Other database errors
+/// 
+/// # Note
+/// System wrestlers cannot be deleted. Deletion cascades through foreign keys.
 pub fn internal_delete_wrestler(
     conn: &mut SqliteConnection,
     wrestler_id: i32,
@@ -399,6 +599,15 @@ pub fn internal_delete_wrestler(
     Ok(())
 }
 
+/// Tauri command to create a new wrestler with basic information
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// * `wrestler_data` - WrestlerData struct containing name and gender
+/// 
+/// # Returns
+/// * `Ok(Wrestler)` - The newly created wrestler
+/// * `Err(String)` - Error message if creation fails
 #[tauri::command]
 pub fn create_wrestler(
     state: State<'_, DbState>,
@@ -417,6 +626,15 @@ pub fn create_wrestler(
         })
 }
 
+/// Tauri command to create a user-defined wrestler with full details
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// * `wrestler_data` - EnhancedWrestlerData with all wrestler attributes
+/// 
+/// # Returns
+/// * `Ok(Wrestler)` - The newly created wrestler
+/// * `Err(String)` - Error message if creation fails
 #[tauri::command]
 pub fn create_user_wrestler(
     state: State<'_, DbState>,
@@ -434,6 +652,14 @@ pub fn create_user_wrestler(
         })
 }
 
+/// Tauri command to fetch all wrestlers from the global pool
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// 
+/// # Returns
+/// * `Ok(Vec<Wrestler>)` - Vector of all wrestlers
+/// * `Err(String)` - Error message if query fails
 #[tauri::command]
 pub fn get_wrestlers(state: State<'_, DbState>) -> Result<Vec<Wrestler>, String> {
     let mut conn = get_connection(&state)?;
@@ -444,6 +670,34 @@ pub fn get_wrestlers(state: State<'_, DbState>) -> Result<Vec<Wrestler>, String>
     })
 }
 
+/// Tauri command to fetch all unassigned wrestlers (not on any show roster)
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// 
+/// # Returns
+/// * `Ok(Vec<Wrestler>)` - Vector of wrestlers not assigned to any show
+/// * `Err(String)` - Error message if query fails
+#[tauri::command]
+pub fn get_unassigned_wrestlers(state: State<'_, DbState>) -> Result<Vec<Wrestler>, String> {
+    let mut conn = get_connection(&state)?;
+
+    internal_get_unassigned_wrestlers(&mut conn).map_err(|e| {
+        error!("Error loading unassigned wrestlers: {}", e);
+        format!("Failed to load unassigned wrestlers: {}", e)
+    })
+}
+
+/// Tauri command to fetch a specific wrestler by ID
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// * `wrestler_id` - The ID of the wrestler to retrieve
+/// 
+/// # Returns
+/// * `Ok(Some(Wrestler))` - The wrestler if found
+/// * `Ok(None)` - If no wrestler with the given ID exists
+/// * `Err(String)` - Error message if query fails
 #[tauri::command]
 pub fn get_wrestler_by_id(state: State<'_, DbState>, wrestler_id: i32) -> Result<Option<Wrestler>, String> {
     let mut conn = get_connection(&state)?;
@@ -454,24 +708,22 @@ pub fn get_wrestler_by_id(state: State<'_, DbState>, wrestler_id: i32) -> Result
     })
 }
 
-#[tauri::command]
-pub fn update_wrestler_promotion(
-    state: State<'_, DbState>,
-    wrestler_id: i32,
-    promotion: String,
-) -> Result<Wrestler, String> {
-    let mut conn = get_connection(&state)?;
 
-    internal_update_wrestler_promotion(&mut conn, wrestler_id, &promotion)
-        .inspect(|wrestler| {
-            info!("Wrestler '{}' promotion updated to '{}'", wrestler.name, promotion);
-        })
-        .map_err(|e| {
-            error!("Error updating wrestler promotion: {}", e);
-            format!("Failed to update wrestler promotion: {}", e)
-        })
-}
-
+/// Tauri command to update a wrestler's power ratings
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// * `wrestler_id` - ID of the wrestler to update
+/// * `strength` - New strength rating (1-10, None to keep)
+/// * `speed` - New speed rating (1-10, None to keep)
+/// * `agility` - New agility rating (1-10, None to keep)
+/// * `stamina` - New stamina rating (1-10, None to keep)
+/// * `charisma` - New charisma rating (1-10, None to keep)
+/// * `technique` - New technique rating (1-10, None to keep)
+/// 
+/// # Returns
+/// * `Ok(Wrestler)` - The updated wrestler
+/// * `Err(String)` - Error message if update fails
 #[tauri::command]
 pub fn update_wrestler_power_ratings(
     state: State<'_, DbState>,
@@ -504,6 +756,20 @@ pub fn update_wrestler_power_ratings(
     })
 }
 
+/// Tauri command to update a wrestler's basic statistics
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// * `wrestler_id` - ID of the wrestler to update
+/// * `height` - New height (e.g., "6'2\"")
+/// * `weight` - New weight (e.g., "220 lbs")
+/// * `debut_year` - New debut year
+/// * `wins` - New win count
+/// * `losses` - New loss count
+/// 
+/// # Returns
+/// * `Ok(Wrestler)` - The updated wrestler
+/// * `Err(String)` - Error message if update fails
 #[tauri::command]
 pub fn update_wrestler_basic_stats(
     state: State<'_, DbState>,
@@ -534,6 +800,17 @@ pub fn update_wrestler_basic_stats(
     })
 }
 
+/// Tauri command to update a wrestler's ring name and nickname
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// * `wrestler_id` - ID of the wrestler to update
+/// * `name` - New ring name
+/// * `nickname` - New nickname or catchphrase
+/// 
+/// # Returns
+/// * `Ok(Wrestler)` - The updated wrestler
+/// * `Err(String)` - Error message if update fails
 #[tauri::command]
 pub fn update_wrestler_name(
     state: State<'_, DbState>,
@@ -553,6 +830,16 @@ pub fn update_wrestler_name(
         })
 }
 
+/// Tauri command to update a wrestler's real name
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// * `wrestler_id` - ID of the wrestler to update
+/// * `real_name` - New real name (None to clear)
+/// 
+/// # Returns
+/// * `Ok(Wrestler)` - The updated wrestler
+/// * `Err(String)` - Error message if update fails
 #[tauri::command]
 pub fn update_wrestler_real_name(
     state: State<'_, DbState>,
@@ -571,6 +858,16 @@ pub fn update_wrestler_real_name(
         })
 }
 
+/// Tauri command to update a wrestler's biography
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// * `wrestler_id` - ID of the wrestler to update
+/// * `biography` - New biography text (None to clear)
+/// 
+/// # Returns
+/// * `Ok(Wrestler)` - The updated wrestler
+/// * `Err(String)` - Error message if update fails
 #[tauri::command]
 pub fn update_wrestler_biography(
     state: State<'_, DbState>,
@@ -589,6 +886,15 @@ pub fn update_wrestler_biography(
         })
 }
 
+/// Tauri command to delete a wrestler (only user-created wrestlers)
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// * `wrestler_id` - ID of the wrestler to delete
+/// 
+/// # Returns
+/// * `Ok(String)` - Success message
+/// * `Err(String)` - Error message if deletion fails or wrestler is system-created
 #[tauri::command]
 pub fn delete_wrestler(state: State<'_, DbState>, wrestler_id: i32) -> Result<String, String> {
     let mut conn = get_connection(&state)?;
@@ -611,7 +917,24 @@ pub fn delete_wrestler(state: State<'_, DbState>, wrestler_id: i32) -> Result<St
 
 // ===== Title Operations =====
 
-/// Creates a new title/belt (used by tests and Tauri commands)
+/// Creates a new championship title (internal function)
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `name` - Title name (e.g., "WWE Championship")
+/// * `title_type` - Type of title ("Singles", "Tag Team", etc.)
+/// * `division` - Division ("World", "Intercontinental", etc.)
+/// * `gender` - Gender restriction ("Male", "Female", "Mixed")
+/// * `show_id` - Optional show assignment (None for cross-brand)
+/// * `current_holder_id` - Optional initial champion ID
+/// * `is_user_created` - Whether this is a user-created title
+/// 
+/// # Returns
+/// * `Ok(Title)` - The newly created title
+/// * `Err(DieselError)` - Database error if creation fails
+/// 
+/// # Note
+/// Prestige tier is automatically calculated based on division
 pub fn internal_create_belt(
     conn: &mut SqliteConnection,
     name: &str,
@@ -648,6 +971,15 @@ pub fn internal_create_belt(
         .get_result(conn)
 }
 
+/// Tauri command to create a new championship title
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// * `title_data` - TitleData struct with all title attributes
+/// 
+/// # Returns
+/// * `Ok(Title)` - The newly created title
+/// * `Err(String)` - Error message if creation fails
 #[tauri::command]
 pub fn create_belt(state: State<'_, DbState>, title_data: TitleData) -> Result<Title, String> {
     let mut conn = get_connection(&state)?;
@@ -671,7 +1003,17 @@ pub fn create_belt(state: State<'_, DbState>, title_data: TitleData) -> Result<T
     })
 }
 
-/// Gets all titles with their current holders
+/// Gets all titles with their current holders (internal function)
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// 
+/// # Returns
+/// * `Ok(Vec<TitleWithHolders>)` - Vector of titles with holder information
+/// * `Err(DieselError)` - Database error if query fails
+/// 
+/// # Note
+/// Returns all active titles from the global pool, ordered by prestige tier
 pub fn internal_get_titles(conn: &mut SqliteConnection) -> Result<Vec<TitleWithHolders>, DieselError> {
     use crate::schema::{titles, title_holders, wrestlers};
     
@@ -721,6 +1063,14 @@ pub fn internal_get_titles(conn: &mut SqliteConnection) -> Result<Vec<TitleWithH
     Ok(titles_with_holders)
 }
 
+/// Tauri command to fetch all championship titles with holders
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// 
+/// # Returns
+/// * `Ok(Vec<TitleWithHolders>)` - Vector of all titles with current holders
+/// * `Err(String)` - Error message if query fails
 #[tauri::command]
 pub fn get_titles(state: State<'_, DbState>) -> Result<Vec<TitleWithHolders>, String> {
     let mut conn = get_connection(&state)?;
@@ -732,7 +1082,19 @@ pub fn get_titles(state: State<'_, DbState>) -> Result<Vec<TitleWithHolders>, St
         })
 }
 
-/// Deletes a title (only if user-created)
+/// Deletes a championship title (only if user-created)
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `title_id` - ID of the title to delete
+/// 
+/// # Returns
+/// * `Ok(())` - If deletion was successful
+/// * `Err(DieselError::RollbackTransaction)` - If title is not user-created
+/// * `Err(DieselError)` - Other database errors
+/// 
+/// # Note
+/// Ends any current title reigns before deletion
 pub fn internal_delete_title(
     conn: &mut SqliteConnection,
     title_id: i32,
@@ -765,6 +1127,19 @@ pub fn internal_delete_title(
 }
 
 /// Gets titles that can be assigned to a wrestler based on gender compatibility
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `wrestler_gender` - Gender of the wrestler ("Male", "Female", etc.)
+/// 
+/// # Returns
+/// * `Ok(Vec<TitleWithHolders>)` - Vector of compatible titles
+/// * `Err(DieselError)` - Database error if query fails
+/// 
+/// # Note
+/// - Male wrestlers can hold Male and Mixed titles
+/// - Female wrestlers can hold Female and Mixed titles
+/// - Other gender wrestlers can hold any title
 pub fn internal_get_titles_for_wrestler_gender(
     conn: &mut SqliteConnection,
     wrestler_gender: &str,
@@ -829,6 +1204,21 @@ pub fn internal_get_titles_for_wrestler_gender(
 }
 
 /// Updates title holder (ends current reign and starts new one)
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `title_id` - ID of the title to update
+/// * `new_wrestler_id` - ID of the new champion
+/// * `event_name` - Optional event name where title changed hands
+/// * `event_location` - Optional event location
+/// * `change_method` - Optional method of title change (e.g., "Pinfall", "Submission")
+/// 
+/// # Returns
+/// * `Ok(())` - If title holder was successfully updated
+/// * `Err(DieselError)` - Database error if update fails
+/// 
+/// # Note
+/// Validates string lengths to prevent database abuse (max 255 chars)
 pub fn internal_update_title_holder(
     conn: &mut SqliteConnection,
     title_id: i32,
@@ -896,6 +1286,19 @@ pub fn internal_update_title_holder(
     Ok(())
 }
 
+/// Tauri command to change a championship title holder
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// * `title_id` - ID of the title to update
+/// * `new_wrestler_id` - ID of the new champion
+/// * `event_name` - Optional event name
+/// * `event_location` - Optional event location
+/// * `change_method` - Optional method of victory
+/// 
+/// # Returns
+/// * `Ok(String)` - Success message
+/// * `Err(String)` - Error message if update fails
 #[tauri::command]
 pub fn update_title_holder(
     state: State<'_, DbState>,
@@ -923,6 +1326,15 @@ pub fn update_title_holder(
     Ok("Title holder updated successfully".to_string())
 }
 
+/// Tauri command to delete a championship title
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// * `title_id` - ID of the title to delete
+/// 
+/// # Returns
+/// * `Ok(String)` - Success message
+/// * `Err(String)` - Error message if deletion fails or title is system-created
 #[tauri::command]
 pub fn delete_title(state: State<'_, DbState>, title_id: i32) -> Result<String, String> {
     let mut conn = get_connection(&state)?;
@@ -942,6 +1354,15 @@ pub fn delete_title(state: State<'_, DbState>, title_id: i32) -> Result<String, 
         .map(|_| "Title deleted successfully".to_string())
 }
 
+/// Tauri command to get titles compatible with a wrestler's gender
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// * `wrestler_gender` - Gender of the wrestler
+/// 
+/// # Returns
+/// * `Ok(Vec<TitleWithHolders>)` - Vector of compatible titles
+/// * `Err(String)` - Error message if query fails
 #[tauri::command]
 pub fn get_titles_for_wrestler(
     state: State<'_, DbState>,
@@ -956,7 +1377,15 @@ pub fn get_titles_for_wrestler(
         })
 }
 
-/// Gets all titles filtered by show assignment
+/// Gets all titles assigned to a specific show
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `show_id` - ID of the show to filter by
+/// 
+/// # Returns
+/// * `Ok(Vec<TitleWithHolders>)` - Vector of titles assigned to the show
+/// * `Err(DieselError)` - Database error if query fails
 pub fn internal_get_titles_for_show(
     conn: &mut SqliteConnection,
     show_id: i32,
@@ -1011,6 +1440,13 @@ pub fn internal_get_titles_for_show(
 }
 
 /// Gets all unassigned titles (not assigned to any show)
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// 
+/// # Returns
+/// * `Ok(Vec<TitleWithHolders>)` - Vector of cross-brand titles
+/// * `Err(DieselError)` - Database error if query fails
 pub fn internal_get_unassigned_titles(
     conn: &mut SqliteConnection,
 ) -> Result<Vec<TitleWithHolders>, DieselError> {
@@ -1063,6 +1499,15 @@ pub fn internal_get_unassigned_titles(
     Ok(titles_with_holders)
 }
 
+/// Tauri command to get titles assigned to a specific show
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// * `show_id` - ID of the show
+/// 
+/// # Returns
+/// * `Ok(Vec<TitleWithHolders>)` - Vector of titles for the show
+/// * `Err(String)` - Error message if query fails
 #[tauri::command]
 pub fn get_titles_for_show(
     state: State<'_, DbState>,
@@ -1077,6 +1522,14 @@ pub fn get_titles_for_show(
         })
 }
 
+/// Tauri command to get cross-brand titles not assigned to any show
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// 
+/// # Returns
+/// * `Ok(Vec<TitleWithHolders>)` - Vector of unassigned titles
+/// * `Err(String)` - Error message if query fails
 #[tauri::command]
 pub fn get_unassigned_titles(
     state: State<'_, DbState>,
@@ -1090,7 +1543,22 @@ pub fn get_unassigned_titles(
         })
 }
 
-/// Creates test data if it doesn't already exist
+/// Tauri command to create comprehensive test data for development
+/// 
+/// Creates the following test data:
+/// - 2 shows (Monday Night RAW, Friday Night SmackDown)
+/// - 5 wrestlers with detailed profiles and signature moves
+/// - 15 championship titles across different tiers
+/// - Show roster assignments
+/// - Title holders
+/// - Sample matches with participants
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// 
+/// # Returns
+/// * `Ok(String)` - Summary of created test data
+/// * `Err(String)` - Error message if creation fails or data already exists
 #[tauri::command]
 pub fn create_test_data(state: State<'_, DbState>) -> Result<String, String> {
     let mut conn = get_connection(&state)?;
@@ -1153,10 +1621,10 @@ pub fn create_test_data(state: State<'_, DbState>) -> Result<String, String> {
         ),
     ];
     
-    for (name, real_name, nickname, gender, wins, losses, height, weight, debut_year, promotion, strength, speed, agility, stamina, charisma, technique, biography, is_user_created) in test_wrestlers {
+    for (name, real_name, nickname, gender, wins, losses, height, weight, debut_year, _unused_promotion, strength, speed, agility, stamina, charisma, technique, biography, is_user_created) in test_wrestlers {
         let wrestler = internal_create_enhanced_wrestler(
             &mut conn, name, real_name, nickname, gender, wins, losses, 
-            height, weight, debut_year, promotion, strength, speed, agility, 
+            height, weight, debut_year, strength, speed, agility, 
             stamina, charisma, technique, biography, is_user_created
         ).map_err(|e| format!("Failed to create wrestler '{}': {}", name, e))?;
         
@@ -1430,7 +1898,18 @@ pub fn create_test_data(state: State<'_, DbState>) -> Result<String, String> {
 
 // ===== Show Roster Operations =====
 
-/// Gets all wrestlers assigned to a specific show
+/// Gets all wrestlers assigned to a specific show's roster
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `show_id` - ID of the show
+/// 
+/// # Returns
+/// * `Ok(Vec<Wrestler>)` - Vector of wrestlers on the show's roster
+/// * `Err(DieselError)` - Database error if query fails
+/// 
+/// # Note
+/// Only returns active roster assignments
 pub fn internal_get_wrestlers_for_show(
     conn: &mut SqliteConnection,
     show_id: i32,
@@ -1446,7 +1925,71 @@ pub fn internal_get_wrestlers_for_show(
         .load::<Wrestler>(conn)
 }
 
-/// Assigns a wrestler to a show roster
+/// Gets all wrestlers not currently assigned to any show (internal function)
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// 
+/// # Returns
+/// * `Ok(Vec<Wrestler>)` - Vector of unassigned wrestlers
+/// * `Err(DieselError)` - Database error if query fails
+/// 
+/// # Note
+/// Uses LEFT JOIN to find wrestlers with no active show roster assignments
+pub fn internal_get_unassigned_wrestlers(
+    conn: &mut SqliteConnection,
+) -> Result<Vec<Wrestler>, DieselError> {
+    use crate::schema::{wrestlers, show_rosters};
+    
+    wrestlers::table
+        .left_join(
+            show_rosters::table.on(
+                wrestlers::id.eq(show_rosters::wrestler_id)
+                    .and(show_rosters::is_active.eq(true))
+            )
+        )
+        .filter(show_rosters::wrestler_id.is_null())
+        .select(Wrestler::as_select())
+        .order(wrestlers::name.asc())
+        .load::<Wrestler>(conn)
+}
+
+/// Gets the current active show assignment for a wrestler
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `wrestler_id` - ID of the wrestler to check
+/// 
+/// # Returns
+/// * `Ok(Option<ShowRoster>)` - The active assignment if found, None otherwise
+/// * `Err(DieselError)` - Database error if query fails
+pub fn internal_get_current_show_for_wrestler(
+    conn: &mut SqliteConnection,
+    wrestler_id: i32,
+) -> Result<Option<ShowRoster>, DieselError> {
+    use crate::schema::show_rosters;
+    
+    show_rosters::table
+        .filter(show_rosters::wrestler_id.eq(wrestler_id))
+        .filter(show_rosters::is_active.eq(true))
+        .first::<ShowRoster>(conn)
+        .optional()
+}
+
+/// Assigns a wrestler to a show's roster with exclusive assignment logic
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `show_id` - ID of the show
+/// * `wrestler_id` - ID of the wrestler to assign
+/// 
+/// # Returns
+/// * `Ok(())` - If assignment was successful or already exists
+/// * `Err(DieselError)` - Database error if assignment fails
+/// 
+/// # Note
+/// Implements exclusive assignment logic - wrestler can only be on one show at a time
+/// Uses database transaction for atomicity
 pub fn internal_assign_wrestler_to_show(
     conn: &mut SqliteConnection,
     show_id: i32,
@@ -1455,35 +1998,83 @@ pub fn internal_assign_wrestler_to_show(
     use crate::schema::show_rosters;
     use chrono::Utc;
     
-    // Check if the assignment already exists and is active
-    let existing = show_rosters::table
-        .filter(show_rosters::show_id.eq(show_id))
-        .filter(show_rosters::wrestler_id.eq(wrestler_id))
-        .filter(show_rosters::is_active.eq(true))
-        .first::<ShowRoster>(conn)
-        .optional()?;
-    
-    if existing.is_some() {
-        // Assignment already exists and is active
-        return Ok(());
-    }
-    
-    // Create new assignment
-    let new_assignment = NewShowRoster {
-        show_id,
-        wrestler_id,
-        assigned_at: Some(Utc::now().naive_utc()),
-        is_active: true,
-    };
-    
-    diesel::insert_into(show_rosters::table)
-        .values(&new_assignment)
-        .execute(conn)?;
-    
-    Ok(())
+    // Use transaction for atomicity
+    conn.transaction::<(), DieselError, _>(|conn| {
+        // Check if wrestler is already assigned to the target show
+        let existing_assignment = show_rosters::table
+            .filter(show_rosters::show_id.eq(show_id))
+            .filter(show_rosters::wrestler_id.eq(wrestler_id))
+            .first::<ShowRoster>(conn)
+            .optional()?;
+        
+        if let Some(assignment) = existing_assignment {
+            if assignment.is_active {
+                // Wrestler already assigned to this show and active - nothing to do
+                info!("Wrestler {} already assigned to show {} (active)", wrestler_id, show_id);
+                return Ok(());
+            } else {
+                // Reactivate the existing inactive assignment to this show
+                info!("Reactivating existing assignment for wrestler {} to show {}", wrestler_id, show_id);
+                diesel::update(show_rosters::table)
+                    .filter(show_rosters::id.eq(assignment.id))
+                    .set((
+                        show_rosters::is_active.eq(true),
+                        show_rosters::assigned_at.eq(Some(Utc::now().naive_utc())),
+                    ))
+                    .execute(conn)?;
+                return Ok(());
+            }
+        }
+        
+        // Check if wrestler is currently assigned to ANY other show
+        let current_assignment = internal_get_current_show_for_wrestler(conn, wrestler_id)?;
+        
+        if let Some(current) = current_assignment {
+            if current.show_id == show_id {
+                // Already assigned to target show (shouldn't happen due to check above, but defensive)
+                info!("Wrestler {} already assigned to show {} (active)", wrestler_id, show_id);
+                return Ok(());
+            }
+            
+            // Deactivate current assignment (transfer)
+            info!("Transferring wrestler {} from show {} to show {}", wrestler_id, current.show_id, show_id);
+            diesel::update(show_rosters::table)
+                .filter(show_rosters::id.eq(current.id))
+                .set(show_rosters::is_active.eq(false))
+                .execute(conn)?;
+        } else {
+            info!("Assigning wrestler {} to show {} (new assignment)", wrestler_id, show_id);
+        }
+        
+        // Create new assignment to target show
+        let new_assignment = NewShowRoster {
+            show_id,
+            wrestler_id,
+            assigned_at: Some(Utc::now().naive_utc()),
+            is_active: true,
+        };
+        
+        diesel::insert_into(show_rosters::table)
+            .values(&new_assignment)
+            .execute(conn)?;
+        
+        Ok(())
+    })
 }
 
-/// Removes a wrestler from a show roster (sets is_active to false)
+/// Removes a wrestler from a show's roster
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `show_id` - ID of the show
+/// * `wrestler_id` - ID of the wrestler to remove
+/// 
+/// # Returns
+/// * `Ok(())` - If removal was successful
+/// * `Err(DieselError)` - Database error if removal fails
+/// 
+/// # Note
+/// Sets is_active to false rather than deleting the record
 pub fn internal_remove_wrestler_from_show(
     conn: &mut SqliteConnection,
     show_id: i32,
@@ -1501,6 +2092,15 @@ pub fn internal_remove_wrestler_from_show(
     Ok(())
 }
 
+/// Tauri command to get all wrestlers on a show's roster
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// * `show_id` - ID of the show
+/// 
+/// # Returns
+/// * `Ok(Vec<Wrestler>)` - Vector of wrestlers on the roster
+/// * `Err(String)` - Error message if query fails
 #[tauri::command]
 pub fn get_wrestlers_for_show(
     state: State<'_, DbState>,
@@ -1515,6 +2115,16 @@ pub fn get_wrestlers_for_show(
         })
 }
 
+/// Tauri command to assign a wrestler to a show's roster
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// * `show_id` - ID of the show
+/// * `wrestler_id` - ID of the wrestler to assign
+/// 
+/// # Returns
+/// * `Ok(String)` - Success message
+/// * `Err(String)` - Error message if assignment fails
 #[tauri::command]
 pub fn assign_wrestler_to_show(
     state: State<'_, DbState>,
@@ -1531,6 +2141,16 @@ pub fn assign_wrestler_to_show(
         .map(|_| "Wrestler assigned to show successfully".to_string())
 }
 
+/// Tauri command to remove a wrestler from a show's roster
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// * `show_id` - ID of the show
+/// * `wrestler_id` - ID of the wrestler to remove
+/// 
+/// # Returns
+/// * `Ok(String)` - Success message
+/// * `Err(String)` - Error message if removal fails
 #[tauri::command]
 pub fn remove_wrestler_from_show(
     state: State<'_, DbState>,
@@ -1547,9 +2167,86 @@ pub fn remove_wrestler_from_show(
         .map(|_| "Wrestler removed from show successfully".to_string())
 }
 
+/// Internal function to get shows that a wrestler is currently assigned to
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `wrestler_id` - ID of the wrestler
+/// 
+/// # Returns
+/// * `Ok(Vec<Show>)` - Vector of shows the wrestler is assigned to
+/// * `Err(DieselError)` - Database error if query fails
+/// 
+/// # Note
+/// Only returns shows with active roster assignments.
+/// Result set is typically small (1-5 shows per wrestler in most cases).
+/// Returns empty vector if wrestler has no active assignments.
+/// 
+/// # Examples
+/// ```rust
+/// let shows = internal_get_shows_for_wrestler(&mut conn, wrestler_id)?;
+/// for show in shows {
+///     println!("Wrestler is assigned to: {}", show.name);
+/// }
+/// ```
+pub fn internal_get_shows_for_wrestler(
+    conn: &mut SqliteConnection,
+    wrestler_id: i32,
+) -> Result<Vec<Show>, DieselError> {
+    use crate::schema::{shows, show_rosters};
+    
+    shows::table
+        .inner_join(show_rosters::table.on(shows::id.eq(show_rosters::show_id)))
+        .filter(show_rosters::wrestler_id.eq(wrestler_id))
+        .filter(show_rosters::is_active.eq(true))
+        .select(Show::as_select())
+        .order(shows::name.asc())
+        .load::<Show>(conn)
+}
+
+/// Tauri command to get shows that a wrestler is currently assigned to
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// * `wrestler_id` - ID of the wrestler
+/// 
+/// # Returns
+/// * `Ok(Vec<Show>)` - Vector of shows the wrestler is assigned to
+/// * `Err(String)` - Error message if query fails
+#[tauri::command]
+pub fn get_shows_for_wrestler(
+    state: State<'_, DbState>,
+    wrestler_id: i32,
+) -> Result<Vec<Show>, String> {
+    // Input validation
+    if wrestler_id <= 0 {
+        error!("Invalid wrestler ID provided: {}", wrestler_id);
+        return Err(format!("Invalid wrestler ID: {}", wrestler_id));
+    }
+    
+    let mut conn = get_connection(&state)?;
+    
+    internal_get_shows_for_wrestler(&mut conn, wrestler_id)
+        .map_err(|e| {
+            error!("Error loading shows for wrestler {}: {}", wrestler_id, e);
+            format!("Failed to load shows for wrestler {}: {}", wrestler_id, e)
+        })
+}
+
 // ===== Match Booking Operations =====
 
 /// Creates a new match for a show
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `match_data` - MatchData struct containing all match details
+/// 
+/// # Returns
+/// * `Ok(Match)` - The newly created match
+/// * `Err(DieselError)` - Database error if creation fails
+/// 
+/// # Note
+/// Scheduled date should be in "YYYY-MM-DD" format
 pub fn internal_create_match(
     conn: &mut SqliteConnection,
     match_data: &MatchData,
@@ -1580,6 +2277,14 @@ pub fn internal_create_match(
 }
 
 /// Gets all matches for a specific show
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `show_id` - ID of the show
+/// 
+/// # Returns
+/// * `Ok(Vec<Match>)` - Vector of matches ordered by match order
+/// * `Err(DieselError)` - Database error if query fails
 pub fn internal_get_matches_for_show(
     conn: &mut SqliteConnection,
     show_id: i32,
@@ -1593,7 +2298,18 @@ pub fn internal_get_matches_for_show(
         .load::<Match>(conn)
 }
 
-/// Adds a wrestler to a match
+/// Adds a wrestler as a participant in a match
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `match_id` - ID of the match
+/// * `wrestler_id` - ID of the wrestler to add
+/// * `team_number` - Optional team number for tag matches
+/// * `entrance_order` - Optional entrance order
+/// 
+/// # Returns
+/// * `Ok(MatchParticipant)` - The newly created match participant
+/// * `Err(DieselError)` - Database error if addition fails
 pub fn internal_add_wrestler_to_match(
     conn: &mut SqliteConnection,
     match_id: i32,
@@ -1616,7 +2332,15 @@ pub fn internal_add_wrestler_to_match(
         .get_result(conn)
 }
 
-/// Gets all participants for a specific match
+/// Gets all participants for a specific match with wrestler details
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `match_id` - ID of the match
+/// 
+/// # Returns
+/// * `Ok(Vec<(MatchParticipant, Wrestler)>)` - Vector of participants with wrestler data
+/// * `Err(DieselError)` - Database error if query fails
 pub fn internal_get_match_participants(
     conn: &mut SqliteConnection,
     match_id: i32,
@@ -1633,6 +2357,15 @@ pub fn internal_get_match_participants(
 }
 
 /// Updates the winner of a match
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `match_id` - ID of the match
+/// * `winner_id` - ID of the winning wrestler
+/// 
+/// # Returns
+/// * `Ok(Match)` - The updated match with winner set
+/// * `Err(DieselError)` - Database error if update fails
 pub fn internal_set_match_winner(
     conn: &mut SqliteConnection,
     match_id: i32,
@@ -1647,6 +2380,15 @@ pub fn internal_set_match_winner(
         .get_result(conn)
 }
 
+/// Tauri command to create a new match for booking
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// * `match_data` - MatchData struct with match details
+/// 
+/// # Returns
+/// * `Ok(Match)` - The newly created match
+/// * `Err(String)` - Error message if creation fails
 #[tauri::command]
 pub fn create_match(
     state: State<'_, DbState>,
@@ -1661,6 +2403,15 @@ pub fn create_match(
         })
 }
 
+/// Tauri command to get all matches for a show
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// * `show_id` - ID of the show
+/// 
+/// # Returns
+/// * `Ok(Vec<Match>)` - Vector of matches for the show
+/// * `Err(String)` - Error message if query fails
 #[tauri::command]
 pub fn get_matches_for_show(
     state: State<'_, DbState>,
@@ -1675,6 +2426,18 @@ pub fn get_matches_for_show(
         })
 }
 
+/// Tauri command to add a wrestler to a match
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// * `match_id` - ID of the match
+/// * `wrestler_id` - ID of the wrestler to add
+/// * `team_number` - Optional team assignment for tag matches
+/// * `entrance_order` - Optional entrance order
+/// 
+/// # Returns
+/// * `Ok(MatchParticipant)` - The created participant record
+/// * `Err(String)` - Error message if addition fails
 #[tauri::command]
 pub fn add_wrestler_to_match(
     state: State<'_, DbState>,
@@ -1692,6 +2455,15 @@ pub fn add_wrestler_to_match(
         })
 }
 
+/// Tauri command to get all participants in a match
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// * `match_id` - ID of the match
+/// 
+/// # Returns
+/// * `Ok(Vec<(MatchParticipant, Wrestler)>)` - Participants with wrestler details
+/// * `Err(String)` - Error message if query fails
 #[tauri::command]
 pub fn get_match_participants(
     state: State<'_, DbState>,
@@ -1706,6 +2478,16 @@ pub fn get_match_participants(
         })
 }
 
+/// Tauri command to set the winner of a match
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// * `match_id` - ID of the match
+/// * `winner_id` - ID of the winning wrestler
+/// 
+/// # Returns
+/// * `Ok(Match)` - The updated match
+/// * `Err(String)` - Error message if update fails
 #[tauri::command]
 pub fn set_match_winner(
     state: State<'_, DbState>,
@@ -1722,6 +2504,20 @@ pub fn set_match_winner(
 }
 
 /// Vacates a title by ending the current title reign
+/// 
+/// # Arguments
+/// * `conn` - Mutable reference to the database connection
+/// * `title_id` - ID of the title to vacate
+/// * `event_name` - Optional event where title was vacated
+/// * `event_location` - Optional event location
+/// * `change_method` - Optional reason for vacancy
+/// 
+/// # Returns
+/// * `Ok(())` - If title was successfully vacated
+/// * `Err(DieselError)` - Database error if update fails
+/// 
+/// # Note
+/// Validates string lengths to prevent database abuse
 pub fn internal_vacate_title(
     conn: &mut SqliteConnection,
     title_id: i32,
@@ -1779,6 +2575,18 @@ pub fn internal_vacate_title(
     Ok(())
 }
 
+/// Tauri command to vacate a championship title
+/// 
+/// # Arguments
+/// * `state` - The Tauri state containing the database pool
+/// * `title_id` - ID of the title to vacate
+/// * `event_name` - Optional event name
+/// * `event_location` - Optional event location
+/// * `change_method` - Optional vacancy reason (e.g., "Injury", "Retirement")
+/// 
+/// # Returns
+/// * `Ok(String)` - Success message
+/// * `Err(String)` - Error message if vacancy fails
 #[tauri::command]
 pub fn vacate_title(
     state: State<'_, DbState>,

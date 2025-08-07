@@ -4,6 +4,10 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use crate::types::Gender;
 
+/// Wrestler data structure for frontend display
+/// 
+/// This mirrors the backend Wrestler model but is kept separate
+/// for frontend-specific serialization needs
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Wrestler {
     pub id: i32,
@@ -16,7 +20,6 @@ pub struct Wrestler {
     pub height: Option<String>,
     pub weight: Option<String>,
     pub debut_year: Option<i32>,
-    pub promotion: Option<String>,
     pub strength: Option<i32>,
     pub speed: Option<i32>,
     pub agility: Option<i32>,
@@ -33,11 +36,24 @@ extern "C" {
     async fn invoke(cmd: &str, args: JsValue) -> JsValue;
 }
 
+/// Fetches all wrestlers from the backend via Tauri command
+/// 
+/// # Returns
+/// * `Ok(Vec<Wrestler>)` - List of all wrestlers
+/// * `Err(String)` - Error message if fetch fails
 async fn get_wrestlers() -> Result<Vec<Wrestler>, String> {
     let result = invoke("get_wrestlers", JsValue::NULL).await;
     serde_wasm_bindgen::from_value(result).map_err(|e| e.to_string())
 }
 
+/// Opens a separate window to display wrestler details
+/// 
+/// # Arguments
+/// * `wrestler_id` - ID of the wrestler to display
+/// 
+/// # Returns
+/// * `Ok(())` - Window opened successfully
+/// * `Err(String)` - Error message if window creation fails
 async fn open_wrestler_window(wrestler_id: String) -> Result<(), String> {
     let args = serde_wasm_bindgen::to_value(&serde_json::json!({
         "wrestlerId": wrestler_id
@@ -48,6 +64,16 @@ async fn open_wrestler_window(wrestler_id: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Wrestlers list component with search and filtering
+/// 
+/// Displays all wrestlers in a responsive grid with:
+/// - Search functionality (debounced)
+/// - Power rating displays
+/// - User-created wrestler indicators
+/// - Click to open detail windows
+/// 
+/// # Props
+/// * `set_current_page` - Signal to change the current page/route
 #[component]
 pub fn WrestlersList(
     set_current_page: WriteSignal<String>,
@@ -58,7 +84,7 @@ pub fn WrestlersList(
     let (search_term, set_search_term) = signal(String::new());
     let (debounced_search_term, set_debounced_search_term) = signal(String::new());
 
-    // Load wrestlers on component mount
+    // Effect that loads wrestlers when component mounts
     Effect::new(move |_| {
         spawn_local(async move {
             set_loading.set(true);
@@ -75,7 +101,8 @@ pub fn WrestlersList(
         });
     });
 
-    // Debounce search term (300ms delay)
+    // Effect that debounces search input with 300ms delay
+    // Prevents excessive filtering while user is typing
     Effect::new(move |_| {
         let current_term = search_term.get();
         spawn_local(async move {
@@ -86,7 +113,8 @@ pub fn WrestlersList(
         });
     });
 
-    // Filtered wrestlers based on debounced search term
+    // Computed function that filters wrestlers based on search term
+    // Searches in name, nickname, and real name fields
     let filtered_wrestlers = move || {
         let term = debounced_search_term.get().to_lowercase();
         if term.is_empty() {

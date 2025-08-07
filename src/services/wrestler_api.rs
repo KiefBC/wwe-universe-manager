@@ -1,4 +1,9 @@
-use crate::types::{invoke_tauri, Title};
+//! Wrestler API service module
+//! 
+//! This module provides frontend API wrappers for all wrestler-related
+//! Tauri commands, including wrestler details, updates, and title management.
+
+use crate::types::{invoke_tauri, Title, Show};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -17,7 +22,6 @@ pub struct WrestlerDetails {
     pub height: Option<String>,
     pub weight: Option<String>,
     pub debut_year: Option<i32>,
-    pub promotion: Option<String>,
     pub strength: Option<i32>,
     pub speed: Option<i32>,
     pub agility: Option<i32>,
@@ -28,6 +32,10 @@ pub struct WrestlerDetails {
     pub is_user_created: Option<bool>,
 }
 
+/// Title with current holder information
+/// 
+/// Combines a title with its current champion(s) and
+/// calculates how long they've held the title
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TitleWithHolders {
     pub title: Title,
@@ -35,6 +43,10 @@ pub struct TitleWithHolders {
     pub days_held: Option<i32>,
 }
 
+/// Title holder record representing a championship reign
+/// 
+/// Tracks when a wrestler held a title, including event details
+/// and how the reign ended (if applicable)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TitleHolder {
     pub id: i32,
@@ -49,6 +61,10 @@ pub struct TitleHolder {
     pub updated_at: Option<String>,
 }
 
+/// Title holder information with wrestler details
+/// 
+/// Combines a TitleHolder record with the wrestler's name and gender
+/// for display purposes
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TitleHolderInfo {
     pub holder: TitleHolder,
@@ -56,7 +72,15 @@ pub struct TitleHolderInfo {
     pub wrestler_gender: String,
 }
 
-/// Get wrestler details by ID
+/// Fetches detailed wrestler information by ID
+/// 
+/// # Arguments
+/// * `wrestler_id` - The ID of the wrestler to fetch
+/// 
+/// # Returns
+/// * `Ok(Some(WrestlerDetails))` - The wrestler's full details
+/// * `Ok(None)` - No wrestler found with that ID
+/// * `Err(String)` - Error message if the request fails
 pub async fn get_wrestler_by_id(wrestler_id: i32) -> Result<Option<WrestlerDetails>, String> {
     let args = json!({
         "wrestlerId": wrestler_id
@@ -65,17 +89,40 @@ pub async fn get_wrestler_by_id(wrestler_id: i32) -> Result<Option<WrestlerDetai
     invoke_tauri("get_wrestler_by_id", args).await
 }
 
-/// Update wrestler's promotion
-pub async fn update_wrestler_promotion(wrestler_id: i32, promotion: String) -> Result<WrestlerDetails, String> {
+
+/// Gets the shows that a wrestler is currently assigned to
+/// 
+/// # Arguments
+/// * `wrestler_id` - The ID of the wrestler
+/// 
+/// # Returns
+/// * `Ok(Vec<Show>)` - List of shows the wrestler is assigned to
+/// * `Err(String)` - Error message if the query fails
+pub async fn get_wrestler_show_assignments(wrestler_id: i32) -> Result<Vec<Show>, String> {
     let args = json!({
-        "wrestlerId": wrestler_id,
-        "promotion": promotion
+        "wrestlerId": wrestler_id
     });
 
-    invoke_tauri("update_wrestler_promotion", args).await
+    invoke_tauri("get_shows_for_wrestler", args).await
 }
 
-/// Update wrestler's power ratings
+/// Updates a wrestler's power ratings
+/// 
+/// # Arguments
+/// * `wrestler_id` - The ID of the wrestler to update
+/// * `strength` - Physical strength rating (1-10)
+/// * `speed` - Speed and quickness rating (1-10)
+/// * `agility` - Agility and flexibility rating (1-10)
+/// * `stamina` - Endurance rating (1-10)
+/// * `charisma` - Crowd connection rating (1-10)
+/// * `technique` - Technical ability rating (1-10)
+/// 
+/// # Returns
+/// * `Ok(WrestlerDetails)` - Updated wrestler information
+/// * `Err(String)` - Error message if the update fails
+/// 
+/// # Note
+/// Pass None for any rating you don't want to change
 pub async fn update_wrestler_power_ratings(
     wrestler_id: i32,
     strength: Option<i32>,
@@ -160,7 +207,17 @@ pub async fn update_wrestler_biography(
     invoke_tauri("update_wrestler_biography", args).await
 }
 
-/// Delete a wrestler
+/// Deletes a wrestler from the system
+/// 
+/// # Arguments
+/// * `wrestler_id` - The ID of the wrestler to delete
+/// 
+/// # Returns
+/// * `Ok(String)` - Success message
+/// * `Err(String)` - Error message if deletion fails
+/// 
+/// # Note
+/// Only user-created wrestlers can be deleted
 pub async fn delete_wrestler(wrestler_id: i32) -> Result<String, String> {
     let args = json!({
         "wrestlerId": wrestler_id
@@ -169,7 +226,14 @@ pub async fn delete_wrestler(wrestler_id: i32) -> Result<String, String> {
     invoke_tauri("delete_wrestler", args).await
 }
 
-/// Get titles available for a wrestler based on gender
+/// Gets all titles available for a wrestler based on gender compatibility
+/// 
+/// # Arguments
+/// * `wrestler_gender` - The wrestler's gender ("Male", "Female", or other)
+/// 
+/// # Returns
+/// * `Ok(Vec<Title>)` - List of titles the wrestler can compete for
+/// * `Err(String)` - Error message if the request fails
 pub async fn get_titles_for_wrestler(wrestler_gender: String) -> Result<Vec<Title>, String> {
     let args = json!({
         "wrestlerGender": wrestler_gender
@@ -181,7 +245,14 @@ pub async fn get_titles_for_wrestler(wrestler_gender: String) -> Result<Vec<Titl
     Ok(titles_with_holders.into_iter().map(|twh| twh.title).collect())
 }
 
-/// Get current titles held by a specific wrestler
+/// Gets all championship titles currently held by a specific wrestler
+/// 
+/// # Arguments
+/// * `wrestler_id` - The ID of the wrestler
+/// 
+/// # Returns
+/// * `Ok(Vec<TitleWithHolders>)` - List of titles with holder information
+/// * `Err(String)` - Error message if the request fails
 pub async fn get_current_titles_for_wrestler(wrestler_id: i32) -> Result<Vec<TitleWithHolders>, String> {
     let args = json!({
         "wrestlerId": wrestler_id
@@ -198,7 +269,17 @@ pub async fn get_current_titles_for_wrestler(wrestler_id: i32) -> Result<Vec<Tit
         .collect())
 }
 
-/// Vacate a title (remove current holder)
+/// Vacates a championship title (removes current holder)
+/// 
+/// # Arguments
+/// * `title_id` - The ID of the title to vacate
+/// * `event_name` - Optional event where the vacancy occurred
+/// * `event_location` - Optional location of the event
+/// * `change_method` - Optional reason for vacancy (e.g., "Injury", "Retirement")
+/// 
+/// # Returns
+/// * `Ok(String)` - Success message
+/// * `Err(String)` - Error message if vacancy fails
 pub async fn vacate_title(
     title_id: i32,
     event_name: Option<String>,
@@ -215,7 +296,18 @@ pub async fn vacate_title(
     invoke_tauri("vacate_title", args).await
 }
 
-/// Assign a title to a wrestler with event details
+/// Assigns a championship title to a wrestler
+/// 
+/// # Arguments
+/// * `title_id` - The ID of the title to assign
+/// * `wrestler_id` - The ID of the new champion
+/// * `event_name` - Optional event where the title changed hands
+/// * `event_location` - Optional location of the event
+/// * `change_method` - Optional method of victory (e.g., "Pinfall", "Submission")
+/// 
+/// # Returns
+/// * `Ok(String)` - Success message
+/// * `Err(String)` - Error message if assignment fails
 pub async fn assign_title_to_wrestler(
     title_id: i32, 
     wrestler_id: i32,
@@ -234,7 +326,18 @@ pub async fn assign_title_to_wrestler(
     invoke_tauri("update_title_holder", args).await
 }
 
-/// Get titles that can be assigned to a wrestler based on gender, excluding currently held titles
+/// Gets titles that can be assigned to a wrestler
+/// 
+/// Filters titles based on gender compatibility and excludes
+/// titles the wrestler already holds.
+/// 
+/// # Arguments
+/// * `wrestler_id` - The ID of the wrestler
+/// * `wrestler_gender` - The wrestler's gender
+/// 
+/// # Returns
+/// * `Ok(Vec<TitleWithHolders>)` - List of assignable titles
+/// * `Err(String)` - Error message if the request fails
 pub async fn get_assignable_titles(wrestler_id: i32, wrestler_gender: String) -> Result<Vec<TitleWithHolders>, String> {
     // Get all titles available for the wrestler's gender
     let available_titles = get_titles_for_wrestler(wrestler_gender).await?;

@@ -18,21 +18,31 @@ extern "C" {
 /// - Central hub for all wrestling management activities
 #[component]
 pub fn PromotionDashboard(
+    /// Signal to update the current page/route
     set_current_page: WriteSignal<String>,
+    /// Signal that triggers data refresh when incremented
     refresh_trigger: ReadSignal<u32>,
 ) -> impl IntoView {
-    // Get shows for the application
+    // Reactive resource that fetches all shows from the backend
+    // Automatically refreshes when refresh_trigger signal changes
     let _shows_resource = LocalResource::new(move || {
         let _trigger = refresh_trigger.get(); // This makes the resource reactive to refresh_trigger
         fetch_shows()
     });
     
-    // Navigate to wrestlers list page
+    // Event handler to navigate to the wrestlers list page
+    // Arguments: _ (Mouse event - unused)
     let navigate_to_wrestlers = move |_| {
         set_current_page.set("wrestlers".to_string());
     };
     
-    // Creates test data (5 wrestlers and 2 shows) if it doesn't exist
+    // Event handler to create comprehensive test data
+    // Creates:
+    // - 5 wrestlers with detailed profiles
+    // - 2 shows (RAW and SmackDown)
+    // - 15 championship titles
+    // - Sample matches and rosters
+    // Arguments: _ (Mouse event - unused)
     let create_test_data = move |_| {
         web_sys::console::log_1(&"Test Data button clicked!".into());
         spawn_local(async move {

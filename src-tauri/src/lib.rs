@@ -13,6 +13,13 @@ use db::{establish_connection, DbState};
 use tauri::{AppHandle, Manager};
 
 /// Main entry point for the Tauri application
+/// 
+/// Initializes the database connection pool, registers all Tauri commands,
+/// and starts the application. This function sets up:
+/// - Database connection pooling
+/// - All Tauri command handlers for database operations
+/// - Window management commands
+/// - Authentication commands
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Initialize database connection pool
@@ -28,8 +35,8 @@ pub fn run() {
             db::get_shows,
             db::create_show,
             db::get_wrestlers,
+            db::get_unassigned_wrestlers,
             db::get_wrestler_by_id,
-            db::update_wrestler_promotion,
             db::update_wrestler_power_ratings,
             db::update_wrestler_basic_stats,
             db::update_wrestler_name,
@@ -52,6 +59,7 @@ pub fn run() {
             db::get_wrestlers_for_show,
             db::assign_wrestler_to_show,
             db::remove_wrestler_from_show,
+            db::get_shows_for_wrestler,
             // Match booking operations
             db::create_match,
             db::get_matches_for_show,
@@ -70,6 +78,18 @@ pub fn run() {
 }
 
 /// Opens a wrestler details window (only one allowed at a time)
+/// 
+/// # Arguments
+/// * `app` - The Tauri application handle
+/// * `wrestler_id` - Optional wrestler ID to display (defaults to "default")
+/// 
+/// # Returns
+/// * `Ok(())` - Window opened or focused successfully
+/// * `Err(String)` - Error message if window operation fails
+/// 
+/// # Behavior
+/// - If a wrestler window already exists, updates its content and focuses it
+/// - Otherwise creates a new window with the specified wrestler
 #[tauri::command]
 async fn open_wrestler_window(app: AppHandle, wrestler_id: Option<String>) -> Result<(), String> {
     let wrestler_id = wrestler_id.unwrap_or_else(|| "default".to_string());
@@ -103,6 +123,18 @@ async fn open_wrestler_window(app: AppHandle, wrestler_id: Option<String>) -> Re
 }
 
 /// Opens a title details window (only one allowed at a time)
+/// 
+/// # Arguments
+/// * `app` - The Tauri application handle
+/// * `title_id` - Optional title ID to display (defaults to "default")
+/// 
+/// # Returns
+/// * `Ok(())` - Window opened or focused successfully
+/// * `Err(String)` - Error message if window operation fails
+/// 
+/// # Behavior
+/// - If a title window already exists, updates its content and focuses it
+/// - Otherwise creates a new window with the specified title
 #[tauri::command]
 async fn open_title_window(app: AppHandle, title_id: Option<String>) -> Result<(), String> {
     let title_id = title_id.unwrap_or_else(|| "default".to_string());

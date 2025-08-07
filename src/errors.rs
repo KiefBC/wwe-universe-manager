@@ -2,6 +2,10 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 
 /// Custom error types for the WWE Universe Manager application
+/// 
+/// **Note**: Many error constructors are future infrastructure for comprehensive error handling.
+
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AppError {
     /// Network/Communication errors
@@ -95,6 +99,7 @@ impl From<&str> for AppError {
 }
 
 /// Helper function to create a Tauri invocation error
+#[allow(dead_code)]
 pub fn tauri_error(command: &str, details: String) -> AppError {
     AppError::TauriInvocationError {
         command: command.to_string(),
@@ -103,6 +108,7 @@ pub fn tauri_error(command: &str, details: String) -> AppError {
 }
 
 /// Helper function to create a serialization error
+#[allow(dead_code)]
 pub fn serialization_error(operation: &str, details: String) -> AppError {
     AppError::SerializationError {
         operation: operation.to_string(),
@@ -111,6 +117,7 @@ pub fn serialization_error(operation: &str, details: String) -> AppError {
 }
 
 /// Helper function to create a validation error
+#[allow(dead_code)]
 pub fn validation_error(field: &str, message: &str) -> AppError {
     AppError::ValidationError {
         field: field.to_string(),
@@ -119,6 +126,7 @@ pub fn validation_error(field: &str, message: &str) -> AppError {
 }
 
 /// Helper function to create a wrestler error
+#[allow(dead_code)]
 pub fn wrestler_error(wrestler_id: Option<i32>, operation: &str, details: String) -> AppError {
     AppError::WrestlerError {
         wrestler_id,
@@ -128,6 +136,7 @@ pub fn wrestler_error(wrestler_id: Option<i32>, operation: &str, details: String
 }
 
 /// Helper function to create a title error
+#[allow(dead_code)]
 pub fn title_error(title_id: Option<i32>, operation: &str, details: String) -> AppError {
     AppError::TitleError {
         title_id,

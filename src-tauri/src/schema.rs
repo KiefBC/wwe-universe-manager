@@ -114,7 +114,6 @@ diesel::table! {
         height -> Nullable<Text>,
         weight -> Nullable<Text>,
         debut_year -> Nullable<Integer>,
-        promotion -> Nullable<Text>,
         strength -> Nullable<Integer>,
         speed -> Nullable<Integer>,
         agility -> Nullable<Integer>,

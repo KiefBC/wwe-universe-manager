@@ -187,3 +187,64 @@ fn test_shows_are_ordered_by_id() {
     test_data.cleanup_shows(show2_name);
     test_data.cleanup_shows(show3_name);
 }
+
+#[test]
+#[serial]
+fn test_get_shows_for_wrestler() {
+    use wwe_universe_manager_lib::db::{internal_create_wrestler, internal_assign_wrestler_to_show, internal_get_shows_for_wrestler};
+    
+    let test_data = TestData::new();
+    let show1_name = "Test Show A";
+    let show1_desc = "First test show for wrestler assignment";
+    let show2_name = "Test Show B"; 
+    let show2_desc = "Second test show for wrestler assignment";
+    let wrestler_name = "Test Wrestler Show Assignment";
+
+    // Cleanup any existing test data
+    test_data.cleanup_shows(show1_name);
+    test_data.cleanup_shows(show2_name);
+    test_data.cleanup_wrestlers(wrestler_name);
+
+    let mut conn = test_data.get_connection();
+
+    // Create test shows and wrestler
+    let show1 = internal_create_show(&mut conn, show1_name, show1_desc)
+        .expect("Failed to create show 1");
+    let show2 = internal_create_show(&mut conn, show2_name, show2_desc)
+        .expect("Failed to create show 2");
+    let wrestler = internal_create_wrestler(&mut conn, wrestler_name, "Mixed", 0, 0)
+        .expect("Failed to create wrestler");
+
+    // Initially, wrestler should not be assigned to any shows
+    let initial_shows = internal_get_shows_for_wrestler(&mut conn, wrestler.id)
+        .expect("Failed to get initial shows for wrestler");
+    assert_eq!(initial_shows.len(), 0);
+
+    // Assign wrestler to first show
+    internal_assign_wrestler_to_show(&mut conn, show1.id, wrestler.id)
+        .expect("Failed to assign wrestler to show 1");
+
+    let shows_after_first = internal_get_shows_for_wrestler(&mut conn, wrestler.id)
+        .expect("Failed to get shows after first assignment");
+    assert_eq!(shows_after_first.len(), 1);
+    assert_eq!(shows_after_first[0].id, show1.id);
+    assert_eq!(shows_after_first[0].name, show1_name);
+
+    // Assign wrestler to second show
+    internal_assign_wrestler_to_show(&mut conn, show2.id, wrestler.id)
+        .expect("Failed to assign wrestler to show 2");
+
+    let shows_after_second = internal_get_shows_for_wrestler(&mut conn, wrestler.id)
+        .expect("Failed to get shows after second assignment");
+    assert_eq!(shows_after_second.len(), 2);
+    
+    // Shows should be ordered by name (ascending)
+    let show_names: Vec<String> = shows_after_second.iter().map(|s| s.name.clone()).collect();
+    assert!(show_names.contains(&show1_name.to_string()));
+    assert!(show_names.contains(&show2_name.to_string()));
+
+    // Cleanup
+    test_data.cleanup_shows(show1_name);
+    test_data.cleanup_shows(show2_name);
+    test_data.cleanup_wrestlers(wrestler_name);
+}

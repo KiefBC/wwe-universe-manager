@@ -1,7 +1,11 @@
+#![allow(dead_code)]
+
 /// UI Constants for consistent styling and behavior across components
 /// 
 /// This module contains hardcoded values that were previously scattered
 /// throughout the codebase for better maintainability and consistency.
+///
+/// **Note**: Many constants are future infrastructure for upcoming features.
 
 /// Prestige tier configurations for championship titles
 pub mod prestige_tiers {

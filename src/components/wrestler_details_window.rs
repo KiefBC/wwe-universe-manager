@@ -21,16 +21,20 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
     // Use URL watcher hook to track current wrestler ID from URL without polling
     let current_wrestler_id = use_url_watcher();
     
-    // Handler for promotion dropdown change
-    let handle_promotion_change = move |new_promotion: String| {
+    // Handler for show roster assignment changes - replaced deprecated promotion logic
+    let (wrestler_shows, set_wrestler_shows) = signal(Vec::<Show>::new());
+    
+    let handle_show_assignment_change = move |_show_id: Option<i32>| {
         if let Some(w) = wrestler.get() {
             spawn_local(async move {
-                match update_wrestler_promotion(w.id, new_promotion.clone()).await {
-                    Ok(updated_wrestler) => {
-                        set_wrestler.set(Some(updated_wrestler));
+                // This would require implementing show roster assignment/removal logic
+                // For now, we'll load the current assignments to display them properly
+                match get_wrestler_show_assignments(w.id).await {
+                    Ok(assigned_shows) => {
+                        set_wrestler_shows.set(assigned_shows);
                     }
                     Err(e) => {
-                        set_error.set(Some(format!("Failed to update promotion: {}", e)));
+                        set_error.set(Some(format!("Failed to load show assignments: {}", e)));
                     }
                 }
             });
@@ -130,6 +134,17 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
                 match get_wrestler_by_id(wrestler_id).await {
                     Ok(Some(wrestler_data)) => {
                         set_wrestler.set(Some(wrestler_data));
+                        
+                        // Load show assignments for this wrestler
+                        match get_wrestler_show_assignments(wrestler_id).await {
+                            Ok(assigned_shows) => {
+                                set_wrestler_shows.set(assigned_shows);
+                            }
+                            Err(e) => {
+                                // Don't set error for show assignments, just log it
+                                web_sys::console::log_1(&format!("Failed to load show assignments: {}", e).into());
+                            }
+                        }
                     }
                     Ok(None) => {
                         set_error.set(Some("Wrestler not found".to_string()));
@@ -213,11 +228,12 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
                                                 on_error=set_error
                                             />
 
-                                            // Promotion Section (separate component)
-                                            <PromotionSection 
-                                                wrestler=wrestler
-                                                shows=shows
-                                                on_promotion_change=handle_promotion_change
+                                            // Show Assignment Section (replaces deprecated promotion logic)
+                                            <ShowAssignmentSection 
+                                                _wrestler=wrestler
+                                                wrestler_shows=wrestler_shows
+                                                _all_shows=shows
+                                                _on_assignment_change=handle_show_assignment_change
                                             />
 
                                             // Basic stats (separate component)
@@ -248,65 +264,61 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
 // PowerBar and PowerBarEdit components moved to power_ratings_section.rs
 
 #[component]
-fn PromotionSection<F>(
-    wrestler: ReadSignal<Option<WrestlerDetails>>,
-    shows: ReadSignal<Vec<Show>>,
-    on_promotion_change: F,
+fn ShowAssignmentSection<F>(
+    _wrestler: ReadSignal<Option<WrestlerDetails>>,
+    wrestler_shows: ReadSignal<Vec<Show>>,
+    _all_shows: ReadSignal<Vec<Show>>,
+    _on_assignment_change: F,
 ) -> impl IntoView
 where
-    F: Fn(String) + 'static + Copy + Send + Sync,
+    F: Fn(Option<i32>) + 'static + Copy + Send + Sync,
 {
     view! {
         <div class="card bg-base-200 border border-base-100 mb-4">
             <div class="card-body">
-            <div class="grid grid-cols-2 gap-4 text-sm">
-                // Show section
-                <div>
-                    <span class="text-base-content/70 font-medium">"Show: "</span>
-                </div>
-                <div>
-                    {move || {
-                        if let Some(current_wrestler) = wrestler.get() {
-                            if let Some(promotion) = current_wrestler.promotion {
-                                view! {
-                                    <span class="text-base-content">{promotion}</span>
+                <h3 class="text-lg font-semibold text-base-content mb-4">"Show Assignments"</h3>
+                <div class="space-y-3 text-sm">
+                    // Current show assignments
+                    <div>
+                        <span class="text-base-content/70 font-medium">"Currently assigned to: "</span>
+                        <div class="mt-2">
+                            {move || {
+                                let shows = wrestler_shows.get();
+                                if shows.is_empty() {
+                                    view! {
+                                        <div class="text-base-content/60 italic">
+                                            "No show assignments"
+                                        </div>
+                                    }.into_any()
+                                } else {
+                                    view! {
+                                        <div class="flex flex-wrap gap-2">
+                                            {shows.into_iter().map(|show| {
+                                                view! {
+                                                    <span class="badge badge-primary">
+                                                        {show.name}
+                                                    </span>
+                                                }
+                                            }).collect::<Vec<_>>()}
+                                        </div>
+                                    }.into_any()
                                 }
-                            } else {
-                                view! {
-                                    <span class="text-base-content/60 italic">{"No show assigned".to_string()}</span>
-                                }
-                            }
-                        } else {
-                            view! {
-                                <span class="text-base-content/60 italic">{"Loading...".to_string()}</span>
-                            }
-                        }
-                    }}
+                            }}
+                        </div>
+                    </div>
+                    
+                    // Note about show roster management
+                    <div class="alert alert-info">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <div>
+                            <div class="text-sm">
+                                "To manage show assignments, use the Show Roster Management interface from the main dashboard."
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                // Show dropdown
-                <div class="col-span-2">
-                    <select 
-                        class="select select-bordered w-full select-sm"
-                        prop:value=move || {
-                            wrestler.get().and_then(|w| w.promotion).unwrap_or_default()
-                        }
-                        on:change:target=move |ev| {
-                            on_promotion_change(ev.target().value());
-                        }
-                    >
-                        <option value="">"Select a show..."</option>
-                        {move || shows.get().into_iter().map(|show| {
-                            view! {
-                                <option 
-                                    value=show.name.clone()
-                                >
-                                    {show.name.clone()}
-                                </option>
-                            }
-                        }).collect::<Vec<_>>()}
-                    </select>
-                </div>
-            </div>
             </div>
         </div>
     }

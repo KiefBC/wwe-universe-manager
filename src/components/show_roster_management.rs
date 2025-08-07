@@ -1,6 +1,6 @@
 use crate::components::show::roster_section::RosterSection;
 use crate::components::show::wrestler_assignment_section::WrestlerAssignmentSection;
-use crate::types::{assign_wrestler_to_show, fetch_shows, fetch_wrestlers, fetch_wrestlers_for_show, remove_wrestler_from_show, Show, Wrestler};
+use crate::types::{assign_wrestler_to_show, fetch_shows, fetch_unassigned_wrestlers, fetch_wrestlers_for_show, fetch_shows_for_wrestler, remove_wrestler_from_show, Show, Wrestler};
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
@@ -26,6 +26,10 @@ pub fn ShowRosterManagement(
     let (shows_loading, set_shows_loading) = signal(true);
     let (status_message, set_status_message) = signal(None::<String>);
     let (error_message, set_error_message) = signal(None::<String>);
+    
+    // Transfer confirmation state
+    let (pending_transfer, set_pending_transfer) = signal(None::<(i32, String, String)>); // (wrestler_id, wrestler_name, current_show_name)
+    let (show_confirmation, set_show_confirmation) = signal(false);
     
     // Communication signals for sub-components
     let (assign_wrestler_trigger, set_assign_wrestler_trigger) = signal(None::<i32>);
@@ -55,22 +59,14 @@ pub fn ShowRosterManagement(
         set_error_message.set(None);
         
         spawn_local(async move {
-            // Fetch current roster and all wrestlers concurrently
+            // Fetch current roster and unassigned wrestlers concurrently
             let roster_result = fetch_wrestlers_for_show(show_id).await;
-            let all_wrestlers_result = fetch_wrestlers().await;
+            let unassigned_result = fetch_unassigned_wrestlers().await;
             
-            match (roster_result, all_wrestlers_result) {
-                (Ok(roster), Ok(all_wrestlers)) => {
-                    set_current_roster.set(roster.clone());
-                    
-                    // Filter out wrestlers already in the roster
-                    let roster_ids: std::collections::HashSet<i32> = roster.iter().map(|w| w.id).collect();
-                    let available: Vec<Wrestler> = all_wrestlers
-                        .into_iter()
-                        .filter(|w| !roster_ids.contains(&w.id))
-                        .collect();
-                    
-                    set_available_wrestlers.set(available);
+            match (roster_result, unassigned_result) {
+                (Ok(roster), Ok(unassigned_wrestlers)) => {
+                    set_current_roster.set(roster);
+                    set_available_wrestlers.set(unassigned_wrestlers);
                     set_loading.set(false);
                 },
                 (Err(e), _) | (_, Err(e)) => {
@@ -100,22 +96,54 @@ pub fn ShowRosterManagement(
     };
     
     
-    // Handle wrestler assignment trigger
+    // Handle wrestler assignment trigger - check for transfers first
     Effect::new(move |_| {
         if let Some(wrestler_id) = assign_wrestler_trigger.get() {
-            if let Some(show) = selected_show.get() {
+            if let Some(target_show) = selected_show.get() {
                 set_loading.set(true);
                 set_status_message.set(None);
                 set_error_message.set(None);
                 
                 spawn_local(async move {
-                    match assign_wrestler_to_show(show.id, wrestler_id).await {
-                        Ok(_) => {
-                            set_status_message.set(Some("Wrestler assigned successfully!".to_string()));
-                            load_roster_data(show.id); // Reload data
+                    // Get wrestler name
+                    let wrestler_name = available_wrestlers.get()
+                        .iter()
+                        .find(|w| w.id == wrestler_id)
+                        .map(|w| w.name.clone())
+                        .unwrap_or_else(|| format!("Wrestler #{}", wrestler_id));
+                    
+                    // Check if wrestler is currently assigned to another show
+                    match fetch_shows_for_wrestler(wrestler_id).await {
+                        Ok(current_shows) => {
+                            if let Some(current_show) = current_shows.first() {
+                                if current_show.id != target_show.id {
+                                    // Wrestler is on a different show - show confirmation dialog
+                                    set_pending_transfer.set(Some((wrestler_id, wrestler_name.clone(), current_show.name.clone())));
+                                    set_show_confirmation.set(true);
+                                    set_loading.set(false);
+                                    return;
+                                }
+                            }
+                            
+                            // No current assignment or already on target show - proceed with assignment
+                            match assign_wrestler_to_show(target_show.id, wrestler_id).await {
+                                Ok(_) => {
+                                    let message = if current_shows.is_empty() {
+                                        format!("{} assigned to {} successfully!", wrestler_name, target_show.name)
+                                    } else {
+                                        format!("{} transferred to {} successfully!", wrestler_name, target_show.name)
+                                    };
+                                    set_status_message.set(Some(message));
+                                    load_roster_data(target_show.id); // Reload data
+                                },
+                                Err(e) => {
+                                    set_error_message.set(Some(format!("Failed to assign {} to {}: {}", wrestler_name, target_show.name, e)));
+                                    set_loading.set(false);
+                                }
+                            }
                         },
                         Err(e) => {
-                            set_error_message.set(Some(format!("Failed to assign wrestler: {}", e)));
+                            set_error_message.set(Some(format!("Failed to check wrestler's current assignment: {}", e)));
                             set_loading.set(false);
                         }
                     }
@@ -134,13 +162,20 @@ pub fn ShowRosterManagement(
                 set_error_message.set(None);
                 
                 spawn_local(async move {
+                    // Get wrestler name for better error messages
+                    let wrestler_name = current_roster.get()
+                        .iter()
+                        .find(|w| w.id == wrestler_id)
+                        .map(|w| w.name.clone())
+                        .unwrap_or_else(|| format!("Wrestler #{}", wrestler_id));
+                    
                     match remove_wrestler_from_show(show.id, wrestler_id).await {
                         Ok(_) => {
-                            set_status_message.set(Some("Wrestler removed successfully!".to_string()));
+                            set_status_message.set(Some(format!("{} removed from {} successfully!", wrestler_name, show.name)));
                             load_roster_data(show.id); // Reload data
                         },
                         Err(e) => {
-                            set_error_message.set(Some(format!("Failed to remove wrestler: {}", e)));
+                            set_error_message.set(Some(format!("Failed to remove {} from {}: {}", wrestler_name, show.name, e)));
                             set_loading.set(false);
                         }
                     }
@@ -149,6 +184,36 @@ pub fn ShowRosterManagement(
             set_remove_wrestler_trigger.set(None); // Reset trigger
         }
     });
+    
+    // Handle confirmation dialog actions
+    let confirm_transfer = move |_| {
+        if let (Some((wrestler_id, wrestler_name, from_show)), Some(to_show)) = (pending_transfer.get(), selected_show.get()) {
+            set_show_confirmation.set(false);
+            set_pending_transfer.set(None);
+            set_loading.set(true);
+            set_status_message.set(None);
+            set_error_message.set(None);
+            
+            spawn_local(async move {
+                match assign_wrestler_to_show(to_show.id, wrestler_id).await {
+                    Ok(_) => {
+                        set_status_message.set(Some(format!("{} transferred from {} to {} successfully!", wrestler_name, from_show, to_show.name)));
+                        load_roster_data(to_show.id); // Reload data
+                    },
+                    Err(e) => {
+                        set_error_message.set(Some(format!("Failed to transfer {} from {} to {}: {}", wrestler_name, from_show, to_show.name, e)));
+                        set_loading.set(false);
+                    }
+                }
+            });
+        }
+    };
+    
+    let cancel_transfer = move |_| {
+        set_show_confirmation.set(false);
+        set_pending_transfer.set(None);
+        set_loading.set(false);
+    };
     
     view! {
         <div class="space-y-8">
@@ -234,6 +299,49 @@ pub fn ShowRosterManagement(
                             <span>{move || error_message.get().unwrap_or_default()}</span>
                         </div>
                     </Show>
+                </div>
+            </Show>
+            
+            // Transfer Confirmation Dialog
+            <Show when=move || show_confirmation.get()>
+                <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div class="card bg-base-100 shadow-2xl w-full max-w-md mx-4">
+                        <div class="card-body">
+                            <h3 class="card-title text-warning">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.728-.833-2.498 0L4.316 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                </svg>
+                                "Transfer Wrestler?"
+                            </h3>
+                            {move || {
+                                if let (Some((_, wrestler_name, from_show)), Some(to_show)) = (pending_transfer.get(), selected_show.get()) {
+                                    view! {
+                                        <p class="py-4">
+                                            {format!("{} is currently assigned to {}.", wrestler_name, from_show)}
+                                            <br/>
+                                            <strong>{format!("Transfer to {}?", to_show.name)}</strong>
+                                        </p>
+                                    }.into_any()
+                                } else {
+                                    view! { <p>"Loading transfer details..."</p> }.into_any()
+                                }
+                            }}
+                            <div class="card-actions justify-end gap-2">
+                                <button 
+                                    class="btn btn-ghost"
+                                    on:click=cancel_transfer
+                                >
+                                    "Cancel"
+                                </button>
+                                <button 
+                                    class="btn btn-warning"
+                                    on:click=confirm_transfer
+                                >
+                                    "Transfer"
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </Show>
             
