@@ -217,25 +217,36 @@ pub fn ShowRosterManagement(
     
     view! {
         <div class="space-y-8">
-            // Header
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-3xl font-bold text-base-content mb-2">
-                        "Show Roster Management"
-                    </h2>
-                    <p class="text-base-content/70">
-                        "Manage wrestler assignments for shows"
-                    </p>
-                </div>
+            // Header with navigation buttons
+            <div class="flex items-center justify-between mb-4">
                 <button
                     class="btn btn-ghost gap-2"
                     on:click=move |_| set_current_page.set("promotion-dashboard".to_string())
                 >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                     </svg>
                     "Back to Dashboard"
                 </button>
+                <button
+                    class="btn btn-secondary gap-2"
+                    on:click=move |_| set_current_page.set("create-show".to_string())
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    "Create Show"
+                </button>
+            </div>
+            
+            // Page Title and Description
+            <div class="mb-8">
+                <h1 class="text-4xl font-bold text-base-content mb-2">
+                    "Shows"
+                </h1>
+                <p class="text-base-content/70">
+                    "Manage your wrestling shows"
+                </p>
             </div>
             
             // Show Selection

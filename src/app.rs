@@ -36,84 +36,19 @@ pub fn App() -> impl IntoView {
                         <Header />
                         <main class="flex-1 container mx-auto px-6 py-8 overflow-auto">
                             <div class="max-w-6xl mx-auto">
-                                <Show
-                                    when=move || current_page.get() == "create-show"
-                                    fallback=move || {
-                                        view! {
-                                            <Show
-                                                when=move || current_page.get() == "create-wrestler"
-                                                fallback=move || {
-                                                    view! {
-                                                        <Show
-                                                            when=move || current_page.get() == "wrestlers"
-                                                            fallback=move || {
-                                                                view! {
-                                                                    <Show
-                                                                        when=move || current_page.get() == "titles"
-                                                                        fallback=move || {
-                                                                            view! {
-                                                                                <Show
-                                                                                    when=move || current_page.get() == "create-show"
-                                                                                    fallback=move || {
-                                                                                        view! {
-                                                                                            <Show
-                                                                                                when=move || current_page.get() == "create-title"
-                                                                                                fallback=move || {
-                                                                                                    view! {
-                                                                                                        <Show
-                                                                                                            when=move || current_page.get() == "booker"
-                                                                                                            fallback=move || {
-                                                                                                                view! {
-                                                                                                                    <Show
-                                                                                                                        when=move || current_page.get() == "show-roster"
-                                                                                                                        fallback=move || {
-                                                                                                                            view! {
-                                                                                                                                <Show
-                                                                                                                                    when=move || current_page.get() == "promotion-dashboard"
-                                                                                                                                    fallback=move || view! { <CreateShow set_current_page set_refresh_trigger /> }
-                                                                                                                                >
-                                                                                                                                    <PromotionDashboard set_current_page refresh_trigger />
-                                                                                                                                </Show>
-                                                                                                                            }
-                                                                                                                        }
-                                                                                                                    >
-                                                                                                                        <ShowRosterManagement set_current_page />
-                                                                                                                    </Show>
-                                                                                                                }
-                                                                                                            }
-                                                                                                        >
-                                                                                                            <BookerDashboard set_current_page />
-                                                                                                        </Show>
-                                                                                                    }
-                                                                                                }
-                                                                                            >
-                                                                                                <CreateTitle set_current_page />
-                                                                                            </Show>
-                                                                                        }
-                                                                                    }
-                                                                                >
-                                                                                    <CreateShow set_current_page set_refresh_trigger />
-                                                                                </Show>
-                                                                            }
-                                                                        }
-                                                                    >
-                                                                        <TitlesList set_current_page />
-                                                                    </Show>
-                                                                }
-                                                            }
-                                                        >
-                                                            <WrestlersList set_current_page />
-                                                        </Show>
-                                                    }
-                                                }
-                                            >
-                                                <CreateWrestler set_current_page />
-                                            </Show>
-                                        }
+                                {move || {
+                                    match current_page.get().as_str() {
+                                        "promotion-dashboard" => view! { <PromotionDashboard set_current_page refresh_trigger /> }.into_any(),
+                                        "show-roster" => view! { <ShowRosterManagement set_current_page /> }.into_any(),
+                                        "create-show" => view! { <CreateShow set_current_page set_refresh_trigger /> }.into_any(),
+                                        "create-wrestler" => view! { <CreateWrestler set_current_page /> }.into_any(),
+                                        "wrestlers" => view! { <WrestlersList set_current_page /> }.into_any(),
+                                        "titles" => view! { <TitlesList set_current_page /> }.into_any(),
+                                        "create-title" => view! { <CreateTitle set_current_page /> }.into_any(),
+                                        "booker" => view! { <BookerDashboard set_current_page /> }.into_any(),
+                                        _ => view! { <PromotionDashboard set_current_page refresh_trigger /> }.into_any(),
                                     }
-                                >
-                                    <CreateShow set_current_page set_refresh_trigger />
-                                </Show>
+                                }}
                             </div>
                         </main>
                         <Footer />
