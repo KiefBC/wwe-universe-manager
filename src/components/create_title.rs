@@ -33,7 +33,14 @@ async fn get_wrestlers() -> Result<Vec<Wrestler>, String> {
 
 async fn create_title(title_data: TitleData) -> Result<(), String> {
     let args = serde_wasm_bindgen::to_value(&serde_json::json!({
-        "titleData": title_data
+        "titleData": {
+            "name": title_data.name,
+            "titleType": title_data.title_type,
+            "division": title_data.division,
+            "gender": title_data.gender,
+            "showId": title_data.show_id,
+            "currentHolderId": title_data.current_holder_id
+        }
     }))
     .map_err(|e| e.to_string())?;
 

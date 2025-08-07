@@ -391,7 +391,16 @@ pub async fn create_match(match_data: MatchData) -> Result<Match, String> {
     console::log_1(&format!("create_match called with: {:?}", match_data).into());
 
     let args = serde_json::json!({
-        "matchData": match_data
+        "matchData": {
+            "showId": match_data.show_id,
+            "matchName": match_data.match_name,
+            "matchType": match_data.match_type,
+            "matchStipulation": match_data.match_stipulation,
+            "scheduledDate": match_data.scheduled_date,
+            "matchOrder": match_data.match_order,
+            "isTitleMatch": match_data.is_title_match,
+            "titleId": match_data.title_id
+        }
     });
 
     let args_value = serde_wasm_bindgen::to_value(&args).map_err(|e| {

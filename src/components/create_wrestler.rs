@@ -281,7 +281,22 @@ async fn fetch_shows() -> Result<Vec<Show>, String> {
 
 async fn create_user_wrestler(wrestler_data: EnhancedWrestlerData) -> Result<Wrestler, String> {
     let args = serde_wasm_bindgen::to_value(&serde_json::json!({
-        "wrestlerData": wrestler_data
+        "wrestlerData": {
+            "name": wrestler_data.name,
+            "gender": wrestler_data.gender,
+            "realName": wrestler_data.real_name,
+            "nickname": wrestler_data.nickname,
+            "height": wrestler_data.height,
+            "weight": wrestler_data.weight,
+            "debutYear": wrestler_data.debut_year,
+            "strength": wrestler_data.strength,
+            "speed": wrestler_data.speed,
+            "agility": wrestler_data.agility,
+            "stamina": wrestler_data.stamina,
+            "charisma": wrestler_data.charisma,
+            "technique": wrestler_data.technique,
+            "biography": wrestler_data.biography
+        }
     }))
     .map_err(|e| e.to_string())?;
 
