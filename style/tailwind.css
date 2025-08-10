@@ -1,1 +1,93 @@
 @import "tailwindcss";
+@plugin "daisyui";
+
+/* Force responsive grid classes generation */
+.grid-cols-1 { 
+  grid-template-columns: repeat(1, minmax(0, 1fr)); 
+}
+
+.grid-cols-2 { 
+  grid-template-columns: repeat(2, minmax(0, 1fr)); 
+}
+
+.grid-cols-3 { 
+  grid-template-columns: repeat(3, minmax(0, 1fr)); 
+}
+
+.grid-cols-5 { 
+  grid-template-columns: repeat(5, minmax(0, 1fr)); 
+}
+
+@media (min-width: 640px) {
+  .sm\:grid-cols-2 { 
+    grid-template-columns: repeat(2, minmax(0, 1fr)); 
+  }
+}
+
+@media (min-width: 768px) {
+  .md\:grid-cols-3 { 
+    grid-template-columns: repeat(3, minmax(0, 1fr)); 
+  }
+}
+
+@media (min-width: 1024px) {
+  .lg\:grid-cols-5 { 
+    grid-template-columns: repeat(5, minmax(0, 1fr)); 
+  }
+  
+  .lg\:stats-horizontal .stat { 
+    display: flex; 
+    flex-direction: row; 
+  }
+}
+
+:root {
+  --border-radius: 0.5rem;
+}
+
+[data-theme="modern-dark"] {
+  color-scheme: dark;
+}
+
+* {
+  transition: none !important;
+  animation: none !important;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #0f172a;
+  color: #f1f5f9;
+}
+
+.glass-effect {
+  background: rgba(30, 41, 59, 0.8);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(100, 116, 139, 0.2);
+}
+
+.card-modern {
+  background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid #334155;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.btn-modern {
+  border-radius: 0.5rem;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+  border: 1px solid transparent;
+}
+
+.input-modern {
+  background: #1e293b;
+  border: 1px solid #475569;
+  border-radius: 0.5rem;
+  color: #f1f5f9;
+}
+
+.input-modern:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}

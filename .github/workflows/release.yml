@@ -1,0 +1,93 @@
+name: 'Release - Wrestling Management System (WMS)'
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  publish-tauri:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest'
+            args: '--target aarch64-apple-darwin'
+          - platform: 'macos-latest' 
+            args: '--target x86_64-apple-darwin'
+          - platform: 'ubuntu-22.04'
+            args: ''
+          - platform: 'windows-latest'
+            args: ''
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install dependencies (Ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Build CSS for production
+        run: npm run build-css-prod
+
+      - name: Build Tauri app and create release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: 'wms-v__VERSION__'
+          releaseName: 'Wrestling Management System (WMS) v__VERSION__'
+          releaseBody: |
+            ## Wrestling Management System (WMS) v__VERSION__
+            
+            ### 🎯 Features
+            - Complete wrestler roster management system
+            - Show and event scheduling
+            - Championship title tracking
+            - Match booking and results
+            - Multi-promotion support (WWE, AEW, NJPW)
+            - Professional dark theme interface
+            
+            ### 📦 Installation
+            **Windows**: Download and run the `.exe` installer
+            **macOS**: Download the `.dmg` file and drag to Applications
+            **Linux**: Download the `.AppImage`, `.deb`, or `.rpm` package
+            
+            ### 🔧 Built With
+            - Rust + Tauri 2.0 for native performance
+            - Leptos WebAssembly frontend
+            - SQLite database with Diesel ORM
+            - Modern responsive UI with Tailwind CSS + DaisyUI
+            
+            See the assets below to download and install this version.
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}

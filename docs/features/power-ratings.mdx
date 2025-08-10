@@ -1,0 +1,612 @@
+---
+title: "Power Ratings System"
+description: "Comprehensive wrestler attributes and character development system"
+---
+
+## Overview
+
+The Power Ratings System is a sophisticated character development framework that quantifies wrestler abilities across six key attributes. This system transforms basic wrestler profiles into detailed character assessments that can be used for booking decisions, storyline development, and realistic match outcomes.
+
+<img
+  className="block dark:hidden"
+  src="/images/power-ratings-light.png"
+  alt="Power Ratings Interface Light Mode"
+/>
+<img
+  className="hidden dark:block"
+  src="/images/power-ratings-dark.png"
+  alt="Power Ratings Interface Dark Mode"
+/>
+
+## The Six Attributes
+
+<CardGroup cols={2}>
+  <Card
+    title="Strength"
+    icon="dumbbell"
+  >
+    Physical power, lifting ability, and impact of power moves
+  </Card>
+  <Card
+    title="Speed"
+    icon="bolt"
+  >
+    Quickness, reaction time, and high-tempo offense capability
+  </Card>
+  <Card
+    title="Agility"
+    icon="running"
+  >
+    Flexibility, acrobatic ability, and aerial maneuver execution
+  </Card>
+  <Card
+    title="Stamina"
+    icon="heart"
+  >
+    Endurance, conditioning, and ability to maintain performance
+  </Card>
+  <Card
+    title="Charisma"
+    icon="star"
+  >
+    Personality, crowd connection, and microphone skills
+  </Card>
+  <Card
+    title="Technique"
+    icon="brain"
+  >
+    Wrestling skill, move execution, and in-ring psychology
+  </Card>
+</CardGroup>
+
+## Rating Scale
+
+All attributes use a **1-100 point scale** with clear performance tiers:
+
+<Tabs>
+  <Tab title="Rating Tiers">
+    <AccordionGroup>
+      <Accordion title="90-100: Legendary">
+        **Elite tier** - Once-in-a-generation talent
+        - **Examples**: John Cena (Charisma: 98), Brock Lesnar (Strength: 97)
+        - **Characteristics**: Dominant in this attribute, defines their wrestling style
+        - **Booking Impact**: Can carry storylines based on this strength alone
+      </Accordion>
+      
+      <Accordion title="80-89: Excellent">
+        **Main event level** - Top-tier performers
+        - **Examples**: Seth Rollins (Technique: 87), Rey Mysterio (Agility: 89)
+        - **Characteristics**: Standout performers with clear specializations
+        - **Booking Impact**: Featured prominently, potential champions
+      </Accordion>
+      
+      <Accordion title="70-79: Very Good">
+        **Upper mid-card** - Reliable performers
+        - **Examples**: Intercontinental Champion level wrestlers
+        - **Characteristics**: Strong performers with room for growth
+        - **Booking Impact**: Title contenders, storyline participants
+      </Accordion>
+      
+      <Accordion title="60-69: Good">
+        **Mid-card level** - Solid performers
+        - **Examples**: Tag team specialists, developing talents
+        - **Characteristics**: Competent with specific strengths
+        - **Booking Impact**: Supporting roles, tag team competitions
+      </Accordion>
+      
+      <Accordion title="50-59: Average">
+        **Lower card** - Basic competency
+        - **Examples**: Enhancement talent, rookies
+        - **Characteristics**: Learning fundamentals, limited specialization
+        - **Booking Impact**: Opening matches, training opportunities
+      </Accordion>
+      
+      <Accordion title="Below 50: Developing">
+        **Developmental** - Needs significant improvement
+        - **Examples**: Complete beginners, comedy characters
+        - **Characteristics**: Major weaknesses in this area
+        - **Booking Impact**: Protected booking, character work focus
+      </Accordion>
+    </AccordionGroup>
+  </Tab>
+  
+  <Tab title="Attribute Details">
+    ### Strength (1-100)
+    **Physical power and impact capability**
+    - **High Strength (80+)**: Power slams, heavy lifting, dominant physical presence
+    - **Low Strength (40-)**: Relies on speed/technique, vulnerable to power moves
+    - **Booking Considerations**: Strong wrestlers dominate shorter matches, weak in endurance battles
+    
+    ### Speed (1-100)
+    **Quickness and reaction time**
+    - **High Speed (80+)**: Fast-paced offense, counter wrestling, high-energy matches
+    - **Low Speed (40-)**: Methodical style, vulnerable to quick attacks
+    - **Booking Considerations**: Speed advantages in multi-person matches, disadvantages in submission holds
+    
+    ### Agility (1-100)
+    **Flexibility and acrobatic ability**
+    - **High Agility (80+)**: Aerial maneuvers, submission escapes, innovative offense
+    - **Low Agility (40-)**: Ground-based style, limited aerial ability
+    - **Booking Considerations**: High-flying match types, ladder/cage match advantages
+    
+    ### Stamina (1-100)
+    **Endurance and conditioning**
+    - **High Stamina (80+)**: Iron Man matches, long main events, consistent performance
+    - **Low Stamina (40-)**: Quick matches preferred, late-match vulnerability
+    - **Booking Considerations**: Match length planning, tournament scenarios
+    
+    ### Charisma (1-100)
+    **Personality and crowd connection**
+    - **High Charisma (80+)**: Main event presence, storyline focal point, natural leader
+    - **Low Charisma (40-)**: Supporting role, needs manager/spokesperson
+    - **Booking Considerations**: Promo opportunities, face/heel dynamics, championship credibility
+    
+    ### Technique (1-100)
+    **Wrestling skill and ring psychology**
+    - **High Technique (80+)**: Complex movesets, storytelling ability, technical classics
+    - **Low Technique (40-)**: Basic moveset, relies on other attributes
+    - **Booking Considerations**: Match quality expectations, training storylines
+  </Tab>
+</Tabs>
+
+## Character Archetypes
+
+The power ratings system naturally creates distinct wrestler archetypes:
+
+### The Powerhouse
+- **High**: Strength (90+), Stamina (75+)
+- **Low**: Speed (60-), Agility (50-)
+- **Examples**: Braun Strowman, Brock Lesnar
+- **Booking**: Dominant squash matches, David vs Goliath storylines
+
+### The High-Flyer
+- **High**: Agility (85+), Speed (80+)
+- **Low**: Strength (65-), Stamina (70-)
+- **Examples**: Rey Mysterio, Ricochet
+- **Booking**: Aerial showcases, underdog storylines
+
+### The Technical Master
+- **High**: Technique (90+), Stamina (80+)
+- **Low**: Charisma (70-), Strength (75-)
+- **Examples**: Daniel Bryan, Kurt Angle
+- **Booking**: Wrestling clinics, submission specialists
+
+### The Complete Package
+- **High**: All attributes 75+
+- **Low**: None below 70
+- **Examples**: John Cena, Roman Reigns
+- **Booking**: Main event players, championship contenders
+
+### The Specialist
+- **High**: One attribute 95+
+- **Low**: Several attributes 60-
+- **Examples**: Ultimate Warrior (Charisma 95, Technique 45)
+- **Booking**: Character-driven storylines
+
+## Rating Management Interface
+
+### Individual Wrestler Editing
+
+Power ratings are managed through the Wrestler Details Window:
+
+```rust
+#[component]
+pub fn PowerRatingsSection(wrestler: ReadSignal<Option<Wrestler>>) -> impl IntoView {
+    let (editing_ratings, set_editing_ratings) = create_signal(false);
+    let (temp_ratings, set_temp_ratings) = create_signal(PowerRatings::default());
+    
+    let save_ratings = move |_| {
+        if let Some(w) = wrestler.get() {
+            let ratings = temp_ratings.get();
+            spawn_local(async move {
+                match update_wrestler_power_ratings(w.id, ratings).await {
+                    Ok(updated_wrestler) => {
+                        set_editing_ratings.set(false);
+                        // Update wrestler signal
+                    }
+                    Err(e) => log::error!("Failed to update ratings: {}", e),
+                }
+            });
+        }
+    };
+    
+    view! {
+        <div class="bg-slate-700 rounded-lg p-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-yellow-400">"Power Ratings"</h3>
+                <button 
+                    on:click=move |_| set_editing_ratings.set(!editing_ratings.get())
+                    class="btn btn-sm btn-secondary"
+                >
+                    {move || if editing_ratings.get() { "Cancel" } else { "Edit" }}
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <RatingDisplay 
+                    label="Strength" 
+                    value=move || wrestler.get().and_then(|w| w.strength).unwrap_or(50)
+                    editing=editing_ratings
+                    on_change=move |val| {
+                        let mut ratings = temp_ratings.get();
+                        ratings.strength = val;
+                        set_temp_ratings.set(ratings);
+                    }
+                />
+                
+                <RatingDisplay 
+                    label="Speed" 
+                    value=move || wrestler.get().and_then(|w| w.speed).unwrap_or(50)
+                    editing=editing_ratings
+                    on_change=move |val| {
+                        let mut ratings = temp_ratings.get();
+                        ratings.speed = val;
+                        set_temp_ratings.set(ratings);
+                    }
+                />
+                
+                // ... similar for other attributes
+            </div>
+            
+            <Show when=editing_ratings>
+                <div class="mt-4 flex gap-2">
+                    <button on:click=save_ratings class="btn btn-primary btn-sm">
+                        "Save Changes"
+                    </button>
+                </div>
+            </Show>
+        </div>
+    }
+}
+```
+
+### Visual Rating Display
+
+Each attribute is displayed with visual indicators:
+
+```rust
+#[component]
+pub fn RatingDisplay(
+    label: &'static str,
+    value: impl Fn() -> i32 + 'static,
+    editing: ReadSignal<bool>,
+    on_change: impl Fn(i32) + 'static,
+) -> impl IntoView {
+    let rating_color = move || {
+        match value() {
+            90..=100 => "text-purple-400", // Legendary
+            80..=89 => "text-red-400",     // Excellent  
+            70..=79 => "text-orange-400",  // Very Good
+            60..=69 => "text-yellow-400",  // Good
+            50..=59 => "text-green-400",   // Average
+            _ => "text-gray-400",          // Developing
+        }
+    };
+    
+    let rating_tier = move || {
+        match value() {
+            90..=100 => "Legendary",
+            80..=89 => "Excellent",
+            70..=79 => "Very Good", 
+            60..=69 => "Good",
+            50..=59 => "Average",
+            _ => "Developing",
+        }
+    };
+    
+    view! {
+        <div class="flex justify-between items-center">
+            <div>
+                <span class="font-medium">{label}</span>
+                <div class="text-xs text-slate-400">{rating_tier}</div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <Show 
+                    when=editing
+                    fallback=move || view! {
+                        <span class=move || format!("font-bold text-lg {}", rating_color())>
+                            {value}
+                        </span>
+                    }
+                >
+                    <input 
+                        type="range"
+                        min="1"
+                        max="100"
+                        prop:value=value
+                        on:input=move |ev| on_change(event_target_value(&ev).parse().unwrap_or(50))
+                        class="range range-primary range-sm"
+                    />
+                    <span class=move || format!("font-bold text-sm w-8 {}", rating_color())>
+                        {value}
+                    </span>
+                </Show>
+            </div>
+        </div>
+    }
+}
+```
+
+## Booking Applications
+
+### Match Type Suitability
+
+Power ratings help determine appropriate match types:
+
+<Tabs>
+  <Tab title="Power Showcase">
+    **Ideal for**: High Strength (85+) wrestlers
+    - **Match Types**: Power vs Power, Strongman competitions
+    - **Stipulations**: Last Man Standing, No Holds Barred
+    - **Booking Notes**: Emphasize physical dominance, shorter duration
+  </Tab>
+  
+  <Tab title="High-Flying Showcase">
+    **Ideal for**: High Agility (85+) wrestlers
+    - **Match Types**: Ladder matches, TLC matches, Battle Royals
+    - **Stipulations**: Tables matches, aerial-focused stipulations
+    - **Booking Notes**: Utilize vertical space, innovative spots
+  </Tab>
+  
+  <Tab title="Technical Classics">
+    **Ideal for**: High Technique (85+) wrestlers
+    - **Match Types**: Iron Man matches, submission matches
+    - **Stipulations**: Chain wrestling, hold-for-hold
+    - **Booking Notes**: Longer duration, storytelling emphasis
+  </Tab>
+  
+  <Tab title="Charisma Showcases">
+    **Ideal for**: High Charisma (85+) wrestlers
+    - **Match Types**: Promo battles, segment-heavy matches
+    - **Stipulations**: Character-driven stipulations
+    - **Booking Notes**: Crowd interaction, storyline advancement
+  </Tab>
+</Tabs>
+
+### Realistic Match Outcomes
+
+Power ratings can inform realistic booking decisions:
+
+```rust
+// Example booking logic
+pub fn calculate_match_probability(
+    wrestler1: &Wrestler, 
+    wrestler2: &Wrestler,
+    match_type: &str
+) -> f32 {
+    let mut w1_advantage = 0.0;
+    let mut w2_advantage = 0.0;
+    
+    match match_type {
+        "Singles" => {
+            // Balanced consideration of all attributes
+            w1_advantage += wrestler1.technique.unwrap_or(50) as f32 * 0.3;
+            w1_advantage += wrestler1.strength.unwrap_or(50) as f32 * 0.2;
+            w1_advantage += wrestler1.stamina.unwrap_or(50) as f32 * 0.2;
+            w1_advantage += wrestler1.speed.unwrap_or(50) as f32 * 0.15;
+            w1_advantage += wrestler1.agility.unwrap_or(50) as f32 * 0.15;
+            
+            // Similar calculation for wrestler2
+            // ...
+        }
+        "Ladder Match" => {
+            // Agility and strength more important
+            w1_advantage += wrestler1.agility.unwrap_or(50) as f32 * 0.4;
+            w1_advantage += wrestler1.strength.unwrap_or(50) as f32 * 0.3;
+            // ...
+        }
+        // Other match types...
+    }
+    
+    // Return probability as percentage
+    w1_advantage / (w1_advantage + w2_advantage)
+}
+```
+
+## Character Development
+
+### Rating Progression
+
+Power ratings should evolve with storylines and character development:
+
+<AccordionGroup>
+  <Accordion title="Rookie Development">
+    **Starting Ratings**: Most attributes 45-55
+    **Growth Pattern**: Gradual increases in technique and stamina
+    **Milestone Increases**: +5 points after major storyline victories
+    **Specialization**: Choose 1-2 attributes to focus development
+  </Accordion>
+  
+  <Accordion title="Mid-Career Enhancement">
+    **Current State**: Established strengths and weaknesses  
+    **Growth Areas**: Shore up weaknesses or enhance specializations
+    **Storyline Integration**: Attribute changes reflect character arcs
+    **Example**: Cowardly heel develops courage (Charisma +10)
+  </Accordion>
+  
+  <Accordion title="Veteran Decline">
+    **Aging Pattern**: Speed and Agility may decrease over time
+    **Compensation**: Technique and Charisma often increase
+    **Storyline Opportunities**: "Old school vs new school" dynamics
+    **Retirement Planning**: Significant rating drops signal career end
+  </Accordion>
+  
+  <Accordion title="Gimmick Changes">
+    **Character Shifts**: Major gimmick changes justify rating adjustments
+    **Examples**: 
+      - Technical wrestler becomes powerhouse (+15 Strength, -10 Technique)
+      - Silent enforcer finds voice (+20 Charisma)
+    **Gradual Changes**: Spread adjustments across multiple events
+  </Accordion>
+</AccordionGroup>
+
+## Advanced Features
+
+### Comparative Analysis
+
+The power ratings system enables sophisticated wrestler comparisons:
+
+```rust
+#[component]
+pub fn WrestlerComparison(
+    wrestler1: ReadSignal<Option<Wrestler>>,
+    wrestler2: ReadSignal<Option<Wrestler>>,
+) -> impl IntoView {
+    let comparison_data = move || {
+        if let (Some(w1), Some(w2)) = (wrestler1.get(), wrestler2.get()) {
+            vec![
+                ("Strength", w1.strength.unwrap_or(50), w2.strength.unwrap_or(50)),
+                ("Speed", w1.speed.unwrap_or(50), w2.speed.unwrap_or(50)),
+                ("Agility", w1.agility.unwrap_or(50), w2.agility.unwrap_or(50)),
+                ("Stamina", w1.stamina.unwrap_or(50), w2.stamina.unwrap_or(50)),
+                ("Charisma", w1.charisma.unwrap_or(50), w2.charisma.unwrap_or(50)),
+                ("Technique", w1.technique.unwrap_or(50), w2.technique.unwrap_or(50)),
+            ]
+        } else {
+            vec![]
+        }
+    };
+    
+    view! {
+        <div class="bg-slate-800 rounded-lg p-6">
+            <h3 class="text-xl font-bold mb-4">"Wrestler Comparison"</h3>
+            <div class="space-y-3">
+                <For
+                    each=comparison_data
+                    key=|(attr, _, _)| attr.to_string()
+                    children=move |(attribute, rating1, rating2)| {
+                        let advantage = if rating1 > rating2 { 1 } else if rating2 > rating1 { 2 } else { 0 };
+                        
+                        view! {
+                            <div class="flex items-center justify-between">
+                                <span class="font-medium w-20">{attribute}</span>
+                                <div class="flex-1 flex items-center gap-4">
+                                    <div class=move || format!(
+                                        "text-right w-12 {}",
+                                        if advantage == 1 { "text-green-400 font-bold" } else { "text-slate-300" }
+                                    )>
+                                        {rating1}
+                                    </div>
+                                    <div class="flex-1 relative h-2 bg-slate-600 rounded">
+                                        <div 
+                                            class="absolute left-0 h-full bg-blue-500 rounded"
+                                            style=move || format!("width: {}%", (rating1 as f32 / (rating1 + rating2) as f32) * 100.0)
+                                        ></div>
+                                    </div>
+                                    <div class=move || format!(
+                                        "w-12 {}",
+                                        if advantage == 2 { "text-green-400 font-bold" } else { "text-slate-300" }
+                                    )>
+                                        {rating2}
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                />
+            </div>
+        </div>
+    }
+}
+```
+
+### Overall Rating Calculation
+
+A composite rating helps with overall wrestler assessment:
+
+```rust
+pub fn calculate_overall_rating(wrestler: &Wrestler) -> i32 {
+    let strength = wrestler.strength.unwrap_or(50) as f32;
+    let speed = wrestler.speed.unwrap_or(50) as f32;
+    let agility = wrestler.agility.unwrap_or(50) as f32;
+    let stamina = wrestler.stamina.unwrap_or(50) as f32;
+    let charisma = wrestler.charisma.unwrap_or(50) as f32;
+    let technique = wrestler.technique.unwrap_or(50) as f32;
+    
+    // Weighted average based on wrestling importance
+    let overall = (
+        technique * 0.25 +      // Most important for match quality
+        stamina * 0.20 +        // Essential for consistency
+        charisma * 0.20 +       // Critical for main event status
+        strength * 0.15 +       // Physical presence
+        speed * 0.10 +          // Exciting offense
+        agility * 0.10          // Innovation and excitement
+    );
+    
+    overall.round() as i32
+}
+```
+
+## Integration with Other Systems
+
+### Title Contender Logic
+
+Power ratings can determine championship readiness:
+
+```rust
+pub fn is_title_ready(wrestler: &Wrestler, title: &Title) -> bool {
+    let overall = calculate_overall_rating(wrestler);
+    let charisma = wrestler.charisma.unwrap_or(50);
+    
+    match title.prestige_tier {
+        1 => overall >= 80 && charisma >= 75,  // World Championships
+        2 => overall >= 70 && charisma >= 65,  // Secondary Singles
+        3 => overall >= 60,                    // Mid-card titles
+        4 => overall >= 50,                    // Lower-tier titles
+        _ => true,                             // Developmental titles
+    }
+}
+```
+
+### Match Quality Prediction
+
+Use ratings to predict match quality for booking decisions:
+
+```rust
+pub fn predict_match_quality(participants: &[&Wrestler]) -> i32 {
+    if participants.is_empty() { return 0; }
+    
+    let avg_technique: f32 = participants.iter()
+        .map(|w| w.technique.unwrap_or(50) as f32)
+        .sum::<f32>() / participants.len() as f32;
+        
+    let avg_charisma: f32 = participants.iter()
+        .map(|w| w.charisma.unwrap_or(50) as f32)
+        .sum::<f32>() / participants.len() as f32;
+    
+    // Match quality based on in-ring ability and star power
+    let quality = (avg_technique * 0.7) + (avg_charisma * 0.3);
+    
+    quality.round() as i32
+}
+```
+
+## Best Practices
+
+### Rating Consistency
+
+<AccordionGroup>
+  <Accordion title="Realistic Distributions">
+    - Most wrestlers should be 60-80 range
+    - 90+ ratings reserved for true legends
+    - Avoid too many perfect 100s
+    - Balance strengths with appropriate weaknesses
+  </Accordion>
+  
+  <Accordion title="Character Authenticity">
+    - Ratings should match on-screen presentation
+    - Consider wrestler's actual abilities and character
+    - Update ratings to reflect storyline development
+    - Maintain consistency across similar wrestlers
+  </Accordion>
+  
+  <Accordion title="Booking Integration">
+    - Use ratings to inform match booking decisions
+    - Consider attribute matchups for interesting dynamics
+    - Plan storylines around rating development
+    - Balance rating advantages in multi-person matches
+  </Accordion>
+</AccordionGroup>
+
+The Power Ratings System transforms WWE Universe Manager from a simple roster tool into a sophisticated character development platform that supports realistic booking decisions and compelling storyline development.

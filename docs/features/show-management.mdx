@@ -1,0 +1,179 @@
+---
+title: 'Show Management'
+description: 'Create and manage wrestling shows in your universe'
+---
+
+## Overview
+
+The Show Management feature allows you to create, organize, and manage wrestling shows within your WWE Universe. Each show represents a wrestling program with its own identity, roster, and storylines.
+
+## Creating a Show
+
+<Steps>
+  <Step title="Navigate to Create Show">
+    Click the "Create Show" button from the main dashboard action buttons
+  </Step>
+  <Step title="Fill in Show Details">
+    Provide a name and description for your show:
+    - **Name**: The show's title (e.g., "Monday Night RAW", "Friday Night SmackDown")
+    - **Description**: A brief description of the show's theme or purpose
+  </Step>
+  <Step title="Save the Show">
+    Click "Create Show" to save your new show to the database
+  </Step>
+  <Step title="Return to Dashboard">
+    After successful creation, you'll return to the dashboard where the new show appears in the dropdown
+  </Step>
+</Steps>
+
+## Show Features
+
+<CardGroup cols={2}>
+  <Card
+    title="Unique Identity"
+    icon="id-card"
+  >
+    Each show has a unique ID and custom name/description
+  </Card>
+  <Card
+    title="Persistent Storage"
+    icon="database"
+  >
+    Shows are stored in SQLite database with timestamps
+  </Card>
+  <Card
+    title="Validation"
+    icon="shield-check"
+  >
+    Form validation ensures all required fields are filled
+  </Card>
+  <Card
+    title="Real-time Updates"
+    icon="refresh"
+  >
+    Show list updates immediately after creation
+  </Card>
+</CardGroup>
+
+## Database Schema
+
+Shows are stored with the following structure:
+
+```sql
+CREATE TABLE shows (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL,
+  created_at DATETIME,
+  updated_at DATETIME
+);
+```
+
+## API Reference
+
+### Create Show
+
+<CodeGroup>
+
+```rust Tauri Command
+#[tauri::command]
+pub fn create_show(
+    state: State<'_, DbState>, 
+    show_data: ShowData
+) -> Result<Show, String>
+```
+
+```rust Request Type
+pub struct ShowData {
+    pub name: String,
+    pub description: String,
+}
+```
+
+```rust Response Type
+pub struct Show {
+    pub id: i32,
+    pub name: String,
+    pub description: String,
+}
+```
+
+</CodeGroup>
+
+### Get Shows
+
+Retrieve all shows from the database:
+
+```rust
+#[tauri::command]
+pub fn get_shows(state: State<'_, DbState>) -> Result<Vec<Show>, String>
+```
+
+## UI Components
+
+The show management feature uses these components:
+
+<Tabs>
+  <Tab title="Dashboard Show Dropdown">
+    Displays a dropdown list of all available shows on the main dashboard for selection.
+    
+    **Features:**
+    - Loading state with spinner
+    - Error handling for failed requests
+    - Real-time updates when shows are added
+    - Integration with dashboard action buttons
+    - Responsive design for all screen sizes
+  </Tab>
+  <Tab title="CreateShow Form">
+    A dedicated form component for creating new shows with validation and submission handling.
+    
+    **Features:**
+    - Form validation for required fields
+    - Loading states during submission
+    - Success/error messaging
+    - Automatic navigation back to dashboard
+    - Modern WWE-themed styling
+  </Tab>
+</Tabs>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Naming Conventions">
+    - Use clear, descriptive show names
+    - Avoid special characters that might cause issues
+    - Consider branding consistency across your universe
+  </Accordion>
+  
+  <Accordion title="Descriptions">
+    - Keep descriptions concise but informative
+    - Include the show's theme or target audience
+    - Update descriptions as your show evolves
+  </Accordion>
+  
+  <Accordion title="Organization">
+    - Plan your show hierarchy before creating
+    - Consider how shows will interact in your universe
+    - Think about scheduling and conflicts
+  </Accordion>
+</AccordionGroup>
+
+## Common Issues
+
+<Warning>
+  **Empty Fields**: Make sure both name and description are filled before submitting the form.
+</Warning>
+
+<Info>
+  **Duplicate Names**: The system allows duplicate show names, but it's recommended to use unique names for clarity.
+</Info>
+
+## Future Enhancements
+
+Planned improvements for show management include:
+
+- Show categories and brands
+- Roster assignment to specific shows
+- Scheduling and calendar integration
+- Show statistics and analytics
+- Import/export functionality

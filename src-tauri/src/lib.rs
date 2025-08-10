@@ -1,19 +1,206 @@
+//! WWE Universe Manager - Backend Library
+//!
+//! This crate provides the backend functionality for the WWE Universe Manager application,
+//! including database operations, authentication, and Tauri command handlers.
+
 pub mod auth;
 pub mod db;
 pub mod models;
 pub mod schema;
+pub mod types;
 
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
+use db::{establish_connection, DbState};
+use tauri::{AppHandle, Manager};
 
+/// Main entry point for the Tauri application
+/// 
+/// Initializes the database connection pool, registers all Tauri commands,
+/// and starts the application. This function sets up:
+/// - Database connection pooling
+/// - All Tauri command handlers for database operations
+/// - Window management commands
+/// - Authentication commands
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Initialize database connection pool
+    let pool = establish_connection();
+    let db_state = DbState { pool };
+
+    // Build and run the Tauri application
     tauri::Builder::default()
+        .manage(db_state)
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![
+            // Database operations
+            db::get_shows,
+            db::create_show,
+            db::get_wrestlers,
+            db::get_unassigned_wrestlers,
+            db::get_wrestler_by_id,
+            db::update_wrestler_power_ratings,
+            db::update_wrestler_basic_stats,
+            db::update_wrestler_name,
+            db::update_wrestler_real_name,
+            db::update_wrestler_biography,
+            db::create_user,
+            db::create_wrestler,
+            db::create_user_wrestler,
+            db::delete_wrestler,
+            db::create_belt,
+            db::get_titles,
+            db::get_titles_for_show,
+            db::get_titles_for_wrestler,
+            db::get_unassigned_titles,
+            db::update_title_holder,
+            db::vacate_title,
+            db::delete_title,
+            db::create_test_data,
+            // Show roster operations
+            db::get_wrestlers_for_show,
+            db::assign_wrestler_to_show,
+            db::remove_wrestler_from_show,
+            db::get_shows_for_wrestler,
+            // Match booking operations
+            db::create_match,
+            db::get_matches_for_show,
+            db::add_wrestler_to_match,
+            db::get_match_participants,
+            db::set_match_winner,
+            // Authentication operations
+            auth::verify_credentials,
+            auth::register_user,
+            // Window operations
+            open_wrestler_window,
+            open_title_window,
+            back_to_wrestlers_list,
+        ])
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .expect("Failed to run Tauri application");
+}
+
+/// Opens a wrestler details window (only one allowed at a time)
+/// 
+/// # Arguments
+/// * `app` - The Tauri application handle
+/// * `wrestler_id` - Optional wrestler ID to display (defaults to "default")
+/// 
+/// # Returns
+/// * `Ok(())` - Window opened or focused successfully
+/// * `Err(String)` - Error message if window operation fails
+/// 
+/// # Behavior
+/// - If a wrestler window already exists, updates its content and focuses it
+/// - Otherwise creates a new window with the specified wrestler
+#[tauri::command]
+async fn open_wrestler_window(app: AppHandle, wrestler_id: Option<String>) -> Result<(), String> {
+    let wrestler_id = wrestler_id.unwrap_or_else(|| "default".to_string());
+    let window_label = "wrestler-details"; // Use consistent label for all wrestler windows
+    
+    // Check if window already exists
+    if let Some(existing_window) = app.get_webview_window(window_label) {
+        // If window exists, update the URL hash to load the new wrestler
+        let js_code = format!("window.location.hash = '#wrestler?id={}';", wrestler_id);
+        existing_window.eval(&js_code)
+            .map_err(|e| e.to_string())?;
+        existing_window.set_focus().map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+
+    // Create new window with wrestler ID in the URL hash
+    let url = format!("index.html#wrestler?id={}", wrestler_id);
+    let _window = tauri::WebviewWindowBuilder::new(
+        &app,
+        window_label,
+        tauri::WebviewUrl::App(url.into()),
+    )
+    .title("Wrestler Details")
+    .inner_size(885.0, 860.0)
+    .min_inner_size(600.0, 500.0)
+    .center()
+    .build()
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+/// Opens a title details window (only one allowed at a time)
+/// 
+/// # Arguments
+/// * `app` - The Tauri application handle
+/// * `title_id` - Optional title ID to display (defaults to "default")
+/// 
+/// # Returns
+/// * `Ok(())` - Window opened or focused successfully
+/// * `Err(String)` - Error message if window operation fails
+/// 
+/// # Behavior
+/// - If a title window already exists, updates its content and focuses it
+/// - Otherwise creates a new window with the specified title
+#[tauri::command]
+async fn open_title_window(app: AppHandle, title_id: Option<String>) -> Result<(), String> {
+    let title_id = title_id.unwrap_or_else(|| "default".to_string());
+    let window_label = "title-details"; // Use consistent label for all title windows
+    
+    // Check if window already exists
+    if let Some(existing_window) = app.get_webview_window(window_label) {
+        // If window exists, update the URL hash to load the new title
+        let js_code = format!("window.location.hash = '#title?id={}';", title_id);
+        existing_window.eval(&js_code)
+            .map_err(|e| e.to_string())?;
+        existing_window.set_focus().map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+
+    // Create new window with title ID in the URL hash
+    let url = format!("index.html#title?id={}", title_id);
+    let _window = tauri::WebviewWindowBuilder::new(
+        &app,
+        window_label,
+        tauri::WebviewUrl::App(url.into()),
+    )
+    .title("Title Details")
+    .inner_size(885.0, 860.0)
+    .min_inner_size(600.0, 500.0)
+    .center()
+    .build()
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+/// Navigates back to the wrestlers list from a wrestler details window
+/// 
+/// # Arguments
+/// * `app` - The Tauri application handle
+/// 
+/// # Returns
+/// * `Ok(())` - Navigation successful
+/// * `Err(String)` - Error message if navigation fails
+/// 
+/// # Behavior
+/// - Closes the wrestler details window
+/// - Navigates the main window to the wrestlers page
+#[tauri::command]
+async fn back_to_wrestlers_list(app: AppHandle) -> Result<(), String> {
+    // Close the wrestler details window if it exists
+    if let Some(wrestler_window) = app.get_webview_window("wrestler-details") {
+        wrestler_window.close().map_err(|e| e.to_string())?;
+    }
+    
+    // Navigate the main window to wrestlers page
+    if let Some(main_window) = app.get_webview_window("main") {
+        let js_code = "
+            if (window.setCurrentPage) {
+                window.setCurrentPage('wrestlers');
+            } else {
+                // Fallback: emit a custom event that the frontend can listen to
+                window.dispatchEvent(new CustomEvent('navigate', { detail: { page: 'wrestlers' } }));
+            }
+        ";
+        main_window.eval(js_code)
+            .map_err(|e| format!("Failed to navigate main window: {}", e))?;
+        main_window.set_focus().map_err(|e| e.to_string())?;
+    }
+    
+    Ok(())
 }

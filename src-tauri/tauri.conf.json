@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "wwe-universe-manager",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "identifier": "com.wwe-universe-manager.app",
   "build": {
     "beforeDevCommand": "trunk serve",
@@ -15,7 +15,7 @@
       {
         "title": "wwe-universe-manager",
         "width": 800,
-        "height": 600
+        "height": 890
       }
     ],
     "security": {

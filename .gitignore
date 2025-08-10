@@ -6,3 +6,5 @@
 /node_modules/
 output.css
 .idea/
+*.env
+.DS_Store

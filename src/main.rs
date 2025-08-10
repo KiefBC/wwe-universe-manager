@@ -1,4 +1,10 @@
 mod app;
+mod components;
+mod constants;
+mod errors;
+mod services;
+mod types;
+mod utils;
 
 use app::*;
 use leptos::prelude::*;

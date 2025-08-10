@@ -1,8 +1,16 @@
 {
   "dependencies": {
-    "@tailwindcss/cli": "^4.0.15"
+    "@tailwindcss/cli": "^4.0.15",
+    "lucide": "^0.487.0"
   },
   "devDependencies": {
+    "daisyui": "^5.0.9",
     "tailwindcss": "^4.0.15"
+  },
+  "scripts": {
+    "build-css": "tailwindcss -i ./style/tailwind.css -o ./style/output.css --watch",
+    "build-css-prod": "tailwindcss -i ./style/tailwind.css -o ./style/output.css --minify",
+    "dev": "cargo tauri dev",
+    "build": "cargo tauri build"
   }
 }

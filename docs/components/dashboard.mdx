@@ -1,0 +1,246 @@
+---
+title: 'Dashboard Component'
+description: 'Main dashboard interface with show selector and action buttons'
+---
+
+## Overview
+
+The Dashboard component serves as the main interface for WWE Universe Manager. It provides a centralized location for accessing all major features through a show selector dropdown and action buttons.
+
+## Component Structure
+
+The dashboard is organized into several key sections:
+
+### Show Selector Section
+- **Dropdown**: Displays all available shows from the database
+- **Loading State**: Shows spinner while fetching shows
+- **Error Handling**: Displays error messages if show loading fails
+- **Real-time Updates**: Automatically refreshes when new shows are created
+
+### Action Buttons Section
+A grid of buttons providing access to main application features:
+
+<CardGroup cols={2}>
+  <Card
+    title="Create Show"
+    icon="plus"
+  >
+    Navigate to the show creation form
+  </Card>
+  <Card
+    title="Wrestlers"
+    icon="users"
+  >
+    Open wrestler details in a separate window
+  </Card>
+  <Card
+    title="Championships"
+    icon="trophy"
+  >
+    Access championship management (planned feature)
+  </Card>
+  <Card
+    title="Test Data"
+    icon="database"
+  >
+    Populate database with sample wrestlers and shows
+  </Card>
+</CardGroup>
+
+## Technical Implementation
+
+### Component Definition
+
+```rust
+#[component]
+pub fn Dashboard() -> impl IntoView {
+    // Signal for managing show selection
+    let (selected_show, set_selected_show) = signal(None::<Show>);
+    
+    // Resource for loading shows from database
+    let shows_resource = Resource::new(|| (), |_| get_shows());
+    
+    view! {
+        // Dashboard layout with show selector and action buttons
+    }
+}
+```
+
+### State Management
+
+The dashboard uses Leptos signals for reactive state management:
+
+- **`selected_show`**: Tracks the currently selected show from the dropdown
+- **`shows_resource`**: Manages the asynchronous loading of shows from the database
+
+### Styling
+
+The dashboard uses Tailwind CSS with WWE theming:
+
+```rust
+view! {
+    <div class="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6">
+        <div class="max-w-4xl mx-auto">
+            // Show selector and action buttons
+        </div>
+    </div>
+}
+```
+
+## User Interactions
+
+### Show Selection
+
+<Steps>
+  <Step title="Load Shows">
+    Dashboard automatically loads all shows when component mounts
+  </Step>
+  <Step title="Display Dropdown">
+    Shows populate the dropdown with names and descriptions
+  </Step>
+  <Step title="User Selection">
+    User can select a show from the dropdown (currently display-only)
+  </Step>
+  <Step title="Future Enhancement">
+    Selected show will filter wrestlers and other data in future versions
+  </Step>
+</Steps>
+
+### Action Button Interactions
+
+<Tabs>
+  <Tab title="Create Show">
+    ```rust
+    on:click=move |_| {
+        set_current_page(Page::CreateShow);
+    }
+    ```
+    Navigates to the CreateShow component for form-based show creation.
+  </Tab>
+  
+  <Tab title="Wrestlers">
+    ```rust
+    on:click=move |_| {
+        spawn_local(async move {
+            let _ = open_wrestler_window().await;
+        });
+    }
+    ```
+    Opens a separate Tauri window displaying wrestler details.
+  </Tab>
+  
+  <Tab title="Test Data">
+    ```rust
+    on:click=move |_| {
+        spawn_local(async move {
+            match create_test_data().await {
+                Ok(_) => {
+                    // Trigger shows reload
+                    shows_resource.refetch();
+                }
+                Err(e) => {
+                    // Handle error
+                }
+            }
+        });
+    }
+    ```
+    Populates database with sample data and refreshes the show dropdown.
+  </Tab>
+</Tabs>
+
+## Responsive Design
+
+The dashboard adapts to different screen sizes:
+
+### Desktop Layout
+- **Grid**: 2x2 grid for action buttons
+- **Spacing**: Generous padding and margins
+- **Typography**: Large headings and readable text
+
+### Mobile Layout
+- **Stack**: Vertical stacking of elements
+- **Buttons**: Full-width action buttons
+- **Dropdown**: Full-width show selector
+
+### CSS Implementation
+
+```css
+/* Action buttons grid */
+.grid {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+}
+```
+
+## Future Enhancements
+
+### Planned Features
+
+<AccordionGroup>
+  <Accordion title="Show Filtering">
+    The selected show will filter wrestler rosters, championships, and other content specific to that show.
+  </Accordion>
+  
+  <Accordion title="Recent Activity">
+    Display recent activities like new wrestlers added, shows created, or championship changes.
+  </Accordion>
+  
+  <Accordion title="Quick Stats">
+    Show summary statistics like total wrestlers, active championships, and upcoming events.
+  </Accordion>
+  
+  <Accordion title="Search Functionality">
+    Add search capabilities to quickly find wrestlers, shows, or championships.
+  </Accordion>
+</AccordionGroup>
+
+### Current Limitations
+
+<Warning>
+The show selector is currently display-only and doesn't filter other content. This functionality is planned for future releases.
+</Warning>
+
+<Info>
+The Championships button is a placeholder and doesn't have associated functionality yet.
+</Info>
+
+## Related Components
+
+<CardGroup cols={2}>
+  <Card
+    title="CreateShow"
+    icon="plus"
+    href="/components/create-show"
+  >
+    Form component accessed via Create Show button
+  </Card>
+  <Card
+    title="WrestlerDetailsWindow"
+    icon="users"
+    href="/components/wrestler-details-window"
+  >
+    Separate window opened via Wrestlers button
+  </Card>
+  <Card
+    title="App Router"
+    icon="route"
+    href="/components/app"
+  >
+    Root component that manages dashboard navigation
+  </Card>
+  <Card
+    title="Test Data Feature"
+    icon="database"
+    href="/features/test-data"
+  >
+    Feature accessed via Test Data button
+  </Card>
+</CardGroup>

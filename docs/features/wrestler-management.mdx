@@ -1,0 +1,868 @@
+---
+title: "Wrestler Management"
+description: "Enhanced wrestler profiles with power ratings, biographical details, and career tracking"
+---
+
+## Overview
+
+Wrestler Management in WWE Universe Manager goes far beyond simple roster listings. The system provides comprehensive wrestler profiles with detailed attributes, career statistics, biographical information, and sophisticated power ratings that drive realistic booking decisions and character development.
+
+<img
+  className="block dark:hidden"
+  src="/images/wrestler-management-light.png"
+  alt="Wrestler Management Interface Light Mode"
+/>
+<img
+  className="hidden dark:block"
+  src="/images/wrestler-management-dark.png"
+  alt="Wrestler Management Interface Dark Mode"
+/>
+
+## Enhanced Wrestler Profiles
+
+<CardGroup cols={2}>
+  <Card
+    title="Power Ratings System"
+    icon="chart-bar"
+  >
+    Six-attribute system: Strength, Speed, Agility, Stamina, Charisma, and Technique
+  </Card>
+  <Card
+    title="Biographical Details"
+    icon="user"
+  >
+    Real names, heights, weights, debut years, and extensive biographical information
+  </Card>
+  <Card
+    title="Career Statistics"
+    icon="trophy"
+  >
+    Win/loss records, championship history, and performance tracking
+  </Card>
+  <Card
+    title="Multi-Window Interface"
+    icon="window-restore"
+  >
+    Dedicated wrestler detail windows with real-time updates and state preservation
+  </Card>
+</CardGroup>
+
+## Wrestler Creation System
+
+### Basic Wrestler Creation
+
+Simple wrestler creation for quick roster building:
+
+```rust
+#[component]
+pub fn CreateWrestlerForm() -> impl IntoView {
+    let (name, set_name) = create_signal(String::new());
+    let (gender, set_gender) = create_signal("Male".to_string());
+    let (creating, set_creating) = create_signal(false);
+    
+    let create_wrestler_action = move |_| {
+        if name.get().trim().is_empty() { return; }
+        
+        set_creating.set(true);
+        let wrestler_data = WrestlerData {
+            name: name.get().trim().to_string(),
+            gender: gender.get(),
+        };
+        
+        spawn_local(async move {
+            match create_wrestler(wrestler_data).await {
+                Ok(new_wrestler) => {
+                    log::info!("Wrestler created: {}", new_wrestler.name);
+                    set_name.set(String::new());
+                }
+                Err(e) => log::error!("Failed to create wrestler: {}", e),
+            }
+            set_creating.set(false);
+        });
+    };
+    
+    view! {
+        <div class="bg-slate-800 rounded-lg p-6">
+            <h3 class="text-xl font-bold text-yellow-400 mb-4">"Create New Wrestler"</h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="label">
+                        <span class="label-text">"Wrestler Name"</span>
+                    </label>
+                    <input
+                        type="text"
+                        placeholder="Enter wrestler name..."
+                        prop:value=name
+                        on:input=move |ev| set_name.set(event_target_value(&ev))
+                        class="input input-bordered w-full"
+                    />
+                </div>
+                
+                <div>
+                    <label class="label">
+                        <span class="label-text">"Gender"</span>
+                    </label>
+                    <select
+                        prop:value=gender
+                        on:change=move |ev| set_gender.set(event_target_value(&ev))
+                        class="select select-bordered w-full"
+                    >
+                        <option value="Male">"Male"</option>
+                        <option value="Female">"Female"</option>
+                        <option value="Other">"Other"</option>
+                    </select>
+                </div>
+                
+                <button
+                    on:click=create_wrestler_action
+                    class="btn btn-primary w-full"
+                    disabled=move || creating.get() || name.get().trim().is_empty()
+                >
+                    <Show when=creating fallback=|| "Create Wrestler">
+                        <span class="loading loading-spinner loading-sm"></span>
+                        "Creating..."
+                    </Show>
+                </button>
+            </div>
+        </div>
+    }
+}
+```
+
+### Enhanced Wrestler Creation
+
+Comprehensive wrestler creation with full profile details:
+
+```rust
+#[component]
+pub fn CreateEnhancedWrestlerForm() -> impl IntoView {
+    let (wrestler_data, set_wrestler_data) = create_signal(EnhancedWrestlerData::default());
+    let (creating, set_creating) = create_signal(false);
+    
+    let update_field = move |field: &str, value: String| {
+        let mut data = wrestler_data.get();
+        match field {
+            "name" => data.name = value,
+            "gender" => data.gender = value,
+            "real_name" => data.real_name = if value.is_empty() { None } else { Some(value) },
+            "height" => data.height = if value.is_empty() { None } else { Some(value) },
+            "weight" => data.weight = if value.is_empty() { None } else { Some(value) },
+            "promotion" => data.promotion = if value.is_empty() { None } else { Some(value) },
+            "biography" => data.biography = if value.is_empty() { None } else { Some(value) },
+            _ => {}
+        }
+        set_wrestler_data.set(data);
+    };
+    
+    let update_rating = move |field: &str, value: i32| {
+        let mut data = wrestler_data.get();
+        match field {
+            "strength" => data.strength = Some(value),
+            "speed" => data.speed = Some(value),
+            "agility" => data.agility = Some(value),
+            "stamina" => data.stamina = Some(value),
+            "charisma" => data.charisma = Some(value),
+            "technique" => data.technique = Some(value),
+            _ => {}
+        }
+        set_wrestler_data.set(data);
+    };
+    
+    view! {
+        <div class="bg-slate-800 rounded-lg p-6">
+            <h3 class="text-xl font-bold text-yellow-400 mb-6">"Create Enhanced Wrestler"</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                // Basic Information
+                <div class="space-y-4">
+                    <h4 class="text-lg font-semibold text-white">"Basic Information"</h4>
+                    
+                    <input
+                        type="text"
+                        placeholder="Ring Name *"
+                        prop:value=move || wrestler_data.get().name
+                        on:input=move |ev| update_field("name", event_target_value(&ev))
+                        class="input input-bordered w-full"
+                    />
+                    
+                    <input
+                        type="text"
+                        placeholder="Real Name"
+                        prop:value=move || wrestler_data.get().real_name.unwrap_or_default()
+                        on:input=move |ev| update_field("real_name", event_target_value(&ev))
+                        class="input input-bordered w-full"
+                    />
+                    
+                    <select
+                        prop:value=move || wrestler_data.get().gender
+                        on:change=move |ev| update_field("gender", event_target_value(&ev))
+                        class="select select-bordered w-full"
+                    >
+                        <option value="Male">"Male"</option>
+                        <option value="Female">"Female"</option>
+                        <option value="Other">"Other"</option>
+                    </select>
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <input
+                            type="text"
+                            placeholder="Height (e.g., 6'2\")"
+                            prop:value=move || wrestler_data.get().height.unwrap_or_default()
+                            on:input=move |ev| update_field("height", event_target_value(&ev))
+                            class="input input-bordered"
+                        />
+                        <input
+                            type="text"
+                            placeholder="Weight (e.g., 245 lbs)"
+                            prop:value=move || wrestler_data.get().weight.unwrap_or_default()
+                            on:input=move |ev| update_field("weight", event_target_value(&ev))
+                            class="input input-bordered"
+                        />
+                    </div>
+                    
+                    <input
+                        type="number"
+                        placeholder="Debut Year"
+                        prop:value=move || wrestler_data.get().debut_year.map(|y| y.to_string()).unwrap_or_default()
+                        on:input=move |ev| {
+                            if let Ok(year) = event_target_value(&ev).parse::<i32>() {
+                                let mut data = wrestler_data.get();
+                                data.debut_year = Some(year);
+                                set_wrestler_data.set(data);
+                            }
+                        }
+                        class="input input-bordered w-full"
+                    />
+                    
+                    <input
+                        type="text"
+                        placeholder="Promotion/Brand"
+                        prop:value=move || wrestler_data.get().promotion.unwrap_or_default()
+                        on:input=move |ev| update_field("promotion", event_target_value(&ev))
+                        class="input input-bordered w-full"
+                    />
+                </div>
+                
+                // Power Ratings
+                <div class="space-y-4">
+                    <h4 class="text-lg font-semibold text-white">"Power Ratings (1-100)"</h4>
+                    
+                    <div class="space-y-3">
+                        <PowerRatingInput
+                            label="Strength"
+                            value=move || wrestler_data.get().strength.unwrap_or(50)
+                            on_change=move |val| update_rating("strength", val)
+                        />
+                        <PowerRatingInput
+                            label="Speed"
+                            value=move || wrestler_data.get().speed.unwrap_or(50)
+                            on_change=move |val| update_rating("speed", val)
+                        />
+                        <PowerRatingInput
+                            label="Agility"
+                            value=move || wrestler_data.get().agility.unwrap_or(50)
+                            on_change=move |val| update_rating("agility", val)
+                        />
+                        <PowerRatingInput
+                            label="Stamina"
+                            value=move || wrestler_data.get().stamina.unwrap_or(50)
+                            on_change=move |val| update_rating("stamina", val)
+                        />
+                        <PowerRatingInput
+                            label="Charisma"
+                            value=move || wrestler_data.get().charisma.unwrap_or(50)
+                            on_change=move |val| update_rating("charisma", val)
+                        />
+                        <PowerRatingInput
+                            label="Technique"
+                            value=move || wrestler_data.get().technique.unwrap_or(50)
+                            on_change=move |val| update_rating("technique", val)
+                        />
+                    </div>
+                </div>
+            </div>
+            
+            // Biography Section
+            <div class="mt-6">
+                <label class="label">
+                    <span class="label-text text-lg font-semibold">"Biography"</span>
+                </label>
+                <textarea
+                    placeholder="Enter wrestler biography, background, gimmick details..."
+                    prop:value=move || wrestler_data.get().biography.unwrap_or_default()
+                    on:input=move |ev| update_field("biography", event_target_value(&ev))
+                    class="textarea textarea-bordered w-full h-24"
+                ></textarea>
+            </div>
+            
+            <button
+                on:click=move |_| {
+                    set_creating.set(true);
+                    let data = wrestler_data.get();
+                    spawn_local(async move {
+                        match create_user_wrestler(data).await {
+                            Ok(wrestler) => {
+                                log::info!("Enhanced wrestler created: {}", wrestler.name);
+                                set_wrestler_data.set(EnhancedWrestlerData::default());
+                            }
+                            Err(e) => log::error!("Failed to create wrestler: {}", e),
+                        }
+                        set_creating.set(false);
+                    });
+                }
+                class="btn btn-primary w-full mt-6"
+                disabled=move || creating.get() || wrestler_data.get().name.trim().is_empty()
+            >
+                <Show when=creating fallback=|| "Create Enhanced Wrestler">
+                    <span class="loading loading-spinner loading-sm"></span>
+                    "Creating..."
+                </Show>
+            </button>
+        </div>
+    }
+}
+```
+
+## Wrestler Details Window
+
+### Comprehensive Profile Display
+
+The wrestler details window provides complete wrestler management:
+
+```rust
+#[component]
+pub fn WrestlerDetailsWindow() -> impl IntoView {
+    let (wrestler, set_wrestler) = create_signal(None::<Wrestler>);
+    let (loading, set_loading) = create_signal(true);
+    let (error, set_error) = create_signal(None::<String>);
+    
+    // Extract wrestler ID from URL
+    let wrestler_id = use_memo(move |_| extract_wrestler_id_from_url());
+    
+    // Load wrestler data
+    Effect::new(move |_| {
+        if let Some(id) = wrestler_id.get() {
+            set_loading.set(true);
+            spawn_local(async move {
+                match get_wrestler_by_id(id).await {
+                    Ok(Some(w)) => {
+                        set_wrestler.set(Some(w));
+                        set_error.set(None);
+                    }
+                    Ok(None) => set_error.set(Some("Wrestler not found".to_string())),
+                    Err(e) => set_error.set(Some(e)),
+                }
+                set_loading.set(false);
+            });
+        }
+    });
+    
+    view! {
+        <div class="min-h-screen bg-slate-900 text-white p-6">
+            <Show when=move || !loading.get()>
+                <Show
+                    when=move || error.get().is_none()
+                    fallback=move || view! {
+                        <div class="text-center mt-20">
+                            <div class="text-red-400 text-xl mb-4">
+                                {error.get().unwrap_or_default()}
+                            </div>
+                            <button 
+                                on:click=move |_| {
+                                    if let Some(id) = wrestler_id.get() {
+                                        spawn_local(async move {
+                                            set_loading.set(true);
+                                            // Retry loading
+                                        });
+                                    }
+                                }
+                                class="btn btn-primary"
+                            >
+                                "Retry"
+                            </button>
+                        </div>
+                    }
+                >
+                    <div class="max-w-4xl mx-auto space-y-6">
+                        // Header Section
+                        <WrestlerHeader wrestler=wrestler />
+                        
+                        // Main Content Grid
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            // Left Column
+                            <div class="space-y-6">
+                                <BasicInfoSection wrestler=wrestler set_wrestler=set_wrestler />
+                                <PowerRatingsSection wrestler=wrestler set_wrestler=set_wrestler />
+                                <CareerStatsSection wrestler=wrestler />
+                            </div>
+                            
+                            // Right Column
+                            <div class="space-y-6">
+                                <BiographySection wrestler=wrestler set_wrestler=set_wrestler />
+                                <ChampionshipSection wrestler=wrestler />
+                                <SignatureMovesSection wrestler=wrestler />
+                            </div>
+                        </div>
+                        
+                        // Action Buttons
+                        <WrestlerActions wrestler=wrestler />
+                    </div>
+                </Show>
+            </Show>
+            
+            <Show when=loading>
+                <div class="flex justify-center items-center min-h-screen">
+                    <span class="loading loading-spinner loading-lg"></span>
+                </div>
+            </Show>
+        </div>
+    }
+}
+```
+
+### Header Section
+
+Displays wrestler's main information prominently:
+
+```rust
+#[component]
+pub fn WrestlerHeader(wrestler: ReadSignal<Option<Wrestler>>) -> impl IntoView {
+    view! {
+        <Show when=move || wrestler.get().is_some()>
+            <div class="bg-gradient-to-r from-red-600 to-yellow-600 rounded-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-4xl font-bold text-white mb-2">
+                            {move || wrestler.get().map(|w| w.name).unwrap_or_default()}
+                        </h1>
+                        <div class="flex items-center space-x-4 text-white/90">
+                            <Show when=move || wrestler.get().and_then(|w| w.real_name).is_some()>
+                                <span class="text-lg">
+                                    "(" {move || wrestler.get().and_then(|w| w.real_name).unwrap_or_default()} ")"
+                                </span>
+                            </Show>
+                            <span class="text-lg">
+                                {move || wrestler.get().map(|w| w.gender).unwrap_or_default()}
+                            </span>
+                            <Show when=move || wrestler.get().and_then(|w| w.promotion).is_some()>
+                                <span class="bg-black/30 px-3 py-1 rounded-full text-sm font-semibold">
+                                    {move || wrestler.get().and_then(|w| w.promotion).unwrap_or_default()}
+                                </span>
+                            </Show>
+                        </div>
+                    </div>
+                    
+                    <div class="text-right">
+                        <div class="text-3xl font-bold text-white mb-1">
+                            {move || {
+                                if let Some(w) = wrestler.get() {
+                                    calculate_overall_rating(&w).to_string()
+                                } else {
+                                    "0".to_string()
+                                }
+                            }}
+                        </div>
+                        <div class="text-white/75 text-sm">"Overall Rating"</div>
+                    </div>
+                </div>
+            </div>
+        </Show>
+    }
+}
+```
+
+### Basic Information Management
+
+Editable basic wrestler information:
+
+```rust
+#[component]
+pub fn BasicInfoSection(
+    wrestler: ReadSignal<Option<Wrestler>>,
+    set_wrestler: WriteSignal<Option<Wrestler>>,
+) -> impl IntoView {
+    let (editing, set_editing) = create_signal(false);
+    let (temp_data, set_temp_data) = create_signal(BasicWrestlerInfo::default());
+    
+    let start_editing = move |_| {
+        if let Some(w) = wrestler.get() {
+            set_temp_data.set(BasicWrestlerInfo {
+                name: w.name.clone(),
+                real_name: w.real_name.clone().unwrap_or_default(),
+                height: w.height.clone().unwrap_or_default(),
+                weight: w.weight.clone().unwrap_or_default(),
+                debut_year: w.debut_year.unwrap_or(2020),
+                promotion: w.promotion.clone().unwrap_or_default(),
+            });
+            set_editing.set(true);
+        }
+    };
+    
+    let save_changes = move |_| {
+        if let Some(w) = wrestler.get() {
+            let data = temp_data.get();
+            
+            spawn_local(async move {
+                // Save each field individually
+                let _ = update_wrestler_name(w.id, data.name).await;
+                let _ = update_wrestler_real_name(w.id, data.real_name).await;
+                
+                // Reload wrestler data
+                if let Ok(Some(updated)) = get_wrestler_by_id(w.id).await {
+                    set_wrestler.set(Some(updated));
+                }
+            });
+            
+            set_editing.set(false);
+        }
+    };
+    
+    view! {
+        <div class="bg-slate-800 rounded-lg p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-yellow-400">"Basic Information"</h3>
+                <Show
+                    when=editing
+                    fallback=move || view! {
+                        <button on:click=start_editing class="btn btn-sm btn-secondary">
+                            "Edit"
+                        </button>
+                    }
+                >
+                    <div class="space-x-2">
+                        <button on:click=save_changes class="btn btn-sm btn-primary">
+                            "Save"
+                        </button>
+                        <button on:click=move |_| set_editing.set(false) class="btn btn-sm btn-outline">
+                            "Cancel"
+                        </button>
+                    </div>
+                </Show>
+            </div>
+            
+            <div class="space-y-4">
+                <Show
+                    when=editing
+                    fallback=move || view! {
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <span class="text-slate-400">"Ring Name:"</span>
+                                <div class="font-semibold">
+                                    {move || wrestler.get().map(|w| w.name).unwrap_or_default()}
+                                </div>
+                            </div>
+                            <div>
+                                <span class="text-slate-400">"Real Name:"</span>
+                                <div class="font-semibold">
+                                    {move || wrestler.get().and_then(|w| w.real_name).unwrap_or_else(|| "Not specified".to_string())}
+                                </div>
+                            </div>
+                            <div>
+                                <span class="text-slate-400">"Height:"</span>
+                                <div class="font-semibold">
+                                    {move || wrestler.get().and_then(|w| w.height).unwrap_or_else(|| "Not specified".to_string())}
+                                </div>
+                            </div>
+                            <div>
+                                <span class="text-slate-400">"Weight:"</span>
+                                <div class="font-semibold">
+                                    {move || wrestler.get().and_then(|w| w.weight).unwrap_or_else(|| "Not specified".to_string())}
+                                </div>
+                            </div>
+                            <div>
+                                <span class="text-slate-400">"Debut Year:"</span>
+                                <div class="font-semibold">
+                                    {move || wrestler.get().and_then(|w| w.debut_year).map(|y| y.to_string()).unwrap_or_else(|| "Not specified".to_string())}
+                                </div>
+                            </div>
+                            <div>
+                                <span class="text-slate-400">"Promotion:"</span>
+                                <div class="font-semibold">
+                                    {move || wrestler.get().and_then(|w| w.promotion).unwrap_or_else(|| "Not specified".to_string())}
+                                </div>
+                            </div>
+                        </div>
+                    }
+                >
+                    <div class="grid grid-cols-2 gap-4">
+                        <input
+                            type="text"
+                            placeholder="Ring Name"
+                            prop:value=move || temp_data.get().name
+                            on:input=move |ev| {
+                                let mut data = temp_data.get();
+                                data.name = event_target_value(&ev);
+                                set_temp_data.set(data);
+                            }
+                            class="input input-bordered input-sm"
+                        />
+                        <input
+                            type="text"
+                            placeholder="Real Name"
+                            prop:value=move || temp_data.get().real_name
+                            on:input=move |ev| {
+                                let mut data = temp_data.get();
+                                data.real_name = event_target_value(&ev);
+                                set_temp_data.set(data);
+                            }
+                            class="input input-bordered input-sm"
+                        />
+                        <input
+                            type="text"
+                            placeholder="Height"
+                            prop:value=move || temp_data.get().height
+                            on:input=move |ev| {
+                                let mut data = temp_data.get();
+                                data.height = event_target_value(&ev);
+                                set_temp_data.set(data);
+                            }
+                            class="input input-bordered input-sm"
+                        />
+                        <input
+                            type="text"
+                            placeholder="Weight"
+                            prop:value=move || temp_data.get().weight
+                            on:input=move |ev| {
+                                let mut data = temp_data.get();
+                                data.weight = event_target_value(&ev);
+                                set_temp_data.set(data);
+                            }
+                            class="input input-bordered input-sm"
+                        />
+                        <input
+                            type="number"
+                            placeholder="Debut Year"
+                            prop:value=move || temp_data.get().debut_year.to_string()
+                            on:input=move |ev| {
+                                if let Ok(year) = event_target_value(&ev).parse::<i32>() {
+                                    let mut data = temp_data.get();
+                                    data.debut_year = year;
+                                    set_temp_data.set(data);
+                                }
+                            }
+                            class="input input-bordered input-sm"
+                        />
+                        <input
+                            type="text"
+                            placeholder="Promotion"
+                            prop:value=move || temp_data.get().promotion
+                            on:input=move |ev| {
+                                let mut data = temp_data.get();
+                                data.promotion = event_target_value(&ev);
+                                set_temp_data.set(data);
+                            }
+                            class="input input-bordered input-sm"
+                        />
+                    </div>
+                </Show>
+            </div>
+        </div>
+    }
+}
+```
+
+## Career Statistics and Analytics
+
+### Performance Tracking
+
+Comprehensive career statistics display:
+
+```rust
+#[component]
+pub fn CareerStatsSection(wrestler: ReadSignal<Option<Wrestler>>) -> impl IntoView {
+    let (championship_history, set_championship_history) = create_signal(Vec::<TitleHolderRecord>::new());
+    let (match_history, set_match_history) = create_signal(Vec::<MatchRecord>::new());
+    
+    Effect::new(move |_| {
+        if let Some(w) = wrestler.get() {
+            spawn_local(async move {
+                // Load championship history
+                if let Ok(titles) = get_titles_for_wrestler(w.gender.clone()).await {
+                    // Filter for this wrestler's title reigns
+                    // Implementation details...
+                }
+                
+                // Load recent match history
+                // Implementation details...
+            });
+        }
+    });
+    
+    let win_percentage = move || {
+        if let Some(w) = wrestler.get() {
+            let total = w.wins + w.losses;
+            if total > 0 {
+                (w.wins as f32 / total as f32 * 100.0) as i32
+            } else {
+                0
+            }
+        } else {
+            0
+        }
+    };
+    
+    view! {
+        <div class="bg-slate-800 rounded-lg p-6">
+            <h3 class="text-xl font-bold text-yellow-400 mb-4">"Career Statistics"</h3>
+            
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-green-400">
+                        {move || wrestler.get().map(|w| w.wins).unwrap_or(0)}
+                    </div>
+                    <div class="text-sm text-slate-400">"Wins"</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-red-400">
+                        {move || wrestler.get().map(|w| w.losses).unwrap_or(0)}
+                    </div>
+                    <div class="text-sm text-slate-400">"Losses"</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-yellow-400">
+                        {win_percentage} "%"
+                    </div>
+                    <div class="text-sm text-slate-400">"Win Rate"</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-purple-400">
+                        {move || championship_history.get().len()}
+                    </div>
+                    <div class="text-sm text-slate-400">"Title Reigns"</div>
+                </div>
+            </div>
+            
+            // Performance chart/visualization could go here
+            <div class="mt-4">
+                <div class="w-full bg-slate-700 rounded-full h-3">
+                    <div 
+                        class="bg-gradient-to-r from-green-400 to-yellow-400 h-3 rounded-full transition-all duration-300"
+                        style=move || format!("width: {}%", win_percentage())
+                    ></div>
+                </div>
+                <div class="text-center text-xs text-slate-400 mt-1">
+                    "Career Win Percentage"
+                </div>
+            </div>
+        </div>
+    }
+}
+```
+
+## Global Wrestler Management
+
+### Wrestler List Interface
+
+Mass wrestler management with filtering and sorting:
+
+```rust
+#[component]
+pub fn WrestlerListManagement() -> impl IntoView {
+    let (wrestlers, set_wrestlers) = create_signal(Vec::<Wrestler>::new());
+    let (search_filter, set_search_filter) = create_signal(String::new());
+    let (gender_filter, set_gender_filter) = create_signal("All".to_string());
+    let (sort_by, set_sort_by) = create_signal("name".to_string());
+    let (loading, set_loading) = create_signal(true);
+    
+    // Load all wrestlers
+    Effect::new(move |_| {
+        set_loading.set(true);
+        spawn_local(async move {
+            match get_wrestlers().await {
+                Ok(wrestler_list) => set_wrestlers.set(wrestler_list),
+                Err(e) => log::error!("Failed to load wrestlers: {}", e),
+            }
+            set_loading.set(false);
+        });
+    });
+    
+    let filtered_wrestlers = move || {
+        let mut wrestlers_list = wrestlers.get();
+        let search = search_filter.get().to_lowercase();
+        let gender = gender_filter.get();
+        
+        // Apply filters
+        wrestlers_list.retain(|w| {
+            let name_match = w.name.to_lowercase().contains(&search);
+            let gender_match = gender == "All" || w.gender == gender;
+            name_match && gender_match
+        });
+        
+        // Apply sorting
+        match sort_by.get().as_str() {
+            "name" => wrestlers_list.sort_by(|a, b| a.name.cmp(&b.name)),
+            "rating" => wrestlers_list.sort_by(|a, b| calculate_overall_rating(b).cmp(&calculate_overall_rating(a))),
+            "wins" => wrestlers_list.sort_by(|a, b| b.wins.cmp(&a.wins)),
+            "winrate" => wrestlers_list.sort_by(|a, b| {
+                let a_rate = if a.wins + a.losses > 0 { a.wins as f32 / (a.wins + a.losses) as f32 } else { 0.0 };
+                let b_rate = if b.wins + b.losses > 0 { b.wins as f32 / (b.wins + b.losses) as f32 } else { 0.0 };
+                b_rate.partial_cmp(&a_rate).unwrap_or(std::cmp::Ordering::Equal)
+            }),
+            _ => {}
+        }
+        
+        wrestlers_list
+    };
+    
+    view! {
+        <div class="space-y-6">
+            // Filters and Controls
+            <div class="bg-slate-800 rounded-lg p-4">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <input
+                        type="text"
+                        placeholder="Search wrestlers..."
+                        prop:value=search_filter
+                        on:input=move |ev| set_search_filter.set(event_target_value(&ev))
+                        class="input input-bordered"
+                    />
+                    <select
+                        prop:value=gender_filter
+                        on:change=move |ev| set_gender_filter.set(event_target_value(&ev))
+                        class="select select-bordered"
+                    >
+                        <option value="All">"All Genders"</option>
+                        <option value="Male">"Male"</option>
+                        <option value="Female">"Female"</option>
+                    </select>
+                    <select
+                        prop:value=sort_by
+                        on:change=move |ev| set_sort_by.set(event_target_value(&ev))
+                        class="select select-bordered"
+                    >
+                        <option value="name">"Sort by Name"</option>
+                        <option value="rating">"Sort by Rating"</option>
+                        <option value="wins">"Sort by Wins"</option>
+                        <option value="winrate">"Sort by Win Rate"</option>
+                    </select>
+                    <div class="text-sm text-slate-400 flex items-center">
+                        {move || filtered_wrestlers().len()} " wrestlers"
+                    </div>
+                </div>
+            </div>
+            
+            // Wrestler Grid
+            <Show when=move || !loading.get()>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <For
+                        each=filtered_wrestlers
+                        key=|wrestler| wrestler.id
+                        children=move |wrestler| view! {
+                            <WrestlerCard wrestler=wrestler show_actions=true />
+                        }
+                    />
+                </div>
+            </Show>
+            
+            <Show when=loading>
+                <div class="flex justify-center py-20">
+                    <span class="loading loading-spinner loading-lg"></span>
+                </div>
+            </Show>
+        </div>
+    }
+}
+```
+
+The Wrestler Management system provides comprehensive tools for creating, managing, and developing wrestler characters with the depth and sophistication needed for realistic wrestling universe simulation and compelling storyline development.

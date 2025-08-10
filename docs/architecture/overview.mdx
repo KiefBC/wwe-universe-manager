@@ -1,0 +1,279 @@
+---
+title: 'Architecture Overview'
+description: 'Understanding the WWE Universe Manager application architecture'
+---
+
+## System Architecture
+
+WWE Universe Manager is built as a modern desktop application using a hybrid architecture that combines the performance of native Rust with the flexibility of web technologies.
+
+<img
+  src="/images/architecture-diagram.svg"
+  alt="WWE Universe Manager Architecture"
+/>
+
+## Technology Stack
+
+<CardGroup cols={3}>
+  <Card
+    title="Frontend"
+    icon="browser"
+  >
+    **Leptos + WebAssembly**
+    - Rust-based reactive UI framework
+    - Compiled to WebAssembly for performance
+    - Type-safe frontend development
+  </Card>
+  <Card
+    title="Backend"
+    icon="server"
+  >
+    **Tauri 2.0**
+    - Rust-based desktop app framework
+    - Secure API bridge between frontend and system
+    - Native OS integration
+  </Card>
+  <Card
+    title="Database"
+    icon="database"
+  >
+    **SQLite + Diesel**
+    - Local file-based database
+    - Type-safe ORM with Diesel
+    - Automatic migrations
+  </Card>
+</CardGroup>
+
+## Application Layers
+
+### Presentation Layer (Frontend)
+
+The presentation layer is built with Leptos and compiled to WebAssembly:
+
+```rust
+src/
+├── main.rs              # Application entry point
+├── components/          # Reusable UI components
+│   ├── app.rs           # Main App component with hash-based routing
+│   ├── dashboard.rs     # Main dashboard with show selector and action buttons
+│   ├── create_show.rs   # Show creation form
+│   ├── wrestler_details_window.rs  # Wrestler profile in separate window
+│   └── mod.rs           # Component exports
+└── types.rs             # Shared types and API functions
+```
+
+**Key Features:**
+- Reactive state management with signals
+- Component-based architecture with separate windows
+- Hash-based routing for window detection  
+- Type-safe props and state
+- Automatic re-rendering on state changes
+- Integration with Tauri window management
+
+### Business Logic Layer (Backend)
+
+The business logic layer handles all application logic and data operations:
+
+```rust
+src-tauri/src/
+├── lib.rs               # Main entry point, Tauri setup, and window management
+├── db.rs                # Database operations, connection pooling, and all Tauri commands
+├── auth.rs              # Authentication utilities and Argon2 password hashing
+├── models/              # Data models and structures
+│   ├── mod.rs           # Model module exports
+│   ├── user.rs          # User model and authentication types
+│   ├── wrestler.rs      # Wrestler model and statistics
+│   ├── title.rs         # Championship title model
+│   └── show.rs          # Wrestling show model
+└── schema.rs            # Diesel-generated database schema
+```
+
+**Key Features:**
+- Connection pooling with r2d2
+- Type-safe database operations with Diesel
+- Secure password hashing with Argon2
+- Window management for separate UI windows
+- Comprehensive error handling and logging
+- Modular internal functions with Tauri command wrappers
+
+### Data Layer (Database)
+
+The data layer uses SQLite with Diesel ORM for type-safe database operations:
+
+```sql
+-- Core entity tables
+shows       -- Wrestling shows/programs
+wrestlers   -- Wrestler profiles and stats
+titles      -- Championship titles and belts
+users       -- Application users with authentication
+
+-- Relationship tables (future)
+title_holders   -- Track title ownership history
+show_rosters    -- Assign wrestlers to shows
+storylines      -- Manage wrestling storylines
+```
+
+## Communication Flow
+
+<Steps>
+  <Step title="User Interaction">
+    User interacts with Leptos components in the frontend
+  </Step>
+  <Step title="Event Handling">
+    Component event handlers trigger state updates or API calls
+  </Step>
+  <Step title="Tauri Bridge">
+    Frontend calls Tauri commands via the `invoke` function
+  </Step>
+  <Step title="Business Logic">
+    Tauri commands execute business logic and database operations
+  </Step>
+  <Step title="Database Operations">
+    Diesel ORM executes type-safe SQL queries against SQLite
+  </Step>
+  <Step title="Response Chain">
+    Results flow back through the same chain to update the UI
+  </Step>
+</Steps>
+
+## Design Patterns
+
+### Command Pattern
+
+All backend operations are exposed as Tauri commands:
+
+```rust
+#[tauri::command]
+pub fn create_show(state: State<'_, DbState>, show_data: ShowData) -> Result<Show, String> {
+    let mut conn = get_connection(&state)?;
+    internal_create_show(&mut conn, &show_data.name, &show_data.description)
+        .map_err(|e| format!("Failed to create show: {}", e))
+}
+```
+
+### Repository Pattern
+
+Database operations are separated into internal functions:
+
+```rust
+// Internal function for pure database logic
+pub fn internal_create_show(
+    conn: &mut SqliteConnection,
+    name: &str,
+    description: &str,
+) -> Result<Show, DieselError> {
+    // Database operation implementation
+}
+
+// Tauri command wrapper with connection management
+#[tauri::command]
+pub fn create_show(state: State<'_, DbState>, show_data: ShowData) -> Result<Show, String> {
+    let mut conn = get_connection(&state)?;
+    internal_create_show(&mut conn, &show_data.name, &show_data.description)
+        .map_err(|e| format!("Failed to create show: {}", e))
+}
+```
+
+### Signal Pattern (Frontend)
+
+Leptos uses signals for reactive state management:
+
+```rust
+let (shows, set_shows) = signal(Vec::new());
+let (selected_show, set_selected_show) = signal(None);
+
+// Signals automatically trigger re-renders when updated
+let shows_resource = LocalResource::new(|| fetch_shows());
+```
+
+## Security Architecture
+
+<AccordionGroup>
+  <Accordion title="Frontend Security">
+    - WebAssembly sandboxing
+    - No direct system access from frontend
+    - Type safety prevents many common vulnerabilities
+  </Accordion>
+  
+  <Accordion title="Backend Security">
+    - Tauri's permission system restricts API access
+    - Argon2 password hashing with salt
+    - SQL injection prevention via Diesel ORM
+  </Accordion>
+  
+  <Accordion title="Data Security">
+    - Local SQLite database (no network exposure)
+    - File system permissions control access
+    - No sensitive data logged or exposed
+  </Accordion>
+</AccordionGroup>
+
+## Performance Considerations
+
+### Frontend Performance
+
+- **WebAssembly**: Near-native performance for compute-intensive operations
+- **Reactive Updates**: Only re-render components when necessary
+- **Code Splitting**: Components loaded on demand
+- **Efficient Bundling**: Optimized WebAssembly bundles
+
+### Backend Performance
+
+- **Connection Pooling**: Reuse database connections with r2d2
+- **Async Operations**: Non-blocking I/O for better responsiveness
+- **Compiled Rust**: Zero-cost abstractions and memory safety
+- **SQLite Optimization**: Indexed queries and efficient storage
+
+### Database Performance
+
+- **Proper Indexing**: Database indexes on frequently queried columns
+- **Query Optimization**: Diesel generates efficient SQL
+- **Transaction Management**: Atomic operations for data consistency
+- **Local Storage**: No network latency for database operations
+
+## Scalability
+
+The current architecture is designed for single-user desktop applications, but can be extended:
+
+<Tabs>
+  <Tab title="Current Scale">
+    - Single user per application instance
+    - Local SQLite database
+    - Desktop application deployment
+  </Tab>
+  <Tab title="Future Scale">
+    - Multi-user support with authentication
+    - Client-server architecture option
+    - Cloud synchronization capabilities
+    - Web-based deployment option
+  </Tab>
+</Tabs>
+
+## Development Benefits
+
+<CardGroup cols={2}>
+  <Card
+    title="Type Safety"
+    icon="shield"
+  >
+    Full-stack type safety from database to UI prevents many runtime errors
+  </Card>
+  <Card
+    title="Performance"
+    icon="bolt"
+  >
+    Native Rust performance with WebAssembly frontend compilation
+  </Card>
+  <Card
+    title="Developer Experience"
+    icon="code"
+  >
+    Hot reloading, excellent tooling, and comprehensive error messages
+  </Card>
+  <Card
+    title="Cross-Platform"
+    icon="desktop"
+  >
+    Single codebase runs on Windows, macOS, and Linux
+  </Card>
+</CardGroup>

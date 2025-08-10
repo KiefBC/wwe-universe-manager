@@ -1,0 +1,124 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "WWE Universe Manager",
+  "logo": {
+    "dark": "/logo/dark.svg",
+    "light": "/logo/light.svg"
+  },
+  "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#DC2626",
+    "light": "#EAB308", 
+    "dark": "#1E293B",
+    "anchors": {
+      "from": "#DC2626",
+      "to": "#EAB308"
+    }
+  },
+  "topbarLinks": [
+    {
+      "name": "Support",
+      "url": "mailto:support@wwe-universe-manager.com"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Dashboard",
+    "url": "https://dashboard.wwe-universe-manager.com"
+  },
+  "tabs": [
+    {
+      "name": "API Reference",
+      "url": "api-reference"
+    }
+  ],
+  "anchors": [
+    {
+      "name": "Documentation",
+      "icon": "book-open-cover",
+      "url": "https://mintlify.com/docs"
+    },
+    {
+      "name": "Community",
+      "icon": "slack",
+      "url": "https://mintlify.com/community"
+    },
+    {
+      "name": "Blog",
+      "icon": "newspaper",
+      "url": "https://mintlify.com/blog"
+    }
+  ],
+  "navigation": [
+    {
+      "group": "Get Started",
+      "pages": [
+        "introduction",
+        "quickstart",
+        "development"
+      ]
+    },
+    {
+      "group": "Features",
+      "pages": [
+        "features/multi-window-interface",
+        "features/show-management",
+        "features/wrestler-management", 
+        "features/title-management",
+        "features/match-booking",
+        "features/show-rosters",
+        "features/power-ratings",
+        "features/user-authentication",
+        "features/test-data"
+      ]
+    },
+    {
+      "group": "Architecture",
+      "pages": [
+        "architecture/overview",
+        "architecture/database-schema",
+        "architecture/frontend-components",
+        "architecture/backend-services",
+        "architecture/multi-window-system",
+        "architecture/state-management"
+      ]
+    },
+    {
+      "group": "Components",
+      "pages": [
+        "components/dashboard",
+        "components/booker-dashboard",
+        "components/create-show",
+        "components/wrestler-details-window",
+        "components/title-details-window",
+        "components/show-roster-management",
+        "components/wrestler-modules",
+        "components/title-modules",
+        "components/show-modules",
+        "components/shared-types"
+      ]
+    },
+    {
+      "group": "API Documentation",
+      "pages": [
+        "api-reference/introduction"
+      ]
+    },
+    {
+      "group": "API Endpoints",
+      "pages": [
+        "api-reference/endpoint/shows",
+        "api-reference/endpoint/wrestlers",
+        "api-reference/endpoint/titles",
+        "api-reference/endpoint/matches",
+        "api-reference/endpoint/show-rosters",
+        "api-reference/endpoint/authentication",
+        "api-reference/endpoint/window-management",
+        "api-reference/endpoint/utilities"
+      ]
+    }
+  ],
+  "footerSocials": {
+    "github": "https://github.com/your-username/wwe-universe-manager",
+    "linkedin": "https://www.linkedin.com/company/wwe-universe-manager"
+  }
+}

@@ -1,0 +1,163 @@
+---
+title: 'Test Data'
+description: 'Populate your database with sample wrestlers and shows for development'
+---
+
+## Overview
+
+The Test Data feature allows developers to quickly populate the database with sample wrestlers and shows during development. This is essential for testing UI components, database operations, and overall application functionality without manually creating data.
+
+## What Gets Created
+
+When you click the "Test Data" button, the application creates:
+
+### Sample Wrestlers (5 total)
+- **Roman Reigns**: 50 wins, 10 losses
+- **Cody Rhodes**: 45 wins, 15 losses  
+- **Seth Rollins**: 40 wins, 20 losses
+- **Drew McIntyre**: 35 wins, 25 losses
+- **CM Punk**: 30 wins, 30 losses
+
+All wrestlers are created with:
+- Realistic win/loss records
+- Male gender designation
+- Proper database relationships
+
+### Sample Shows (2 total)
+- **Monday Night RAW**: "The flagship show of WWE"
+- **Friday Night SmackDown**: "The blue brand of WWE"
+
+## How to Use
+
+<Steps>
+  <Step title="Access the Dashboard">
+    Open WWE Universe Manager and ensure you're on the main dashboard
+  </Step>
+  <Step title="Click Test Data">
+    Look for the "Test Data" button among the action buttons and click it
+  </Step>
+  <Step title="Verify Creation">
+    The button will trigger the creation process. You can verify by:
+    - Checking the show dropdown for the new shows
+    - Opening wrestler details to see sample data
+    - Running database queries to confirm data persistence
+  </Step>
+</Steps>
+
+## Technical Implementation
+
+### Backend Function
+
+The test data creation is handled by the `create_test_data` Tauri command:
+
+```rust
+#[tauri::command]
+pub fn create_test_data(state: State<'_, DbState>) -> Result<String, String> {
+    let mut conn = get_connection(&state)?;
+    
+    // Create sample wrestlers and shows
+    internal_create_test_data(&mut conn)
+        .map_err(|e| format!("Failed to create test data: {}", e))
+}
+```
+
+### Database Operations
+
+The function performs these operations:
+
+1. **Create Sample Wrestlers**: Inserts 5 wrestlers with varied statistics
+2. **Create Sample Shows**: Inserts 2 wrestling shows with descriptions
+3. **Transaction Safety**: All operations are wrapped in database transactions
+4. **Error Handling**: Comprehensive error reporting for any failures
+
+### Frontend Integration
+
+The test data button is integrated into the dashboard component:
+
+```rust
+<button 
+    class="btn btn-accent"
+    on:click=move |_| {
+        spawn_local(async move {
+            match create_test_data().await {
+                Ok(_) => {
+                    // Handle success
+                }
+                Err(e) => {
+                    // Handle error
+                }
+            }
+        });
+    }
+>
+    "Test Data"
+</button>
+```
+
+## Development Benefits
+
+### Rapid Testing
+- Quickly populate empty databases
+- Test UI components with realistic data
+- Verify database relationships work correctly
+
+### Consistent Environment
+- All developers get the same sample data
+- Predictable test scenarios
+- Easier debugging and troubleshooting
+
+### User Experience Testing
+- Test dropdown populations
+- Verify wrestler detail displays
+- Ensure proper data formatting
+
+## Best Practices
+
+<Warning>
+The test data feature should only be used in development environments. It's not intended for production use and may interfere with real user data.
+</Warning>
+
+### When to Use
+- ✅ Setting up development environment
+- ✅ Testing new features
+- ✅ Demonstrating application functionality
+- ✅ Running integration tests
+
+### When NOT to Use
+- ❌ Production environments
+- ❌ When real user data exists
+- ❌ In automated deployment scripts
+- ❌ When data integrity is critical
+
+## Related Features
+
+<CardGroup cols={2}>
+  <Card
+    title="Show Management"
+    icon="tv"
+    href="/features/show-management"
+  >
+    Learn how the sample shows integrate with show management
+  </Card>
+  <Card
+    title="Wrestler Management"
+    icon="users"
+    href="/features/wrestler-management"
+  >
+    Understand how sample wrestlers appear in the roster
+  </Card>
+  <Card
+    title="Dashboard"
+    icon="dashboard"
+    href="/components/dashboard"
+  >
+    See how test data populates dashboard components
+  </Card>
+  <Card
+    title="Database Architecture"
+    icon="database"
+    href="/architecture/database"
+  >
+    Learn about the underlying database structure
+  </Card>
+</CardGroup>

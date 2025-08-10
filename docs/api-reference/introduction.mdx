@@ -1,0 +1,274 @@
+---
+title: 'API Reference'
+description: 'Complete reference for WWE Universe Manager Tauri commands and types'
+---
+
+## Overview
+
+WWE Universe Manager exposes its functionality through Tauri commands, which serve as the bridge between the frontend (Leptos/WebAssembly) and the backend (Rust). All commands follow a consistent pattern for error handling and data serialization.
+
+## Command Architecture
+
+### Command Structure
+
+All Tauri commands follow this pattern:
+
+```rust
+#[tauri::command]
+pub fn command_name(
+    state: State<'_, DbState>,     // Database connection state
+    parameters: DataType           // Typed parameters
+) -> Result<ReturnType, String>    // Typed return value or error
+```
+
+### Error Handling
+
+Commands return `Result<T, String>` where:
+- `Ok(T)` contains the successful result
+- `Err(String)` contains a user-friendly error message
+
+### Data Serialization
+
+All data types implement Serde for JSON serialization:
+
+```rust
+#[derive(Serialize, Deserialize)]
+pub struct DataType {
+    pub field: String,
+}
+```
+
+## Available Commands
+
+<CardGroup cols={2}>
+  <Card
+    title="Show Management"
+    icon="tv"
+    href="/api-reference/endpoint/shows"
+  >
+    Commands for creating and managing wrestling shows
+  </Card>
+  <Card
+    title="Wrestler Management"
+    icon="users"
+    href="/api-reference/endpoint/wrestlers"
+  >
+    Commands for managing wrestler profiles and statistics
+  </Card>
+  <Card
+    title="Title Management"
+    icon="trophy"
+    href="/api-reference/endpoint/titles"
+  >
+    Commands for championship titles and holder tracking
+  </Card>
+  <Card
+    title="User Management"
+    icon="user"
+    href="/api-reference/endpoint/users"
+  >
+    Commands for user authentication and management
+  </Card>
+</CardGroup>
+
+## Frontend Integration
+
+### Calling Commands
+
+Commands are called from the frontend using the Tauri `invoke` function:
+
+```typescript
+import { invoke } from '@tauri-apps/api/tauri';
+
+// Call a command
+const result = await invoke('create_show', {
+  showData: {
+    name: "Monday Night Raw",
+    description: "WWE's flagship show"
+  }
+});
+```
+
+### Rust Frontend (Leptos)
+
+In the Rust frontend, commands are wrapped in async functions:
+
+```rust
+pub async fn create_show(show_data: ShowData) -> Result<Show, String> {
+    let args = serde_json::json!({
+        "showData": show_data
+    });
+    
+    let args_value = serde_wasm_bindgen::to_value(&args)?;
+    let result_js = invoke("create_show", args_value).await;
+    serde_wasm_bindgen::from_value(result_js)
+}
+```
+
+## Common Data Types
+
+### Core Entities
+
+<Tabs>
+  <Tab title="Show">
+    ```rust
+    #[derive(Serialize, Deserialize)]
+    pub struct Show {
+        pub id: i32,
+        pub name: String,
+        pub description: String,
+        pub created_at: Option<NaiveDateTime>,
+        pub updated_at: Option<NaiveDateTime>,
+    }
+    
+    #[derive(Deserialize)]
+    pub struct ShowData {
+        pub name: String,
+        pub description: String,
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Wrestler">
+    ```rust
+    #[derive(Serialize, Deserialize)]
+    pub struct Wrestler {
+        pub id: i32,
+        pub name: String,
+        pub gender: String,
+        pub wins: i32,
+        pub losses: i32,
+        pub created_at: Option<NaiveDateTime>,
+        pub updated_at: Option<NaiveDateTime>,
+    }
+    
+    #[derive(Deserialize)]
+    pub struct WrestlerData {
+        pub name: String,
+        pub gender: String,
+        pub wins: i32,
+        pub losses: i32,
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Title">
+    ```rust
+    #[derive(Serialize, Deserialize)]
+    pub struct Title {
+        pub id: i32,
+        pub name: String,
+        pub current_holder_id: Option<i32>,
+        pub created_at: Option<NaiveDateTime>,
+        pub updated_at: Option<NaiveDateTime>,
+    }
+    
+    #[derive(Deserialize)]
+    pub struct TitleData {
+        pub name: String,
+        pub current_holder_id: Option<i32>,
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Error Responses
+
+### Common Error Types
+
+<AccordionGroup>
+  <Accordion title="Database Errors">
+    - Connection pool exhaustion
+    - SQL constraint violations
+    - Foreign key constraint failures
+    - Database file permissions
+  </Accordion>
+  
+  <Accordion title="Validation Errors">
+    - Missing required fields
+    - Invalid data formats
+    - Business logic violations
+    - Duplicate entries
+  </Accordion>
+  
+  <Accordion title="System Errors">
+    - File system access denied
+    - Memory allocation failures
+    - Network connectivity issues
+    - Platform-specific errors
+  </Accordion>
+</AccordionGroup>
+
+### Error Format
+
+All errors are returned as strings with descriptive messages:
+
+```json
+{
+  "error": "Failed to create show: Database connection error"
+}
+```
+
+## Authentication
+
+### Password Hashing
+
+User passwords are hashed using Argon2:
+
+```rust
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
+
+pub fn hash_password(password: &str) -> Result<String, String> {
+    let salt = SaltString::generate(&mut OsRng);
+    let argon2 = Argon2::default();
+    argon2.hash_password(password.as_bytes(), &salt)
+        .map(|hash| hash.to_string())
+        .map_err(|e| format!("Failed to hash password: {}", e))
+}
+```
+
+### Session Management
+
+Currently, authentication is stateless. Future versions may include:
+- Session tokens
+- JWT authentication
+- OAuth integration
+- Role-based access control
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card
+    title="Error Handling"
+    icon="exclamation-triangle"
+  >
+    Always handle both success and error cases when calling commands
+  </Card>
+  <Card
+    title="Type Safety"
+    icon="shield"
+  >
+    Use the provided TypeScript/Rust types for all API interactions
+  </Card>
+  <Card
+    title="Async Operations"
+    icon="clock"
+  >
+    All commands are async - use proper async/await patterns
+  </Card>
+  <Card
+    title="Data Validation"
+    icon="check"
+  >
+    Validate data on both frontend and backend for security
+  </Card>
+</CardGroup>
+
+## Rate Limiting
+
+Currently, there are no rate limits on commands since the application runs locally. Future network-enabled versions may include:
+
+- Request rate limiting
+- Concurrent operation limits
+- Resource usage monitoring
+- Performance metrics
