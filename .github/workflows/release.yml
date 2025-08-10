@@ -55,6 +55,11 @@ jobs:
       - name: Install frontend dependencies
         run: npm install
 
+      - name: Install Trunk
+        uses: jetli/trunk-action@v0.4.0
+        with:
+          version: 'latest'
+
       - name: Build CSS for production
         run: npm run build-css-prod
 
