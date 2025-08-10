@@ -4,8 +4,14 @@ use crate::services::wrestler_api::*;
 use crate::types::{Show, fetch_shows};
 use crate::utils::url_watcher::use_url_watcher;
 use leptos::prelude::*;
-// wasm_bindgen imports removed - no longer needed
+use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"])]
+    async fn invoke(cmd: &str, args: JsValue) -> JsValue;
+}
 
 // WrestlerDetails, TitleWithHolders, and other types are now imported from wrestler_api service
 
@@ -163,99 +169,168 @@ pub fn WrestlerDetailsWindow() -> impl IntoView {
 
 
     view! {
-        <div class="container mx-auto p-6 bg-base-100 min-h-screen">
-            <div class="max-w-4xl mx-auto">
-                <Show when=move || loading.get()>
-                    <div class="flex justify-center items-center py-20">
-                        <span class="loading loading-spinner loading-lg"></span>
-                        <span class="ml-3 text-base-content/70">"Loading wrestler details..."</span>
-                    </div>
-                </Show>
-                
-                <Show when=move || error.get().is_some()>
-                    <div class="alert alert-error">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        <div>
-                            <h3 class="font-bold">"Error"</h3>
-                            <div class="text-xs">{move || error.get().unwrap_or_default()}</div>
+        <div class="min-h-screen bg-base-100">
+            // Professional Executive Hero Section
+            <div class="hero bg-gradient-to-br from-primary/10 via-accent/10 to-secondary/10 rounded-none border-b border-primary/20 mb-6 sm:mb-8">
+                <div class="hero-content text-center py-6 sm:py-8 px-4">
+                    <div class="max-w-4xl w-full">
+                        <div class="flex items-center justify-center gap-4 sm:gap-6 mb-4">
+                            <div class="indicator">
+                                <span class="indicator-item badge badge-info badge-sm animate-pulse">"PROFILE"</span>
+                                <div class="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-primary via-accent to-secondary rounded-2xl flex items-center justify-center shadow-2xl">
+                                    <svg class="w-8 h-8 sm:w-12 sm:h-12 text-base-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                    </svg>
+                                </div>
+                            </div>
                         </div>
+                        <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent mb-3">
+                            "Wrestler Profile & Analytics"
+                        </h1>
+                        <p class="text-sm sm:text-base lg:text-lg text-base-content/80 leading-relaxed max-w-2xl mx-auto">
+                            "Comprehensive talent management with performance metrics, biographical data, and career statistics."
+                        </p>
                     </div>
-                </Show>
-                
-                <Show when=move || !loading.get() && error.get().is_none() && wrestler.get().is_some()>
-                    {move || {
-                        wrestler.get().map(|_w| {
-                            view! {
-                                <div class="card bg-base-200 border border-base-100 rounded-xl relative overflow-hidden">
-                                    <div class="card-body p-0">
-                                    // Header with sleek styling
-                                    <HeaderSection wrestler=wrestler />
-
-                                    <div class="grid md:grid-cols-2 gap-6 p-6">
-                                        // Left side - Image and basic info
-                                        <div class="space-y-4">
-                                            // Wrestler image placeholder
-                                            <PhotoSection />
-
-                                            // Delete wrestler component (only for user-created wrestlers)
-                                            <DeleteWrestlerComponent wrestler=wrestler />
-
-                                            // Wrestler name banner
-                                            <NameBannerSection 
-                                                wrestler=wrestler
-                                                on_name_change=handle_name_change
-                                            />
-
-                                            // Championship & Team Status
-                                            <ChampionshipTeamSection 
-                                                wrestler=wrestler
-                                            />
-
-                                        </div>
-
-                                        // Right side - Stats and info
-                                        <div class="space-y-4">
-                                            // Real name section
-                                            <RealNameSection 
-                                                wrestler=wrestler
-                                                on_real_name_change=handle_real_name_change
-                                            />
-
-                                            // Power ratings section
-                                            <PowerRatingsSection 
-                                                wrestler=wrestler
-                                                on_wrestler_updated=set_wrestler
-                                                on_error=set_error
-                                            />
-
-                                            // Show Assignment Section (replaces deprecated promotion logic)
-                                            <ShowAssignmentSection 
-                                                _wrestler=wrestler
-                                                wrestler_shows=wrestler_shows
-                                                _all_shows=shows
-                                                _on_assignment_change=handle_show_assignment_change
-                                            />
-
-                                            // Basic stats (separate component)
-                                            <BasicStatsSection 
-                                                wrestler=wrestler
-                                                on_stats_change=handle_basic_stats_change
-                                            />
-
-                                            // Biography
-                                            <BiographySection 
-                                                wrestler=wrestler
-                                                on_biography_change=handle_biography_change
-                                            />
-                                        </div>
-                                    </div>
-
+                </div>
+            </div>
+            
+            <div class="px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12">
+                <div class="max-w-6xl mx-auto">
+                    
+                    // Professional Back Button
+                    <div class="mb-6">
+                        <button
+                            class="btn btn-ghost gap-2 hover:btn-primary transition-colors min-h-[44px]"
+                            on:click=move |_| {
+                                spawn_local(async move {
+                                    let args = serde_wasm_bindgen::to_value(&serde_json::json!({})).unwrap();
+                                    let _result = invoke("back_to_wrestlers_list", args).await;
+                                });
+                            }
+                        >
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                            </svg>
+                            <span class="hidden sm:inline">"Back to Talent Management"</span>
+                            <span class="sm:hidden">"Back"</span>
+                        </button>
+                    </div>
+                    // Loading State
+                    <Show when=move || loading.get()>
+                        <div class="card bg-base-200/50 border border-base-300/30">
+                            <div class="card-body p-8 sm:p-12 text-center">
+                                <div class="flex flex-col items-center gap-4">
+                                    <span class="loading loading-spinner loading-lg text-primary"></span>
+                                    <div>
+                                        <h3 class="text-lg font-bold text-base-content mb-1">"Loading Wrestler Profile"</h3>
+                                        <p class="text-base-content/70 text-sm">"Gathering detailed analytics and performance data..."</p>
                                     </div>
                                 </div>
-                            }
-                        })
-                    }}
-                </Show>
+                            </div>
+                        </div>
+                    </Show>
+                    
+                    // Error State
+                    <Show when=move || error.get().is_some()>
+                        <div class="card bg-error/10 border border-error/30">
+                            <div class="card-body p-6 sm:p-8">
+                                <div class="flex items-center gap-4 mb-4">
+                                    <div class="w-12 h-12 bg-error/20 rounded-xl flex items-center justify-center">
+                                        <svg class="w-7 h-7 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-lg font-bold text-error mb-1">"Error Loading Profile"</h3>
+                                        <p class="text-error/80 text-sm">{move || error.get().unwrap_or_default()}</p>
+                                    </div>
+                                </div>
+                                <div class="flex justify-end">
+                                    <button class="btn btn-error btn-sm" on:click=move |_| {
+                                        if let Some(window) = web_sys::window() {
+                                            let _ = window.location().reload();
+                                        }
+                                    }>
+                                        "Retry"
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </Show>
+                    
+                    // Profile Content
+                    <Show when=move || !loading.get() && error.get().is_none() && wrestler.get().is_some()>
+                        {move || {
+                            wrestler.get().map(|_w| {
+                                view! {
+                                    <div class="card bg-gradient-to-br from-base-100 to-base-200/30 border border-base-300/50 shadow-xl rounded-2xl overflow-hidden">
+                                        <div class="card-body p-0">
+                                            // Enhanced Header Section
+                                            <HeaderSection wrestler=wrestler />
+
+                                            // Mobile-first responsive layout
+                                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-4 sm:p-6">
+                                                // Left Column - Profile & Identity
+                                                <div class="space-y-6">
+                                                    // Wrestler name banner
+                                                    <NameBannerSection 
+                                                        wrestler=wrestler
+                                                        on_name_change=handle_name_change
+                                                    />
+
+                                                    // Real name section
+                                                    <RealNameSection 
+                                                        wrestler=wrestler
+                                                        on_real_name_change=handle_real_name_change
+                                                    />
+
+                                                    // Championship & Team Status
+                                                    <ChampionshipTeamSection 
+                                                        wrestler=wrestler
+                                                    />
+                                                    
+                                                    // Delete wrestler component (only for user-created wrestlers)
+                                                    <DeleteWrestlerComponent wrestler=wrestler />
+                                                </div>
+
+                                                // Right Column - Statistics & Performance
+                                                <div class="space-y-6">
+                                                    // Power ratings section
+                                                    <PowerRatingsSection 
+                                                        wrestler=wrestler
+                                                        on_wrestler_updated=set_wrestler
+                                                        on_error=set_error
+                                                    />
+
+                                                    // Basic stats (separate component)
+                                                    <BasicStatsSection 
+                                                        wrestler=wrestler
+                                                        on_stats_change=handle_basic_stats_change
+                                                    />
+
+                                                    // Show Assignment Section
+                                                    <ShowAssignmentSection 
+                                                        _wrestler=wrestler
+                                                        wrestler_shows=wrestler_shows
+                                                        _all_shows=shows
+                                                        _on_assignment_change=handle_show_assignment_change
+                                                    />
+
+                                                    // Biography
+                                                    <BiographySection 
+                                                        wrestler=wrestler
+                                                        on_biography_change=handle_biography_change
+                                                    />
+                                                </div>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                }
+                            })
+                        }}
+                    </Show>
+                </div>
             </div>
         </div>
     }
@@ -520,38 +595,33 @@ fn HeaderSection(
     wrestler: ReadSignal<Option<WrestlerDetails>>,
 ) -> impl IntoView {
     view! {
-        <div class="bg-base-300 border-b border-base-content/20 p-6 text-center relative">
-            <div class="badge badge-neutral absolute top-4 left-6">
-                "WRESTLER"
+        <div class="bg-gradient-to-br from-base-300/80 to-base-200/50 border-b border-base-content/10 p-4 sm:p-6 text-center relative">
+            // Status badges - responsive positioning
+            <div class="flex justify-between items-start mb-4 sm:mb-0 sm:absolute sm:inset-x-0 sm:top-4 sm:px-6">
+                <div class="badge badge-primary badge-sm">
+                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                    "TALENT"
+                </div>
+                <div class="badge badge-info badge-sm">
+                    {move || wrestler.get().map(|w| format!("ID #{:03}", w.id)).unwrap_or_default()}
+                </div>
             </div>
-            <div class="badge badge-neutral absolute top-4 right-6">
-                {move || wrestler.get().map(|w| format!("#{:03}", w.id)).unwrap_or_default()}
+            
+            // Main header content
+            <div class="pt-2">
+                <h2 class="text-xl sm:text-2xl lg:text-3xl font-bold text-base-content mb-2">
+                    "Professional Profile"
+                </h2>
+                <p class="text-base-content/70 text-xs sm:text-sm">
+                    "Comprehensive talent analytics and career management"
+                </p>
             </div>
-            <h2 class="text-2xl font-bold text-base-content">
-                "Wrestler Profile"
-            </h2>
-            <p class="text-base-content/70 text-sm mt-1">
-                "Character Details & Statistics"
-            </p>
         </div>
     }
 }
 
-#[component]
-fn PhotoSection() -> impl IntoView {
-    view! {
-        <div class="card bg-base-200 border border-base-100 aspect-[3/4] flex items-center justify-center relative overflow-hidden">
-            <div class="card-body items-center justify-center">
-                <div class="text-center text-base-content/60">
-                    <svg class="w-16 h-16 mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                    </svg>
-                    <p class="text-sm font-medium">"Photo Coming Soon"</p>
-                </div>
-            </div>
-        </div>
-    }
-}
 
 #[component]
 fn NameBannerSection<F>(
@@ -597,7 +667,7 @@ where
                             </label>
                             <input
                                 type="text"
-                                class="input input-bordered text-lg font-bold text-center"
+                                class="input input-bordered text-base sm:text-lg font-bold text-center min-h-[44px]"
                                 prop:value=move || temp_name.get()
                                 on:input:target=move |ev| {
                                     set_temp_name.set(ev.target().value());

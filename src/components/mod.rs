@@ -1,3 +1,4 @@
+pub mod analytics_dashboard;
 pub mod booker_dashboard;
 pub mod create_show;
 pub mod create_title;
@@ -5,6 +6,7 @@ pub mod create_wrestler;
 pub mod dashboard;
 pub mod show;
 pub mod show_roster_management;
+pub mod system_monitor;
 pub mod title;
 pub mod title_details_window;
 pub mod titles_list;
@@ -12,12 +14,14 @@ pub mod wrestler;
 pub mod wrestler_details_window;
 pub mod wrestlers_list;
 
+pub use analytics_dashboard::AnalyticsDashboard;
 pub use booker_dashboard::BookerDashboard;
 pub use create_show::CreateShow;
 pub use create_title::CreateTitle;
 pub use create_wrestler::CreateWrestler;
-pub use dashboard::PromotionDashboard;
+pub use dashboard::ProfessionalDashboard;
 pub use show_roster_management::ShowRosterManagement;
+pub use system_monitor::SystemMonitor;
 pub use title_details_window::TitleDetailsWindow;
 pub use titles_list::TitlesList;
 pub use wrestler_details_window::WrestlerDetailsWindow;

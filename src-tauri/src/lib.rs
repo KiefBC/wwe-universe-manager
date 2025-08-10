@@ -72,6 +72,7 @@ pub fn run() {
             // Window operations
             open_wrestler_window,
             open_title_window,
+            back_to_wrestlers_list,
         ])
         .run(tauri::generate_context!())
         .expect("Failed to run Tauri application");
@@ -164,5 +165,42 @@ async fn open_title_window(app: AppHandle, title_id: Option<String>) -> Result<(
     .build()
     .map_err(|e| e.to_string())?;
 
+    Ok(())
+}
+
+/// Navigates back to the wrestlers list from a wrestler details window
+/// 
+/// # Arguments
+/// * `app` - The Tauri application handle
+/// 
+/// # Returns
+/// * `Ok(())` - Navigation successful
+/// * `Err(String)` - Error message if navigation fails
+/// 
+/// # Behavior
+/// - Closes the wrestler details window
+/// - Navigates the main window to the wrestlers page
+#[tauri::command]
+async fn back_to_wrestlers_list(app: AppHandle) -> Result<(), String> {
+    // Close the wrestler details window if it exists
+    if let Some(wrestler_window) = app.get_webview_window("wrestler-details") {
+        wrestler_window.close().map_err(|e| e.to_string())?;
+    }
+    
+    // Navigate the main window to wrestlers page
+    if let Some(main_window) = app.get_webview_window("main") {
+        let js_code = "
+            if (window.setCurrentPage) {
+                window.setCurrentPage('wrestlers');
+            } else {
+                // Fallback: emit a custom event that the frontend can listen to
+                window.dispatchEvent(new CustomEvent('navigate', { detail: { page: 'wrestlers' } }));
+            }
+        ";
+        main_window.eval(js_code)
+            .map_err(|e| format!("Failed to navigate main window: {}", e))?;
+        main_window.set_focus().map_err(|e| e.to_string())?;
+    }
+    
     Ok(())
 }

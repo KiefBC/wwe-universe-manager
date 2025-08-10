@@ -168,144 +168,212 @@ pub fn BookerDashboard(
     });
     
     view! {
-        <div class="space-y-8">
-            // Header
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-3xl font-bold text-base-content mb-2">
-                        "Match Booking Dashboard"
-                    </h2>
-                    <p class="text-base-content/70">
-                        "Book matches and manage match cards"
-                    </p>
-                </div>
-                <button
-                    class="btn btn-ghost gap-2"
-                    on:click=move |_| set_current_page.set("promotion-dashboard".to_string())
-                >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
-                    "Back to Dashboard"
-                </button>
-            </div>
-            
-            // Show Selection
-            <div class="card bg-base-200 shadow-xl">
-                <div class="card-body">
-                    <h3 class="card-title text-xl mb-4">"Select Show"</h3>
-                    <div class="form-control w-full max-w-xs">
-                        <label class="label">
-                            <span class="label-text">"Show:"</span>
-                        </label>
-                        <select 
-                            class="select select-bordered w-full max-w-xs"
-                            on:change=on_show_change
-                        >
-                            <option value="" selected=move || selected_show.get().is_none()>
-                                "Choose a show to book matches..."
-                            </option>
-                            {move || {
-                                let shows_list = shows.get();
-                                if shows_loading.get() {
-                                    vec![view! { <option value="".to_string() selected=false>{"Loading shows...".to_string()}</option> }]
-                                } else if shows_list.is_empty() {
-                                    vec![view! { <option value="".to_string() selected=false>{"No shows available".to_string()}</option> }]
-                                } else {
-                                    shows_list.iter().map(|show| {
-                                        let is_selected = selected_show.get()
-                                            .map(|s| s.id == show.id)
-                                            .unwrap_or(false);
-                                        let id_str = show.id.to_string();
-                                        let name_str = show.name.clone();
-                                        
-                                        view! {
-                                            <option value=id_str selected=is_selected>
-                                                {name_str}
-                                            </option>
-                                        }
-                                    }).collect::<Vec<_>>()
-                                }
-                            }}
-                        </select>
+        <div class="min-h-screen bg-base-100">
+            // Professional Executive Hero Section
+            <div class="hero bg-gradient-to-br from-info/10 via-accent/10 to-primary/10 rounded-none border-b border-info/20 mb-6 sm:mb-8">
+                <div class="hero-content text-center py-4 sm:py-6">
+                    <div class="max-w-6xl w-full">
+                        <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-info via-accent to-primary bg-clip-text text-transparent mb-6">
+                            "Wrestling Management System (WMS)"
+                        </h1>
+                        
+                        // Action buttons row - mobile responsive
+                        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 px-4 mt-2">
+                            <button
+                                class="btn btn-primary gap-2 w-full sm:w-auto min-h-[44px]"
+                                on:click=move |_| set_current_page.set("promotion-dashboard".to_string())
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                                </svg>
+                                "Back to Command Hub"
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
             
-            // Status and Error Messages
-            <Show when=move || status_message.get().is_some() || error_message.get().is_some()>
-                <div class="space-y-2">
-                    <Show when=move || status_message.get().is_some()>
-                        <div class="alert alert-success">
-                            <svg class="w-6 h-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            <span>{move || status_message.get().unwrap_or_default()}</span>
-                        </div>
-                    </Show>
-                    <Show when=move || error_message.get().is_some()>
-                        <div class="alert alert-error">
-                            <svg class="w-6 h-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            <span>{move || error_message.get().unwrap_or_default()}</span>
-                        </div>
-                    </Show>
-                </div>
-            </Show>
+            <div class="px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12">
+                <div class="max-w-6xl mx-auto space-y-6">
             
-            // Loading indicator
-            <Show when=move || loading.get()>
-                <div class="flex justify-center">
-                    <span class="loading loading-spinner loading-lg"></span>
-                </div>
-            </Show>
+                    // Show Selection Section
+                    <section>
+                        <div class="mb-6">
+                            <h2 class="text-2xl sm:text-3xl font-bold text-base-content mb-2">"Show Selection"</h2>
+                            <p class="text-base-content/70 text-sm sm:text-base">"Select a show to start booking matches and managing the card"</p>
+                        </div>
+                        
+                        <div class="card bg-gradient-to-br from-info/5 to-info/2 border border-info/20 shadow-lg">
+                            <div class="card-body p-4 sm:p-6">
+                                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+                                    <div class="w-12 h-12 bg-info/20 rounded-xl flex items-center justify-center">
+                                        <svg class="w-7 h-7 text-info" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1 w-full sm:w-auto">
+                                        <h3 class="text-lg font-bold text-base-content mb-2">"Active Show"</h3>
+                                        <div class="form-control w-full">
+                                            <select 
+                                                class="select select-bordered w-full bg-base-100 text-base focus:border-info focus:outline-none min-h-[44px]"
+                                                on:change=on_show_change
+                                            >
+                                                <option value="" selected=move || selected_show.get().is_none()>
+                                                    "Choose a show to book matches..."
+                                                </option>
+                                                {move || {
+                                                    let shows_list = shows.get();
+                                                    if shows_loading.get() {
+                                                        vec![view! { <option value="".to_string() selected=false>{"Loading shows...".to_string()}</option> }]
+                                                    } else if shows_list.is_empty() {
+                                                        vec![view! { <option value="".to_string() selected=false>{"No shows available".to_string()}</option> }]
+                                                    } else {
+                                                        shows_list.iter().map(|show| {
+                                                            let is_selected = selected_show.get()
+                                                                .map(|s| s.id == show.id)
+                                                                .unwrap_or(false);
+                                                            let id_str = show.id.to_string();
+                                                            let name_str = show.name.clone();
+                                                            
+                                                            view! {
+                                                                <option value=id_str selected=is_selected>
+                                                                    {name_str}
+                                                                </option>
+                                                            }
+                                                        }).collect::<Vec<_>>()
+                                                    }
+                                                }}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    {move || {
+                                        if let Some(show) = selected_show.get() {
+                                            view! {
+                                                <div class="flex flex-col items-end gap-2">
+                                                    <div class="badge badge-info badge-lg gap-2">
+                                                        <div class="w-2 h-2 rounded-full bg-current animate-pulse"></div>
+                                                        "Active"
+                                                    </div>
+                                                    <div class="text-xs text-base-content/60 text-right">
+                                                        {format!("Booking: {}", show.name)}
+                                                    </div>
+                                                </div>
+                                            }.into_any()
+                                        } else {
+                                            view! {
+                                                <div class="badge badge-ghost">
+                                                    "No Selection"
+                                                </div>
+                                            }.into_any()
+                                        }
+                                    }}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
             
-            // Match Booking Interface (only show when a show is selected)
-            <Show when=move || selected_show.get().is_some()>
-                <div class="space-y-6">
-                    // Create Match Section
-                    <div class="card bg-base-200 shadow-xl">
-                        <div class="card-body">
-                            <div class="flex items-center justify-between mb-4">
-                                <h3 class="card-title text-xl">
-                                    "Match Card for "
-                                    {move || selected_show.get().map(|s| s.name).unwrap_or_default()}
-                                </h3>
-                                <button
-                                    class="btn btn-primary gap-2"
-                                    on:click=move |_| set_show_create_form.set(!show_create_form.get())
-                                >
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                    </svg>
-                                    "Create Match"
-                                </button>
+                    // Status and Error Messages
+                    <Show when=move || status_message.get().is_some() || error_message.get().is_some()>
+                        <section>
+                            <div class="space-y-3">
+                                <Show when=move || status_message.get().is_some()>
+                                    <div class="alert alert-success shadow-lg border border-success/20">
+                                        <svg class="w-6 h-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        <div>
+                                            <h3 class="font-bold">"Booking Successful"</h3>
+                                            <div class="text-sm opacity-80">{move || status_message.get().unwrap_or_default()}</div>
+                                        </div>
+                                    </div>
+                                </Show>
+                                <Show when=move || error_message.get().is_some()>
+                                    <div class="alert alert-error shadow-lg border border-error/20">
+                                        <svg class="w-6 h-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        <div>
+                                            <h3 class="font-bold">"Booking Failed"</h3>
+                                            <div class="text-sm opacity-80">{move || error_message.get().unwrap_or_default()}</div>
+                                        </div>
+                                    </div>
+                                </Show>
+                            </div>
+                        </section>
+                    </Show>
+                    
+                    // Loading indicator
+                    <Show when=move || loading.get()>
+                        <section>
+                            <div class="flex flex-col items-center justify-center py-8 sm:py-12">
+                                <div class="loading loading-spinner loading-lg text-info mb-4"></div>
+                                <div class="text-base-content/70 text-sm">"Processing booking changes..."</div>
+                            </div>
+                        </section>
+                    </Show>
+            
+                    // Match Booking Interface (only show when a show is selected)
+                    <Show when=move || selected_show.get().is_some()>
+                        <section>
+                            <div class="mb-6">
+                                <h2 class="text-2xl sm:text-3xl font-bold text-base-content mb-2">"Match Card Management"</h2>
+                                <p class="text-base-content/70 text-sm sm:text-base">"Professional match booking and creative control for your selected show"</p>
                             </div>
                             
-                            <MatchCreationForm 
-                                show_form=show_create_form.into()
-                                set_show_form=set_show_create_form
-                                match_name=match_name.into()
-                                set_match_name=set_match_name
-                                match_type=match_type.into()
-                                set_match_type=set_match_type
-                                match_stipulation=match_stipulation.into()
-                                set_match_stipulation=set_match_stipulation
-                                loading=loading.into()
-                                on_create_match=set_create_match_trigger
-                            />
-                            
-                            <MatchListSection 
-                                matches=matches.into()
-                                show_wrestlers=show_wrestlers.into()
-                                loading=loading.into()
-                                on_add_wrestler_to_match=set_add_wrestler_to_match_trigger
-                            />
-                        </div>
-                    </div>
+                            // Create Match Section with Professional Styling
+                            <div class="card bg-gradient-to-br from-info/5 to-info/2 border border-info/20 shadow-lg">
+                                <div class="card-body p-4 sm:p-6">
+                                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-12 h-12 bg-info/20 rounded-xl flex items-center justify-center">
+                                                <svg class="w-7 h-7 text-info" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <h3 class="text-lg font-bold text-base-content">
+                                                    "Match Card: "
+                                                    {move || selected_show.get().map(|s| s.name).unwrap_or_default()}
+                                                </h3>
+                                                <p class="text-sm text-base-content/60">"Professional match booking and talent coordination"</p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            class="btn btn-info gap-2 w-full sm:w-auto min-h-[44px]"
+                                            on:click=move |_| set_show_create_form.set(!show_create_form.get())
+                                        >
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                            </svg>
+                                            {move || if show_create_form.get() { "Cancel Match Creation" } else { "Create New Match" }}
+                                        </button>
+                                    </div>
+                                    
+                                    <MatchCreationForm 
+                                        show_form=show_create_form.into()
+                                        set_show_form=set_show_create_form
+                                        match_name=match_name.into()
+                                        set_match_name=set_match_name
+                                        match_type=match_type.into()
+                                        set_match_type=set_match_type
+                                        match_stipulation=match_stipulation.into()
+                                        set_match_stipulation=set_match_stipulation
+                                        loading=loading.into()
+                                        on_create_match=set_create_match_trigger
+                                    />
+                                    
+                                    <MatchListSection 
+                                        matches=matches.into()
+                                        show_wrestlers=show_wrestlers.into()
+                                        loading=loading.into()
+                                        on_add_wrestler_to_match=set_add_wrestler_to_match_trigger
+                                    />
+                                </div>
+                            </div>
+                        </section>
+                    </Show>
                 </div>
-            </Show>
+            </div>
         </div>
     }
 }
