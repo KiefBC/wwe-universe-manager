@@ -39,7 +39,7 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin,wasm32-unknown-unknown' || 'wasm32-unknown-unknown' }}
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -52,13 +52,63 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
+      - name: Install SQLite (Windows only)
+        if: matrix.platform == 'windows-latest'
+        run: |
+          vcpkg install sqlite3:x64-windows-static
+        env:
+          VCPKG_ROOT: C:\vcpkg
+
       - name: Install frontend dependencies
         run: npm install
+
+      - name: Install Trunk
+        uses: jetli/trunk-action@v0.4.0
+        with:
+          version: 'latest'
 
       - name: Build CSS for production
         run: npm run build-css-prod
 
-      - name: Build Tauri app and create release
+      - name: Build Tauri app and create release (Windows)
+        if: matrix.platform == 'windows-latest'
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VCPKG_ROOT: C:\vcpkg
+          SQLITE3_LIB_DIR: C:\vcpkg\installed\x64-windows-static\lib
+        with:
+          tagName: 'wms-v__VERSION__'
+          releaseName: 'Wrestling Management System (WMS) v__VERSION__'
+          releaseBody: |
+            ## Wrestling Management System (WMS) v__VERSION__
+            
+            ### 🎯 Features
+            - Complete wrestler roster management system
+            - Show and event scheduling
+            - Championship title tracking
+            - Match booking and results
+            - Multi-promotion support (WWE, AEW, NJPW)
+            - Professional dark theme interface
+            
+            ### 📦 Installation
+            **Windows**: Download and run the `.exe` installer
+            **macOS**: Download the `.dmg` file and drag to Applications
+            **Linux**: Download the `.AppImage`, `.deb`, or `.rpm` package
+            
+            ### 🔧 Built With
+            - Rust + Tauri 2.0 for native performance
+            - Leptos WebAssembly frontend
+            - SQLite database with Diesel ORM
+            - Modern responsive UI with Tailwind CSS + DaisyUI
+            
+            See the assets below to download and install this version.
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
+
+      - name: Build Tauri app and create release (Non-Windows)
+        if: matrix.platform != 'windows-latest'
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
